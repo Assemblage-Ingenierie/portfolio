@@ -1,5 +1,5 @@
 import { getProjet } from '@/lib/airtable';
-import ProjetView from '@/components/ProjetView';
+import ProjetView from '@/components/projet/ProjetView';
 import { notFound } from 'next/navigation';
 
 export default async function ProjetPage({

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import type { Projet, LayoutChoice } from '@/types/projet';
 import LayoutEditorial from '@/components/layouts/LayoutEditorial';
 import LayoutMagazine from '@/components/layouts/LayoutMagazine';
-import ProjetToolbar from '@/components/ProjetToolbar';
+import ProjetToolbar from './ProjetToolbar';
 
 interface Props {
   projet: Projet;

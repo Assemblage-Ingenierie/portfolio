@@ -1,7 +1,7 @@
 'use cache';
 
 import { getProjets } from '@/lib/airtable';
-import PortfolioGrid from '@/components/PortfolioGrid';
+import PortfolioGrid from '@/components/portfolio/PortfolioGrid';
 
 export default async function HomePage() {
   const projets = await getProjets();

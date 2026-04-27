@@ -1,5 +1,5 @@
 import type { Projet } from '@/types/projet';
-import TagsZone from '@/components/blocks/TagsZone';
+import TagsZone from '@/components/ui/TagsZone';
 import s from '@/styles/layout-magazine.module.css';
 
 interface Props {

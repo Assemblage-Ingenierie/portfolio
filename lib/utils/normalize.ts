@@ -5,7 +5,6 @@ const MAP: Record<string, Statut> = {
   'en consultation': 'En consultation',
   'str en pause': 'En pause',
   'livraison prévue en 2024': 'En chantier',
-  // Valeurs réelles observées en base
   'chantier': 'En chantier',
   'terminé': 'Livré',
   'annulé': 'Abandonné',

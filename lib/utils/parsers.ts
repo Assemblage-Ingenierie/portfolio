@@ -5,7 +5,6 @@ export function parseChiffresCles(raw: string | undefined): { label: string; val
     .map((part) => {
       const idx = part.lastIndexOf(':');
       if (idx === -1) {
-        // Format "Valeur Label" without colon — treat whole part as valeur
         const trimmed = part.trim();
         return trimmed ? { label: trimmed, valeur: '' } : null;
       }
@@ -22,7 +21,6 @@ export function parseTagsSiteWeb(raw: string | undefined): string[] {
   return raw
     .split('|')
     .map((t) => {
-      // Strip subcategory prefix "Category>Tag" → "Tag"
       const parts = t.split('>');
       return parts[parts.length - 1].trim();
     })
