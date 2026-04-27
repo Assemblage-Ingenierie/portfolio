@@ -1,0 +1,11 @@
+:root {
+  --ai-rouge: #E30513;
+  --ai-violet: #30323E;
+  --ai-gris: #DFE4E8;
+  --ai-rouge-clair: #F9E1E3;
+  --ai-gris-tres-clair: #F2F2F2;
+  --ai-noir70: #4D4D4D;
+  --ai-noir: #000000;
+  --serif: 'Newsreader', Georgia, serif;
+  --sans: 'Open Sans', system-ui, sans-serif;
+}

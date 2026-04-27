@@ -1,0 +1,78 @@
+@import "tailwindcss";
+
+:root {
+  --ai-rouge: #E30513;
+  --ai-violet: #30323E;
+  --ai-gris: #DFE4E8;
+  --ai-rouge-clair: #F9E1E3;
+  --ai-gris-tres-clair: #F2F2F2;
+  --ai-noir70: #4D4D4D;
+  --ai-noir: #000000;
+  --serif: 'Newsreader', Georgia, serif;
+  --sans: 'Open Sans', system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: var(--sans);
+  color: var(--ai-noir);
+  background: #ECECEC;
+  -webkit-font-smoothing: antialiased;
+  margin: 0;
+  padding: 0;
+}
+
+@media print {
+  body { background: white; }
+}
+
+/* Dual range slider */
+.range-slider {
+  position: relative;
+  height: 28px;
+}
+.range-slider input[type="range"] {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  pointer-events: none;
+  outline: none;
+  margin: 0;
+  padding: 0;
+}
+.range-slider input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  background: transparent;
+}
+.range-slider input[type="range"]::-moz-range-track {
+  height: 4px;
+  background: transparent;
+}
+.range-slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #E30513;
+  cursor: pointer;
+  pointer-events: all;
+  border: 2px solid white;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  margin-top: -7px;
+}
+.range-slider input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #E30513;
+  cursor: pointer;
+  pointer-events: all;
+  border: 2px solid white;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
