@@ -19,10 +19,12 @@ export async function PATCH(
     await updateProjetFields(slug, body);
     return NextResponse.json({ ok: true });
   } catch (err) {
-    console.error('Fields update error:', err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Erreur inconnue' },
-      { status: 500 }
-    );
+    const message = err instanceof Error
+      ? err.message
+      : typeof err === 'object' && err !== null
+        ? JSON.stringify(err)
+        : String(err);
+    console.error('Fields update error:', message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
