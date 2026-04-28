@@ -24,5 +24,12 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     return <AttentePage email={session?.user?.email ?? ''} onLogout={logout} />;
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      {children}
+      <button onClick={logout} className={styles.logoutBtn} title="Se déconnecter">
+        ⏻
+      </button>
+    </>
+  );
 }
