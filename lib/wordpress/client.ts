@@ -3,7 +3,10 @@ function wpApi(): string {
 }
 
 function authHeaders(): Record<string, string> {
-  return { 'X-Api-Key': process.env.WP_API_KEY ?? '' };
+  const user = process.env.WP_USER ?? '';
+  const pass = (process.env.WP_APP_PASSWORD ?? '').replace(/\s/g, '');
+  const token = Buffer.from(`${user}:${pass}`).toString('base64');
+  return { Authorization: `Basic ${token}` };
 }
 
 function mimeType(filename: string): string {
