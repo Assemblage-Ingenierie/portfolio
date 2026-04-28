@@ -100,7 +100,13 @@ export default function ProjetEditor({ projet }: Props) {
       if (!res.ok) throw new Error(data.error ?? 'Erreur');
       setSaveStatus('saved');
       setSaveMsg('Sauvegardé dans Airtable');
-      router.refresh();
+      // Le slug Airtable est une formule basée sur "Nom du projet" : si le nom
+      // a changé, le slug change aussi → rediriger vers la nouvelle URL.
+      if (data.slug && data.slug !== projet.slug) {
+        router.replace(`/projet/${data.slug}/edit`);
+      } else {
+        router.refresh();
+      }
       setTimeout(() => setSaveStatus('idle'), 3000);
     } catch (e) {
       setSaveStatus('error');

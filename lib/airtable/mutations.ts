@@ -24,7 +24,7 @@ export interface ProjetEditableFields {
   motsCles?: string[];
 }
 
-export async function updateProjetFields(slug: string, fields: ProjetEditableFields): Promise<void> {
+export async function updateProjetFields(slug: string, fields: ProjetEditableFields): Promise<{ slug: string }> {
   if (!/^[a-zA-Z0-9_-]+$/.test(slug)) throw new Error(`Slug invalide: ${slug}`);
   const records = await base(TABLE)
     .select({ filterByFormula: `{Slug} = "${slug}"`, maxRecords: 1 })
@@ -57,6 +57,12 @@ export async function updateProjetFields(slug: string, fields: ProjetEditableFie
   if (fields.motsCles !== undefined)       update['Mots-clés']          = fields.motsCles.join(', ');
 
   await base(TABLE).update(records[0].id, update, { typecast: true });
+
+  // Re-fetch to get the (possibly recomputed) slug — the Slug field is a formula
+  // derived from "Nom du projet", so renaming the project changes its slug.
+  const updated = await base(TABLE).find(records[0].id);
+  const newSlug = String(updated.fields['Slug'] ?? slug);
+  return { slug: newSlug };
 }
 
 export async function updateProjetUrl(slug: string, url: string): Promise<void> {

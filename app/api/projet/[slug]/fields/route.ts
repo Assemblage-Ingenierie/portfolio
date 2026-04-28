@@ -16,8 +16,8 @@ export async function PATCH(
   }
 
   try {
-    await updateProjetFields(slug, body);
-    return NextResponse.json({ ok: true });
+    const result = await updateProjetFields(slug, body);
+    return NextResponse.json({ ok: true, slug: result.slug });
   } catch (err) {
     const message = err instanceof Error
       ? err.message
