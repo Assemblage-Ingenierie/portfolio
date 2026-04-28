@@ -5,17 +5,20 @@ import { recordToProjet } from './mappers';
 export async function getProjets(): Promise<Projet[]> {
   'use cache';
   if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) return [];
-  const records = await base(TABLE)
-    .select({
-      filterByFormula: '{Visible portfolio} = TRUE()',
-      sort: [
-        { field: 'Année livraison', direction: 'desc' },
-        { field: 'Affaire', direction: 'asc' },
-      ],
-    })
-    .all();
-
-  return records.map(recordToProjet);
+  try {
+    const records = await base(TABLE)
+      .select({
+        filterByFormula: '{Visible portfolio} = TRUE()',
+        sort: [
+          { field: 'Année livraison', direction: 'desc' },
+          { field: 'Affaire', direction: 'asc' },
+        ],
+      })
+      .all();
+    return records.map(recordToProjet);
+  } catch {
+    return [];
+  }
 }
 
 export async function getProjet(slug: string): Promise<Projet | null> {
