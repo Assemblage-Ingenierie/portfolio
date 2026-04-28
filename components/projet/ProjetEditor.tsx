@@ -159,7 +159,7 @@ export default function ProjetEditor({ projet }: Props) {
         <div style={SECTION}>
           <div style={STITLE}>Layout</div>
           <div style={{ display: 'flex', gap: '8px' }}>
-            {(['Éditorial', 'Magazine'] as LayoutChoice[]).map(l => (
+            {(['Editorial', 'Magazine'] as LayoutChoice[]).map(l => (
               <button key={l} onClick={() => setLayout(l)} style={{ padding: '6px 18px', borderRadius: '2px', cursor: 'pointer', fontFamily: 'var(--sans)', fontSize: '9pt', fontWeight: 700, background: layout === l ? 'var(--ai-violet)' : 'white', color: layout === l ? 'white' : 'var(--ai-noir70)', border: layout === l ? 'none' : '1px solid #DFE4E8' }}>
                 {l}
               </button>

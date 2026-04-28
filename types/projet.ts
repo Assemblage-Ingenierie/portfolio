@@ -6,7 +6,7 @@ export type Statut =
   | 'En pause'
   | 'En consultation';
 
-export type LayoutChoice = 'Éditorial' | 'Magazine';
+export type LayoutChoice = 'Editorial' | 'Magazine';
 
 export interface Projet {
   affaire: string;

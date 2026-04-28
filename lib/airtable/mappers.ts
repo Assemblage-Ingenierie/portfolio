@@ -38,7 +38,7 @@ export function recordToProjet(record: any): Projet {
     : undefined;
 
   const rawLayout = f['Sélectionner'];
-  const layout: LayoutChoice = rawLayout === 'Magazine' ? 'Magazine' : 'Éditorial';
+  const layout: LayoutChoice = rawLayout === 'Magazine' ? 'Magazine' : 'Editorial';
 
   return {
     affaire: f['Affaire'] ?? '',

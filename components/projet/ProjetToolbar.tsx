@@ -41,11 +41,11 @@ export default function ProjetToolbar({ slug, urlWordpress, layout, onLayoutChan
       <Link href="/" style={{ color: 'var(--ai-gris)', textDecoration: 'none', fontWeight: 600 }}>← Portfolio</Link>
       <div style={{ flex: 1 }} />
       <button
-        onClick={() => onLayoutChange(layout === 'Magazine' ? 'Éditorial' : 'Magazine')}
+        onClick={() => onLayoutChange(layout === 'Magazine' ? 'Editorial' : 'Magazine')}
         style={{ ...btn, background: 'transparent', border: '1px solid var(--ai-gris)', color: 'white' }}
-        title={`Passer en layout ${layout === 'Magazine' ? 'Éditorial' : 'Magazine'}`}
+        title={`Passer en layout ${layout === 'Magazine' ? 'Editorial' : 'Magazine'}`}
       >
-        {layout === 'Magazine' ? 'Éditorial' : 'Magazine'}
+        {layout === 'Magazine' ? 'Editorial' : 'Magazine'}
       </button>
       <Link
         href={`/projet/${slug}/edit`}
