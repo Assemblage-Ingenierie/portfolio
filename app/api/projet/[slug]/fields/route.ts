@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { updateProjetFields } from '@/lib/airtable';
+import { PROJETS_TAG } from '@/lib/airtable/queries';
 import type { ProjetEditableFields } from '@/lib/airtable';
 
 export async function PATCH(
@@ -17,6 +19,7 @@ export async function PATCH(
 
   try {
     const result = await updateProjetFields(slug, body);
+    revalidateTag(PROJETS_TAG, 'max');
     return NextResponse.json({ ok: true, slug: result.slug });
   } catch (err) {
     const message = err instanceof Error
