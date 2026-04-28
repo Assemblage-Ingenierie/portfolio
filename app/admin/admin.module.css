@@ -1,0 +1,135 @@
+.page {
+  min-height: 100vh;
+  background: var(--ai-gris-tres-clair);
+  font-family: var(--sans);
+  padding: 2rem;
+}
+
+.header {
+  max-width: 900px;
+  margin: 0 auto 2rem;
+}
+
+.logo {
+  display: flex;
+  align-items: baseline;
+  gap: .4rem;
+  margin-bottom: .5rem;
+}
+
+.logoText {
+  font-size: .8rem;
+  color: var(--ai-violet);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.logoDot {
+  font-size: .8rem;
+  color: var(--ai-rouge);
+  font-weight: 700;
+}
+
+.title {
+  font-family: var(--serif);
+  font-size: 2rem;
+  font-weight: 400;
+  color: var(--ai-violet);
+  margin: 0;
+}
+
+.tableWrap {
+  max-width: 900px;
+  margin: 0 auto;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 16px rgba(0,0,0,.06);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .875rem;
+}
+
+.table th {
+  text-align: left;
+  padding: .75rem 1rem;
+  background: var(--ai-violet);
+  color: #fff;
+  font-weight: 600;
+  font-size: .8rem;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.table td {
+  padding: .75rem 1rem;
+  border-bottom: 1px solid var(--ai-gris);
+  color: var(--ai-violet);
+  vertical-align: middle;
+}
+
+.table tr:last-child td {
+  border-bottom: none;
+}
+
+.table tr:hover td {
+  background: var(--ai-gris-tres-clair);
+}
+
+.date {
+  color: var(--ai-noir70) !important;
+  font-size: .8rem;
+}
+
+.badgeAdmin,
+.badgeUser,
+.badgeOk,
+.badgePending {
+  display: inline-block;
+  padding: .2rem .55rem;
+  border-radius: 3px;
+  font-size: .75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+
+.badgeAdmin { background: var(--ai-violet); color: #fff; }
+.badgeUser { background: var(--ai-gris); color: var(--ai-violet); }
+.badgeOk { background: #d1fae5; color: #065f46; }
+.badgePending { background: var(--ai-rouge-clair); color: var(--ai-rouge); }
+
+.actions {
+  display: flex;
+  gap: .5rem;
+  align-items: center;
+}
+
+.btnApprove,
+.btnRevoke,
+.btnAdmin {
+  padding: .3rem .75rem;
+  border-radius: 4px;
+  border: none;
+  font-family: var(--sans);
+  font-size: .8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity .15s;
+}
+
+.btnApprove { background: #d1fae5; color: #065f46; }
+.btnRevoke { background: var(--ai-rouge-clair); color: var(--ai-rouge); }
+.btnAdmin { background: var(--ai-gris); color: var(--ai-violet); }
+
+.btnApprove:hover,
+.btnRevoke:hover,
+.btnAdmin:hover { opacity: .75; }
+
+.btnApprove:disabled,
+.btnRevoke:disabled,
+.btnAdmin:disabled { opacity: .4; cursor: not-allowed; }
