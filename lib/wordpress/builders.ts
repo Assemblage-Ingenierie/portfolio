@@ -1,5 +1,14 @@
 import type { Projet } from '@/types/projet';
 
+function esc(value: string | number | undefined | null): string {
+  if (value === undefined || value === null) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 const ROUGE  = '#E30513';
 const VIOLET = '#30323E';
 const GRIS   = '#DFE4E8';
@@ -12,16 +21,16 @@ function infoItem(label: string, value?: string | number, sub?: string): string 
   return `
     <div style="margin-bottom:10px;">
       <span style="display:block;font-family:${SANS};font-size:9px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:${NOIR70};margin-bottom:2px;">${label}</span>
-      <div style="font-family:${SERIF};font-size:13px;font-weight:600;line-height:1.2;color:#000;">${value}</div>
-      ${sub ? `<div style="font-family:${SANS};font-size:10px;color:${NOIR70};margin-top:2px;">${sub}</div>` : ''}
+      <div style="font-family:${SERIF};font-size:13px;font-weight:600;line-height:1.2;color:#000;">${esc(value)}</div>
+      ${sub ? `<div style="font-family:${SANS};font-size:10px;color:${NOIR70};margin-top:2px;">${esc(sub)}</div>` : ''}
     </div>`;
 }
 
 function buildWpMagazine(projet: Projet, coverUrl: string | undefined, photoUrls: string[]): string {
-  const pitch = projet.pitch ?? '';
+  const pitch = esc(projet.pitch ?? '');
   const description = projet.description ?? '';
   const paragraphs = description.split(/\n\n+/).filter(Boolean);
-  const badge = [projet.programme, projet.pole].filter(Boolean).join(' · ');
+  const badge = [projet.programme, projet.pole].filter(Boolean).map(esc).join(' · ');
   const chiffresCles = projet.chiffresCles ?? [];
 
   const heroStyle = coverUrl
@@ -58,8 +67,8 @@ function buildWpMagazine(projet: Projet, coverUrl: string | undefined, photoUrls
     </div>
     <div style="position:absolute;bottom:0;left:0;right:0;padding:20px 28px;z-index:2;">
       ${badge ? `<div style="display:inline-block;background:${ROUGE};color:white;padding:2px 10px;font-family:${SANS};font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:8px;">${badge}</div>` : ''}
-      <h1 style="font-family:${SERIF};font-size:34px;font-weight:400;line-height:1;letter-spacing:-0.02em;color:white;margin:0 0 6px;">${projet.nom}</h1>
-      ${projet.adresse ? `<div style="font-family:${SANS};font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.85);">${projet.adresse}</div>` : ''}
+      <h1 style="font-family:${SERIF};font-size:34px;font-weight:400;line-height:1;letter-spacing:-0.02em;color:white;margin:0 0 6px;">${esc(projet.nom)}</h1>
+      ${projet.adresse ? `<div style="font-family:${SANS};font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.85);">${esc(projet.adresse)}</div>` : ''}
     </div>
   </div>
 
@@ -81,17 +90,17 @@ function buildWpMagazine(projet: Projet, coverUrl: string | undefined, photoUrls
         <div style="margin-top:14px;padding-top:14px;border-top:1px solid ${GRIS};">
           ${chiffresCles.map(c => `
             <div style="margin-bottom:10px;">
-              <div style="font-family:${SERIF};font-size:28px;font-weight:600;line-height:1;color:${VIOLET};letter-spacing:-0.02em;">${c.valeur}</div>
-              <div style="font-family:${SANS};font-size:8px;font-weight:600;color:${NOIR70};letter-spacing:0.05em;text-transform:uppercase;margin-top:2px;">${c.label}</div>
+              <div style="font-family:${SERIF};font-size:28px;font-weight:600;line-height:1;color:${VIOLET};letter-spacing:-0.02em;">${esc(c.valeur)}</div>
+              <div style="font-family:${SANS};font-size:8px;font-weight:600;color:${NOIR70};letter-spacing:0.05em;text-transform:uppercase;margin-top:2px;">${esc(c.label)}</div>
             </div>`).join('')}
         </div>` : ''}
     </div>
 
     <!-- Principal -->
     <div style="padding-left:24px;">
-      <h2 style="font-family:${SERIF};font-size:22px;font-weight:500;line-height:1.1;color:#000;letter-spacing:-0.01em;margin:0 0 16px;">${projet.nom}</h2>
+      <h2 style="font-family:${SERIF};font-size:22px;font-weight:500;line-height:1.1;color:#000;letter-spacing:-0.01em;margin:0 0 16px;">${esc(projet.nom)}</h2>
       <div style="columns:2;column-gap:16px;column-rule:1px solid ${GRIS};">
-        ${paragraphs.map((p, i) => `<p style="font-family:${SANS};font-size:11px;line-height:1.5;color:#000;margin-bottom:8px;${i === 0 ? 'break-inside:avoid;' : ''}">${p}</p>`).join('')}
+        ${paragraphs.map((p, i) => `<p style="font-family:${SANS};font-size:11px;line-height:1.5;color:#000;margin-bottom:8px;${i === 0 ? 'break-inside:avoid;' : ''}">${esc(p)}</p>`).join('')}
       </div>
       ${galerie}
     </div>
@@ -104,14 +113,14 @@ function buildWpMagazine(projet: Projet, coverUrl: string | undefined, photoUrls
     <div style="text-align:center;flex:1;padding:0 16px;opacity:0.8;">
       <strong>Assemblage ingénierie</strong> S.A.S · 137 rue d'Aboukir, 75002 Paris · contact@assemblage.net · assemblage.net
     </div>
-    <div style="text-transform:uppercase;letter-spacing:0.08em;font-weight:600;color:${ROUGE};">${projet.affaire}</div>
+    <div style="text-transform:uppercase;letter-spacing:0.08em;font-weight:600;color:${ROUGE};">${esc(projet.affaire)}</div>
   </div>
 
 </div>`;
 }
 
 function buildWpEditorial(projet: Projet, coverUrl: string | undefined, photoUrls: string[]): string {
-  const pitch = projet.pitch ?? '';
+  const pitch = esc(projet.pitch ?? '');
   const description = projet.description ?? '';
   const paragraphs = description.split(/\n\n+/).filter(Boolean);
   const chiffresCles = projet.chiffresCles ?? [];
@@ -137,13 +146,13 @@ function buildWpEditorial(projet: Projet, coverUrl: string | undefined, photoUrl
   <!-- Header -->
   <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid ${ROUGE};padding-bottom:6px;margin-bottom:16px;">
     <div style="font-family:${SANS};font-size:9px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:${VIOLET};">Assemblage ingénierie · Référence Projet</div>
-    <div style="font-family:${SANS};font-size:9px;font-weight:600;color:${NOIR70};">● ${projet.statut}</div>
+    <div style="font-family:${SANS};font-size:9px;font-weight:600;color:${NOIR70};">● ${esc(projet.statut)}</div>
   </div>
 
   <!-- Titre -->
   <div style="margin-bottom:20px;">
-    ${projet.adresse ? `<div style="font-family:${SANS};font-size:9px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:${ROUGE};margin-bottom:6px;">${projet.adresse}</div>` : ''}
-    <h1 style="font-family:${SERIF};font-size:34px;font-weight:400;line-height:1;letter-spacing:-0.02em;color:#000;margin:0 0 10px;">${projet.nom}</h1>
+    ${projet.adresse ? `<div style="font-family:${SANS};font-size:9px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:${ROUGE};margin-bottom:6px;">${esc(projet.adresse)}</div>` : ''}
+    <h1 style="font-family:${SERIF};font-size:34px;font-weight:400;line-height:1;letter-spacing:-0.02em;color:#000;margin:0 0 10px;">${esc(projet.nom)}</h1>
     ${pitch ? `<p style="font-family:${SERIF};font-size:15px;font-style:italic;line-height:1.4;color:${VIOLET};margin:0;">${pitch}</p>` : ''}
   </div>
 
@@ -172,13 +181,13 @@ function buildWpEditorial(projet: Projet, coverUrl: string | undefined, photoUrl
   <!-- Contenu : texte + photos -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:20px;">
     <div>
-      ${paragraphs.map((p, i) => `<p style="font-family:${SANS};font-size:11px;line-height:1.6;color:#000;margin-bottom:8px;${i === 0 ? `font-size:12px;font-weight:500;` : ''}">${p}</p>`).join('')}
+      ${paragraphs.map((p, i) => `<p style="font-family:${SANS};font-size:11px;line-height:1.6;color:#000;margin-bottom:8px;${i === 0 ? `font-size:12px;font-weight:500;` : ''}">${esc(p)}</p>`).join('')}
       ${chiffresCles.length > 0 ? `
         <div style="border-top:1px solid ${ROUGE};padding-top:10px;margin-top:10px;">
           <div style="font-family:${SANS};font-size:8px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:${ROUGE};margin-bottom:6px;">Chiffres clés</div>
           ${chiffresCles.map(c => `
             <div style="display:flex;justify-content:space-between;font-family:${SANS};font-size:10px;padding:4px 0;border-bottom:1px dotted ${GRIS};">
-              ${c.label} <strong style="font-family:${SERIF};font-weight:600;">${c.valeur}</strong>
+              ${esc(c.label)} <strong style="font-family:${SERIF};font-weight:600;">${esc(c.valeur)}</strong>
             </div>`).join('')}
         </div>` : ''}
     </div>
@@ -193,7 +202,7 @@ function buildWpEditorial(projet: Projet, coverUrl: string | undefined, photoUrl
     <div style="text-align:center;flex:1;padding:0 16px;opacity:0.8;">
       <strong>Assemblage ingénierie</strong> S.A.S · 137 rue d'Aboukir, 75002 Paris · contact@assemblage.net · assemblage.net
     </div>
-    <div style="text-transform:uppercase;letter-spacing:0.08em;font-weight:600;color:${ROUGE};">${projet.affaire}</div>
+    <div style="text-transform:uppercase;letter-spacing:0.08em;font-weight:600;color:${ROUGE};">${esc(projet.affaire)}</div>
   </div>
 
 </div>`;

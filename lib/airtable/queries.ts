@@ -4,6 +4,7 @@ import { recordToProjet } from './mappers';
 
 export async function getProjets(): Promise<Projet[]> {
   'use cache';
+  if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) return [];
   const records = await base(TABLE)
     .select({
       filterByFormula: '{Visible portfolio} = TRUE()',
@@ -19,6 +20,8 @@ export async function getProjets(): Promise<Projet[]> {
 
 export async function getProjet(slug: string): Promise<Projet | null> {
   'use cache';
+  if (!/^[a-zA-Z0-9_-]+$/.test(slug)) return null;
+  if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) return null;
   const records = await base(TABLE)
     .select({
       filterByFormula: `{Slug} = "${slug}"`,

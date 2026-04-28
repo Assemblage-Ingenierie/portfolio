@@ -3,6 +3,17 @@ import { getProjet, updateProjetUrl } from '@/lib/airtable';
 import { uploadMedia, createOrUpdatePost, extractWpPostId } from '@/lib/wordpress';
 import { buildWpContent } from '@/lib/wordpress/builders';
 
+const ALLOWED_IMAGE_HOSTS = ['dl.airtable.com', 'v5.airtableusercontent.com', 'airtableusercontent.com'];
+
+function isAllowedImageUrl(url: string): boolean {
+  try {
+    const { hostname } = new URL(url);
+    return ALLOWED_IMAGE_HOSTS.some(h => hostname === h || hostname.endsWith(`.${h}`));
+  } catch {
+    return false;
+  }
+}
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
@@ -19,6 +30,9 @@ export async function POST(
     let coverId: number | undefined;
     let coverUrl: string | undefined;
     if (projet.photoCouverture) {
+      if (!isAllowedImageUrl(projet.photoCouverture.url)) {
+        return NextResponse.json({ error: 'URL de couverture non autorisée' }, { status: 400 });
+      }
       const uploaded = await uploadMedia(projet.photoCouverture.url, `${slug}-cover.jpg`);
       coverId = uploaded.id;
       coverUrl = uploaded.url;
@@ -28,6 +42,7 @@ export async function POST(
     const photoUrls: string[] = [];
     for (let i = 0; i < (projet.photosProjet ?? []).length; i++) {
       const photo = projet.photosProjet![i];
+      if (!isAllowedImageUrl(photo.url)) continue;
       const uploaded = await uploadMedia(photo.url, `${slug}-photo-${i + 1}.jpg`);
       photoUrls.push(uploaded.url);
     }

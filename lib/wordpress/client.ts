@@ -1,5 +1,6 @@
-const WP_BASE = process.env.WP_BASE_URL!.replace(/\/$/, '');
-const WP_API = `${WP_BASE}/wp-json/wp/v2`;
+function wpApi(): string {
+  return `${process.env.WP_BASE_URL!.replace(/\/$/, '')}/wp-json/wp/v2`;
+}
 
 function authHeaders(): Record<string, string> {
   return { 'X-Api-Key': process.env.WP_API_KEY ?? '' };
@@ -23,7 +24,7 @@ export async function uploadMedia(
   if (!imageRes.ok) throw new Error(`Failed to fetch image: ${imageUrl}`);
   const buffer = await imageRes.arrayBuffer();
 
-  const res = await fetch(`${WP_API}/media`, {
+  const res = await fetch(`${wpApi()}/media`, {
     method: 'POST',
     headers: {
       ...authHeaders(),
@@ -56,8 +57,8 @@ export async function createOrUpdatePost(
   existingPostId?: number
 ): Promise<{ id: number; url: string }> {
   const endpoint = existingPostId
-    ? `${WP_API}/posts/${existingPostId}`
-    : `${WP_API}/posts`;
+    ? `${wpApi()}/posts/${existingPostId}`
+    : `${wpApi()}/posts`;
 
   const res = await fetch(endpoint, {
     method: 'POST',

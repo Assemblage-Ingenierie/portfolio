@@ -26,6 +26,7 @@ export interface ProjetEditableFields {
 }
 
 export async function updateProjetFields(slug: string, fields: ProjetEditableFields): Promise<void> {
+  if (!/^[a-zA-Z0-9_-]+$/.test(slug)) throw new Error(`Slug invalide: ${slug}`);
   const records = await base(TABLE)
     .select({ filterByFormula: `{Slug} = "${slug}"`, maxRecords: 1 })
     .all();
@@ -61,6 +62,7 @@ export async function updateProjetFields(slug: string, fields: ProjetEditableFie
 }
 
 export async function updateProjetUrl(slug: string, url: string): Promise<void> {
+  if (!/^[a-zA-Z0-9_-]+$/.test(slug)) return;
   const records = await base(TABLE)
     .select({ filterByFormula: `{Slug} = "${slug}"`, maxRecords: 1 })
     .all();
