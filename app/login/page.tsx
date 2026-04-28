@@ -15,11 +15,16 @@ export default function LoginPage() {
 
   async function handleGoogle() {
     setLoading(true);
+    setMessage('');
     const supabase = createClient();
-    await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: `${origin}/auth/callback` },
     });
+    if (error) {
+      setMessage(`Erreur Google OAuth : ${error.message}`);
+      setLoading(false);
+    }
   }
 
   async function handleMagicLink(e: React.FormEvent) {
