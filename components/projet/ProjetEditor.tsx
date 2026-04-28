@@ -75,7 +75,6 @@ export default function ProjetEditor({ projet }: Props) {
         body: JSON.stringify({
           nom: nom || undefined,
           adresse: adresse || undefined,
-          pitch: pitch || undefined,
           description: description || undefined,
           moa: moa || undefined,
           mandataire: mandataire || undefined,
@@ -171,7 +170,11 @@ export default function ProjetEditor({ projet }: Props) {
           <div style={STITLE}>Identité</div>
           <div style={{ marginBottom: '14px' }}><label style={LABEL}>Nom du projet</label><input value={nom} onChange={e => setNom(e.target.value)} style={INPUT} /></div>
           <div style={{ marginBottom: '14px' }}><label style={LABEL}>Adresse</label><input value={adresse} onChange={e => setAdresse(e.target.value)} style={INPUT} /></div>
-          <div style={{ marginBottom: '14px' }}><label style={LABEL}>Pitch</label><textarea value={pitch} onChange={e => setPitch(e.target.value)} rows={3} style={TEXTAREA} /></div>
+          <div style={{ marginBottom: '14px' }}>
+            <label style={LABEL}>Pitch (formule Airtable, lecture seule)</label>
+            <textarea value={pitch} onChange={e => setPitch(e.target.value)} rows={3} style={{ ...TEXTAREA, background: '#F2F2F2', color: '#888' }} readOnly />
+            <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', marginTop: '4px' }}>Calculé par formule dans Airtable. Modifiable en aperçu uniquement.</p>
+          </div>
           <div>
             <label style={LABEL}>Description projet</label>
             <textarea value={description} onChange={e => setDescription(e.target.value)} rows={10} style={TEXTAREA} />
@@ -231,9 +234,9 @@ export default function ProjetEditor({ projet }: Props) {
         <div style={{ ...SECTION, borderBottom: 'none', marginBottom: 0 }}>
           <div style={STITLE}>Contenu enrichi</div>
           <div style={{ marginBottom: '14px' }}>
-            <label style={LABEL}>Chiffres clés</label>
-            <textarea value={chiffresClesRaw} onChange={e => setChiffresClesRaw(e.target.value)} rows={6} style={TEXTAREA} placeholder={'Surface totale | 4 242 m2\nBudget travaux | 8,2 M HT'} />
-            <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', marginTop: '4px' }}>Une ligne par chiffre, format : Label | Valeur</p>
+            <label style={LABEL}>Chiffres clés (formule Airtable, lecture seule)</label>
+            <textarea value={chiffresClesRaw} onChange={e => setChiffresClesRaw(e.target.value)} rows={6} style={{ ...TEXTAREA, background: '#F2F2F2', color: '#888' }} readOnly placeholder={'Surface totale | 4 242 m2\nBudget travaux | 8,2 M HT'} />
+            <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', marginTop: '4px' }}>Calculé par formule dans Airtable. Modifiable en aperçu uniquement.</p>
           </div>
           <div style={{ marginBottom: '14px' }}>
             <label style={LABEL}>Certifications</label>
