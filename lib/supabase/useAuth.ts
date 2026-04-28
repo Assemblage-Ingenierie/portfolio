@@ -37,7 +37,10 @@ async function fetchProfile(userId: string): Promise<Profile | null> {
     .select('id, email, role, is_approved')
     .eq('id', userId)
     .single();
-  if (error || !data) return null;
+  if (error) {
+    console.error('[useAuth] fetchProfile error:', error.code, error.message);
+    return null;
+  }
   return data as Profile;
 }
 
@@ -57,9 +60,10 @@ export function useAuth() {
     setSession(s);
 
     const cached = readCache();
-    if (cached?.id === s.user.id) {
+    // Only trust cache when already approved — avoids stale 'waiting' state
+    if (cached?.id === s.user.id && cached.is_approved) {
       setProfile(cached);
-      setAuthState(cached.is_approved ? 'approved' : 'waiting');
+      setAuthState('approved');
       fetchProfile(s.user.id).then(fresh => {
         if (fresh) {
           writeCache(fresh);
