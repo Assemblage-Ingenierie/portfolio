@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import type { LayoutChoice } from '@/types/projet';
+import { authHeaders } from '@/lib/supabase/authHeaders';
 
 interface Props {
   slug: string;
@@ -20,7 +21,10 @@ export default function ProjetToolbar({ slug, urlWordpress, layout, onLayoutChan
     setPublishing(true);
     setResult(null);
     try {
-      const res = await fetch(`/api/projet/${slug}/publish`, { method: 'POST' });
+      const res = await fetch(`/api/projet/${slug}/publish`, {
+        method: 'POST',
+        headers: await authHeaders(),
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Erreur inconnue');
       setResult({ url: data.url, warning: data.warning });
@@ -28,6 +32,26 @@ export default function ProjetToolbar({ slug, urlWordpress, layout, onLayoutChan
       setResult({ error: e instanceof Error ? e.message : 'Erreur' });
     } finally {
       setPublishing(false);
+    }
+  }
+
+  async function handleDownloadPdf() {
+    try {
+      const res = await fetch(`/api/projet/${slug}/pdf`, {
+        headers: await authHeaders(),
+      });
+      if (!res.ok) throw new Error('Téléchargement PDF refusé');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${slug}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Erreur');
     }
   }
 
@@ -53,12 +77,12 @@ export default function ProjetToolbar({ slug, urlWordpress, layout, onLayoutChan
       >
         Modifier
       </Link>
-      <a
-        href={`/api/projet/${slug}/pdf`}
-        style={{ ...btn, background: 'var(--ai-rouge)', color: 'white', textDecoration: 'none', border: 'none' }}
+      <button
+        onClick={handleDownloadPdf}
+        style={{ ...btn, background: 'var(--ai-rouge)', color: 'white', border: 'none' }}
       >
         Télécharger PDF
-      </a>
+      </button>
       <button
         style={{ ...btn, background: 'white', color: 'var(--ai-violet)', border: 'none' }}
         onClick={handlePublish}

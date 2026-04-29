@@ -5,10 +5,10 @@ import { requireApprovedUser } from '@/lib/supabase/requireApprovedUser';
 export const maxDuration = 60;
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
-  const auth = await requireApprovedUser();
+  const auth = await requireApprovedUser(req);
   if (auth instanceof NextResponse) return auth;
 
   const { slug } = await params;

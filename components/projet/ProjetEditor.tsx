@@ -6,6 +6,7 @@ import type { Projet, LayoutChoice } from '@/types/projet';
 import LayoutEditorial from '@/components/layouts/LayoutEditorial';
 import LayoutMagazine from '@/components/layouts/LayoutMagazine';
 import Link from 'next/link';
+import { authHeaders } from '@/lib/supabase/authHeaders';
 
 interface Props { projet: Projet; }
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
@@ -65,13 +66,33 @@ export default function ProjetEditor({ projet }: Props) {
       return { label: label ?? '', valeur: valeur ?? '' };
     });
 
+  async function handleDownloadPdf() {
+    try {
+      const res = await fetch(`/api/projet/${projet.slug}/pdf`, {
+        headers: await authHeaders(),
+      });
+      if (!res.ok) throw new Error('Téléchargement PDF refusé');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${projet.affaire || projet.slug}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : 'Erreur');
+    }
+  }
+
   async function handleSave() {
     setSaveStatus('saving');
     setSaveMsg('');
     try {
       const res = await fetch(`/api/projet/${projet.slug}/fields`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
         body: JSON.stringify({
           nom: nom || undefined,
           adresse: adresse || undefined,
@@ -133,9 +154,9 @@ export default function ProjetEditor({ projet }: Props) {
       <button onClick={() => setPreview(v => !v)} style={{ background: 'white', color: 'var(--ai-violet)', padding: '5px 12px', borderRadius: '2px', border: 'none', cursor: 'pointer', fontWeight: 600, fontFamily: 'var(--sans)', fontSize: '8pt' }}>
         {preview ? 'Modifier' : 'Aperçu'}
       </button>
-      <a href={`/api/projet/${projet.slug}/pdf`} style={{ background: 'var(--ai-rouge)', color: 'white', padding: '5px 12px', borderRadius: '2px', textDecoration: 'none', fontWeight: 600 }}>
+      <button onClick={handleDownloadPdf} style={{ background: 'var(--ai-rouge)', color: 'white', padding: '5px 12px', borderRadius: '2px', border: 'none', cursor: 'pointer', fontWeight: 600, fontFamily: 'var(--sans)', fontSize: '8pt' }}>
         Télécharger PDF
-      </a>
+      </button>
     </div>
   );
 
