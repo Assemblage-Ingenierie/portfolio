@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getProjet } from '@/lib/airtable';
 import { requireApprovedUser } from '@/lib/supabase/requireApprovedUser';
+import { renderPdfHtml } from '@/lib/pdf/renderHtml';
 
 export const maxDuration = 60;
 
@@ -18,19 +19,20 @@ export async function GET(
     return NextResponse.json({ error: 'Projet introuvable' }, { status: 404 });
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
-  const pageUrl = `${appUrl}/projet/${slug}?print=true`;
-
   try {
     let browser;
 
     if (process.env.NODE_ENV === 'production' || process.env.USE_CHROMIUM_LAMBDA) {
       const chromium = (await import('@sparticuz/chromium')).default;
       const puppeteer = (await import('puppeteer-core')).default;
+
+      chromium.setHeadlessMode = true;
+      chromium.setGraphicsMode = false;
+
       browser = await puppeteer.launch({
         args: chromium.args,
         executablePath: await chromium.executablePath(),
-        headless: true,
+        headless: chromium.headless,
       });
     } else {
       const puppeteer = await import('puppeteer');
@@ -38,7 +40,9 @@ export async function GET(
     }
 
     const page = await browser.newPage();
-    await page.goto(pageUrl, { waitUntil: 'networkidle0', timeout: 30000 });
+    const html = renderPdfHtml(projet);
+
+    await page.setContent(html, { waitUntil: 'networkidle0', timeout: 30000 });
 
     const pdf = await page.pdf({
       format: 'A4',

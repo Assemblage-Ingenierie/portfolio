@@ -1,10 +1,18 @@
 import type { NextConfig } from "next";
 import path from "path";
+import { existsSync } from "fs";
+
+// In a git worktree the cwd has no node_modules; walk up to find the real root.
+function findProjectRoot(dir: string): string {
+  if (existsSync(path.join(dir, "node_modules"))) return dir;
+  const parent = path.dirname(dir);
+  return parent === dir ? dir : findProjectRoot(parent);
+}
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
   turbopack: {
-    root: path.resolve(__dirname),
+    root: findProjectRoot(__dirname),
   },
   images: {
     remotePatterns: [
