@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getProjet, updateProjetUrl } from '@/lib/airtable';
 import { uploadMedia, createOrUpdatePost, extractWpPostId } from '@/lib/wordpress';
 import { buildWpContent } from '@/lib/wordpress/builders';
+import { requireApprovedUser } from '@/lib/supabase/requireApprovedUser';
 
 const ALLOWED_IMAGE_HOSTS = ['dl.airtable.com', 'v5.airtableusercontent.com', 'airtableusercontent.com'];
 
@@ -18,6 +19,9 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
+  const auth = await requireApprovedUser();
+  if (auth instanceof NextResponse) return auth;
+
   const { slug } = await params;
   const projet = await getProjet(slug);
 

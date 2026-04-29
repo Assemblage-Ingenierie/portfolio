@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getProjet } from '@/lib/airtable';
+import { requireApprovedUser } from '@/lib/supabase/requireApprovedUser';
 
 export const maxDuration = 60;
 
@@ -7,6 +8,9 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
+  const auth = await requireApprovedUser();
+  if (auth instanceof NextResponse) return auth;
+
   const { slug } = await params;
   const projet = await getProjet(slug);
 
