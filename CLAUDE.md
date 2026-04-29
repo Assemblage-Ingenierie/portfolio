@@ -35,6 +35,43 @@ layout.tsx ──► AuthGate ──► useAuth ─► Supabase JS (implicit flo
 - **`/admin`** : page client-side qui liste les profils et permet d'approuver / changer de rôle. La route `/api/admin/users/[id]` (PATCH) valide côté serveur que l'appelant est admin avant d'écrire.
 - **Variables d'env** : `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Le redirect OAuth pointe vers `window.location.origin` (pas de route `/auth/callback` séparée).
 
+### Protection des routes API (gate auth serveur)
+
+`AuthGate` est purement UX côté client — il ne protège **rien** au niveau serveur. **Toute route API qui touche Airtable, WordPress, Supabase admin ou tout autre ressource sensible doit appeler `requireApprovedUser(req)` au tout début du handler.**
+
+```ts
+// app/api/.../route.ts
+import { requireApprovedUser } from '@/lib/supabase/requireApprovedUser';
+
+export async function POST(req: NextRequest, ...) {
+  const auth = await requireApprovedUser(req);
+  if (auth instanceof NextResponse) return auth; // 401 ou 403
+  // ... auth.user.id, auth.profile.role disponibles
+}
+```
+
+Le helper lit le JWT dans cet ordre :
+1. **Header `Authorization: Bearer <jwt>`** — utilisé par les fetch côté client (le flow OAuth implicit stocke le token en localStorage, pas en cookie)
+2. **Cookie de session** (fallback Server Components)
+
+Puis il vérifie que `portfolio_profiles.is_approved = true`. Sinon → 401/403.
+
+**Côté client**, tout fetch vers une route protégée doit attacher l'header :
+
+```ts
+import { authHeaders } from '@/lib/supabase/authHeaders';
+
+await fetch('/api/projet/foo/fields', {
+  method: 'PATCH',
+  headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+  body: JSON.stringify({...}),
+});
+```
+
+**Pas de `<a href>` direct** vers une route protégée (impossible d'attacher un header à un lien) — utiliser un bouton + fetch + `URL.createObjectURL(blob)` pour les téléchargements (cf. `handleDownloadPdf` dans `ProjetEditor.tsx` / `ProjetToolbar.tsx`).
+
+Routes protégées actuelles : `/api/projet/[slug]/{fields,publish,pdf}` et `/api/admin/users/[id]`.
+
 ### Data flow (Airtable → app)
 
 ```
