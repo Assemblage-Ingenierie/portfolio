@@ -26,13 +26,12 @@ export async function GET(
       const chromium = (await import('@sparticuz/chromium')).default;
       const puppeteer = (await import('puppeteer-core')).default;
 
-      chromium.setHeadlessMode = true;
       chromium.setGraphicsMode = false;
 
       browser = await puppeteer.launch({
         args: chromium.args,
         executablePath: await chromium.executablePath(),
-        headless: chromium.headless,
+        headless: true,
       });
     } else {
       const puppeteer = await import('puppeteer');
