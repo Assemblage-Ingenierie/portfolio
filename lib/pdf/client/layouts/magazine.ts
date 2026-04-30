@@ -23,6 +23,68 @@ function imgFmt(b64: string): 'JPEG' | 'PNG' {
   return b64.startsWith('data:image/png') ? 'PNG' : 'JPEG';
 }
 
+/** Lit les dimensions d'une image base64 sans passer par HTMLImageElement (synchrone). */
+function getImageSize(b64: string): { w: number; h: number } {
+  const raw = atob(b64.split(',')[1]);
+  const bytes = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+
+  if (b64.startsWith('data:image/png')) {
+    const w = ((bytes[16] << 24) | (bytes[17] << 16) | (bytes[18] << 8) | bytes[19]) >>> 0;
+    const h = ((bytes[20] << 24) | (bytes[21] << 16) | (bytes[22] << 8) | bytes[23]) >>> 0;
+    return { w, h };
+  }
+
+  // JPEG : chercher SOF marker (0xFF 0xC0-0xC3)
+  for (let i = 2; i < bytes.length - 9;) {
+    if (bytes[i] !== 0xFF) { i++; continue; }
+    const m = bytes[i + 1];
+    if (m >= 0xC0 && m <= 0xC3) {
+      return { w: (bytes[i + 7] << 8) | bytes[i + 8], h: (bytes[i + 5] << 8) | bytes[i + 6] };
+    }
+    i += 2 + ((bytes[i + 2] << 8) | bytes[i + 3]);
+  }
+  return { w: 4, h: 3 }; // fallback 4:3
+}
+
+/**
+ * Équivalent CSS background-size:cover; background-position:center
+ * Clip via opérateurs PDF bruts pour éviter tout débordement.
+ */
+function drawImageCover(doc: Doc, b64: string, boxX: number, boxY: number, boxW: number, boxH: number): void {
+  const { w: imgW, h: imgH } = getImageSize(b64);
+  const imgAspect = imgW / imgH;
+  const boxAspect = boxW / boxH;
+
+  let drawW: number, drawH: number, drawX: number, drawY: number;
+  if (imgAspect > boxAspect) {
+    // Image plus large que la box : scale sur hauteur, centre horizontalement
+    drawH = boxH;
+    drawW = drawH * imgAspect;
+    drawX = boxX - (drawW - boxW) / 2;
+    drawY = boxY;
+  } else {
+    // Image plus haute que la box : scale sur largeur, centre verticalement
+    drawW = boxW;
+    drawH = drawW / imgAspect;
+    drawX = boxX;
+    drawY = boxY - (drawH - boxH) / 2;
+  }
+
+  // Clip via opérateurs PDF bruts (coordonnées en points, axe Y bas→haut)
+  const pt = 72 / 25.4;
+  const cx = (boxX * pt).toFixed(3);
+  const cy = ((297 - boxY - boxH) * pt).toFixed(3); // Y inversé
+  const cw = (boxW * pt).toFixed(3);
+  const ch = (boxH * pt).toFixed(3);
+
+  doc.saveGraphicsState();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (doc as any).internal.out(`${cx} ${cy} ${cw} ${ch} re W n`);
+  doc.addImage(b64, imgFmt(b64), drawX, drawY, drawW, drawH, undefined, 'FAST');
+  doc.restoreGraphicsState();
+}
+
 export function drawMagazine(doc: Doc, projet: Projet, images: Record<string, string>): void {
   const L = 18;  // left margin
   const R = 192; // right edge
@@ -32,7 +94,7 @@ export function drawMagazine(doc: Doc, projet: Projet, images: Record<string, st
   // ── Hero ─────────────────────────────────────────────────────────────────
   const coverB64 = projet.photoCouverture ? images[projet.photoCouverture.url] : null;
   if (coverB64) {
-    doc.addImage(coverB64, imgFmt(coverB64), 0, 0, 210, HERO_H, undefined, 'FAST');
+    drawImageCover(doc, coverB64, 0, 0, 210, HERO_H);
   } else {
     doc.setFillColor(...VT);
     doc.rect(0, 0, 210, HERO_H, 'F');
