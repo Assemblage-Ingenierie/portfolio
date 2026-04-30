@@ -41,6 +41,7 @@ export async function requireApprovedUser(req?: NextRequest) {
       }
     );
     const { data, error } = await supabase.auth.getUser(bearerToken);
+    if (error) console.error('[requireApprovedUser] getUser error:', error.status, error.message, '| SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL?.slice(0, 40));
     if (!error && data?.user) userId = data.user.id;
   } else {
     // Fallback cookies (Server Components)
