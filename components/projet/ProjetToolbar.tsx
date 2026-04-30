@@ -2,18 +2,19 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import type { LayoutChoice } from '@/types/projet';
+import type { Projet, LayoutChoice } from '@/types/projet';
 import { authHeaders } from '@/lib/supabase/authHeaders';
+import { generateAndDownloadPdf } from '@/lib/pdf/client/generatePdf';
 
 interface Props {
-  slug: string;
-  urlWordpress?: string;
+  projet: Projet;
   layout: LayoutChoice;
   onLayoutChange: (layout: LayoutChoice) => void;
 }
 
-export default function ProjetToolbar({ slug, urlWordpress, layout, onLayoutChange }: Props) {
+export default function ProjetToolbar({ projet, layout, onLayoutChange }: Props) {
   const [publishing, setPublishing] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [result, setResult] = useState<{ url?: string; error?: string; warning?: string } | null>(null);
 
   async function handlePublish() {
@@ -21,7 +22,7 @@ export default function ProjetToolbar({ slug, urlWordpress, layout, onLayoutChan
     setPublishing(true);
     setResult(null);
     try {
-      const res = await fetch(`/api/projet/${slug}/publish`, {
+      const res = await fetch(`/api/projet/${projet.slug}/publish`, {
         method: 'POST',
         headers: await authHeaders(),
       });
@@ -36,22 +37,13 @@ export default function ProjetToolbar({ slug, urlWordpress, layout, onLayoutChan
   }
 
   async function handleDownloadPdf() {
+    setExporting(true);
     try {
-      const res = await fetch(`/api/projet/${slug}/pdf`, {
-        headers: await authHeaders(),
-      });
-      if (!res.ok) throw new Error('Téléchargement PDF refusé');
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${slug}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      await generateAndDownloadPdf({ ...projet, layout });
     } catch (e) {
-      alert(e instanceof Error ? e.message : 'Erreur');
+      alert(e instanceof Error ? e.message : 'Erreur export PDF');
+    } finally {
+      setExporting(false);
     }
   }
 
@@ -72,16 +64,17 @@ export default function ProjetToolbar({ slug, urlWordpress, layout, onLayoutChan
         {layout === 'Magazine' ? 'Editorial' : 'Magazine'}
       </button>
       <Link
-        href={`/projet/${slug}/edit`}
+        href={`/projet/${projet.slug}/edit`}
         style={{ ...btn, background: 'transparent', border: '1px solid var(--ai-gris)', color: 'white', textDecoration: 'none' }}
       >
         Modifier
       </Link>
       <button
         onClick={handleDownloadPdf}
-        style={{ ...btn, background: 'var(--ai-rouge)', color: 'white', border: 'none' }}
+        disabled={exporting}
+        style={{ ...btn, background: 'var(--ai-rouge)', color: 'white', border: 'none', opacity: exporting ? 0.7 : 1 }}
       >
-        Télécharger PDF
+        {exporting ? 'Export…' : 'Télécharger PDF'}
       </button>
       <button
         style={{ ...btn, background: 'white', color: 'var(--ai-violet)', border: 'none' }}
@@ -90,9 +83,9 @@ export default function ProjetToolbar({ slug, urlWordpress, layout, onLayoutChan
       >
         {publishing ? 'Publication…' : 'Publier sur WordPress'}
       </button>
-      {urlWordpress && (
+      {projet.urlWordpress && (
         <a
-          href={urlWordpress}
+          href={projet.urlWordpress}
           target="_blank"
           rel="noopener noreferrer"
           style={{ color: 'var(--ai-gris)', textDecoration: 'none', fontWeight: 600 }}

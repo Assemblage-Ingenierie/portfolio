@@ -7,6 +7,7 @@ import LayoutEditorial from '@/components/layouts/LayoutEditorial';
 import LayoutMagazine from '@/components/layouts/LayoutMagazine';
 import Link from 'next/link';
 import { authHeaders } from '@/lib/supabase/authHeaders';
+import { generateAndDownloadPdf } from '@/lib/pdf/client/generatePdf';
 
 interface Props { projet: Projet; }
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
@@ -57,6 +58,7 @@ export default function ProjetEditor({ projet }: Props) {
   );
 
   const [preview, setPreview] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [saveMsg, setSaveMsg] = useState('');
 
@@ -67,22 +69,37 @@ export default function ProjetEditor({ projet }: Props) {
     });
 
   async function handleDownloadPdf() {
+    setExporting(true);
     try {
-      const res = await fetch(`/api/projet/${projet.slug}/pdf`, {
-        headers: await authHeaders(),
+      await generateAndDownloadPdf({
+        ...projet,
+        nom,
+        adresse: adresse || undefined,
+        pitch: pitch || undefined,
+        description,
+        moa: moa || undefined,
+        mandataire: mandataire || undefined,
+        betAssocies: betAssocies || undefined,
+        entreprise: entreprise || undefined,
+        bailleur: bailleur || undefined,
+        referentAi: referentAi || undefined,
+        missionAi: missionAi || undefined,
+        surface: surface ? Number(surface) : undefined,
+        anneeLivraison: annee ? Number(annee) : undefined,
+        programme: programme || undefined,
+        pole: pole || undefined,
+        departement: departement || undefined,
+        rehabNeuf: rehabNeuf || undefined,
+        statut,
+        layout,
+        chiffresCles: parseChiffres(),
+        certifications: certifications.split('\n').map(s => s.trim()).filter(Boolean),
+        motsCles: motsCles.split(',').map(s => s.trim()).filter(Boolean),
       });
-      if (!res.ok) throw new Error('Téléchargement PDF refusé');
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${projet.affaire || projet.slug}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
     } catch (e) {
-      alert(e instanceof Error ? e.message : 'Erreur');
+      alert(e instanceof Error ? e.message : 'Erreur export PDF');
+    } finally {
+      setExporting(false);
     }
   }
 
@@ -154,8 +171,8 @@ export default function ProjetEditor({ projet }: Props) {
       <button onClick={() => setPreview(v => !v)} style={{ background: 'white', color: 'var(--ai-violet)', padding: '5px 12px', borderRadius: '2px', border: 'none', cursor: 'pointer', fontWeight: 600, fontFamily: 'var(--sans)', fontSize: '8pt' }}>
         {preview ? 'Modifier' : 'Aperçu'}
       </button>
-      <button onClick={handleDownloadPdf} style={{ background: 'var(--ai-rouge)', color: 'white', padding: '5px 12px', borderRadius: '2px', border: 'none', cursor: 'pointer', fontWeight: 600, fontFamily: 'var(--sans)', fontSize: '8pt' }}>
-        Télécharger PDF
+      <button onClick={handleDownloadPdf} disabled={exporting} style={{ background: 'var(--ai-rouge)', color: 'white', padding: '5px 12px', borderRadius: '2px', border: 'none', cursor: 'pointer', fontWeight: 600, fontFamily: 'var(--sans)', fontSize: '8pt', opacity: exporting ? 0.7 : 1 }}>
+        {exporting ? 'Export…' : 'Télécharger PDF'}
       </button>
     </div>
   );
