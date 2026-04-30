@@ -51,12 +51,12 @@ export function drawMagazine(doc: Doc, projet: Projet, images: Record<string, st
   }
 
   // Marque en haut à droite — ".A" en rouge suivi du label en blanc
-  doc.setFont('times', 'bold');
+  doc.setFont('Newsreader', 'bold');
   doc.setFontSize(12);
   doc.setTextColor(...RD);
   doc.text('.A', R, 12, { align: 'right' });
   const sigleW = doc.getTextWidth('.A');
-  doc.setFont('helvetica', 'bold');
+  doc.setFont('OpenSans', 'bold');
   doc.setFontSize(8);
   doc.setTextColor(...WH);
   doc.text(' · Assemblage ingénierie', R - sigleW, 12, { align: 'right' });
@@ -64,7 +64,7 @@ export function drawMagazine(doc: Doc, projet: Projet, images: Record<string, st
   // Badge rouge — mesurer avec la font du badge avant de tracer le rect
   const badge = [projet.programme, projet.pole].filter(Boolean).join(' · ');
   if (badge) {
-    doc.setFont('helvetica', 'bold');
+    doc.setFont('OpenSans', 'bold');
     doc.setFontSize(7.5);
     const badgeText = badge.toUpperCase();
     const badgeW = doc.getTextWidth(badgeText) + 8;
@@ -75,7 +75,7 @@ export function drawMagazine(doc: Doc, projet: Projet, images: Record<string, st
   }
 
   // H1
-  doc.setFont('times', 'normal');
+  doc.setFont('Newsreader', 'normal');
   doc.setFontSize(26);
   doc.setTextColor(...WH);
   const h1Lines: string[] = doc.splitTextToSize(projet.nom, W);
@@ -83,7 +83,7 @@ export function drawMagazine(doc: Doc, projet: Projet, images: Record<string, st
 
   // Adresse
   if (projet.adresse) {
-    doc.setFont('helvetica', 'bold');
+    doc.setFont('OpenSans', 'bold');
     doc.setFontSize(9);
     doc.setTextColor(...WH);
     doc.text(projet.adresse.toUpperCase(), L, 77);
@@ -114,7 +114,7 @@ export function drawMagazine(doc: Doc, projet: Projet, images: Record<string, st
 
   // Pitch
   if (projet.pitch) {
-    doc.setFont('times', 'italic');
+    doc.setFont('Newsreader', 'italic');
     doc.setFontSize(11);
     doc.setTextColor(...VT);
     const pitchLines: string[] = doc.splitTextToSize(projet.pitch, SIDEBAR_W);
@@ -141,13 +141,13 @@ export function drawMagazine(doc: Doc, projet: Projet, images: Record<string, st
 
   for (const item of sideInfoItems) {
     if (sy > FOOTER_Y - 10) break;
-    doc.setFont('helvetica', 'bold');
+    doc.setFont('OpenSans', 'bold');
     doc.setFontSize(6.5);
     doc.setTextColor(...N70);
     doc.text((item.label ?? '').toUpperCase(), SIDEBAR_X, sy);
     sy += lh(6.5);
 
-    doc.setFont('times', 'normal');
+    doc.setFont('Newsreader', 'normal');
     doc.setFontSize(10);
     doc.setTextColor(...BK);
     const vLines: string[] = doc.splitTextToSize(String(item.value ?? ''), SIDEBAR_W);
@@ -155,7 +155,7 @@ export function drawMagazine(doc: Doc, projet: Projet, images: Record<string, st
     sy += vLines.length * lh(10);
 
     if (item.sub) {
-      doc.setFont('helvetica', 'normal');
+      doc.setFont('OpenSans', 'normal');
       doc.setFontSize(7.5);
       doc.setTextColor(...N70);
       doc.text(item.sub, SIDEBAR_X, sy);
@@ -179,12 +179,12 @@ export function drawMagazine(doc: Doc, projet: Projet, images: Record<string, st
 
     for (const [label, value] of secItems) {
       if (sy > FOOTER_Y - 10) break;
-      doc.setFont('helvetica', 'bold');
+      doc.setFont('OpenSans', 'bold');
       doc.setFontSize(6);
       doc.setTextColor(...N70);
       doc.text(label.toUpperCase(), SIDEBAR_X, sy);
       sy += lh(6);
-      doc.setFont('helvetica', 'bold');
+      doc.setFont('OpenSans', 'bold');
       doc.setFontSize(8.5);
       doc.setTextColor(...BK);
       doc.text(value, SIDEBAR_X, sy);
@@ -201,12 +201,12 @@ export function drawMagazine(doc: Doc, projet: Projet, images: Record<string, st
 
     for (const c of projet.chiffresCles) {
       if (sy > FOOTER_Y - 15) break;
-      doc.setFont('times', 'bold');
+      doc.setFont('Newsreader', 'bold');
       doc.setFontSize(22);
       doc.setTextColor(...VT);
       doc.text(String(c.valeur), SIDEBAR_X, sy);
       sy += lh(22, 1.1);
-      doc.setFont('helvetica', 'bold');
+      doc.setFont('OpenSans', 'bold');
       doc.setFontSize(7.5);
       doc.setTextColor(...N70);
       doc.text(String(c.label).toUpperCase(), SIDEBAR_X, sy);
@@ -217,7 +217,7 @@ export function drawMagazine(doc: Doc, projet: Projet, images: Record<string, st
   // ── Main ──────────────────────────────────────────────────────────────────
 
   // H2
-  doc.setFont('times', 'normal');
+  doc.setFont('Newsreader', 'normal');
   doc.setFontSize(18);
   doc.setTextColor(...BK);
   const h2Lines: string[] = doc.splitTextToSize(projet.nom, MAIN_W);
@@ -226,7 +226,7 @@ export function drawMagazine(doc: Doc, projet: Projet, images: Record<string, st
 
   // Texte article (simple colonne — le 2-col CSS est trop complexe à reproduire en jsPDF)
   const paragraphs = projet.description.split(/\n\n+/).filter(Boolean);
-  doc.setFont('helvetica', 'normal');
+  doc.setFont('OpenSans', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(...BK);
 
@@ -273,7 +273,7 @@ export function drawMagazine(doc: Doc, projet: Projet, images: Record<string, st
     ];
 
     for (const tag of allTags) {
-      doc.setFont('helvetica', 'bold');
+      doc.setFont('OpenSans', 'bold');
       doc.setFontSize(7.5);
       const tw = doc.getTextWidth(tag.text) + 5;
       if (tx + tw > R) break;
@@ -295,12 +295,12 @@ export function drawMagazine(doc: Doc, projet: Projet, images: Record<string, st
   doc.rect(0, FOOTER_Y, 210, 297 - FOOTER_Y, 'F');
 
   const fY = FOOTER_Y + 5;
-  doc.setFont('times', 'bold');
+  doc.setFont('Newsreader', 'bold');
   doc.setFontSize(14);
   doc.setTextColor(...RD);
   doc.text('.A', L, fY);
 
-  doc.setFont('helvetica', 'normal');
+  doc.setFont('OpenSans', 'normal');
   doc.setFontSize(7);
   doc.setTextColor(200, 200, 210);
   doc.text(
@@ -310,7 +310,7 @@ export function drawMagazine(doc: Doc, projet: Projet, images: Record<string, st
     { align: 'center' }
   );
 
-  doc.setFont('helvetica', 'bold');
+  doc.setFont('OpenSans', 'bold');
   doc.setTextColor(...RD);
   doc.text(projet.affaire, R, fY, { align: 'right' });
 }

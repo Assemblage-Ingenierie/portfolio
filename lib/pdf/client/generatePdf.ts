@@ -54,6 +54,9 @@ export async function generateAndDownloadPdf(projet: Projet): Promise<void> {
   const { jsPDF } = (window as unknown as { jspdf: { jsPDF: typeof JsPDFType } }).jspdf;
   const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
 
+  const { registerFonts } = await import('./fonts');
+  await registerFonts(doc);
+
   if (projet.layout === 'Magazine') {
     const { drawMagazine } = await import('./layouts/magazine');
     drawMagazine(doc, projet, images);

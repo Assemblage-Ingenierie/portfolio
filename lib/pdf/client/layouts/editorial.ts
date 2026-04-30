@@ -25,11 +25,11 @@ export function drawEditorial(doc: Doc, projet: Projet, images: Record<string, s
   let y = 14;
 
   // ── Header ──────────────────────────────────────────────────────────────
-  doc.setFont('helvetica', 'normal');
+  doc.setFont('OpenSans', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(...N70);
   doc.text('Assemblage ingénierie · Référence Projet', L, y);
-  doc.setFont('helvetica', 'bold');
+  doc.setFont('OpenSans', 'bold');
   doc.setTextColor(...RD);
   doc.text(`● ${projet.statut}`, R, y, { align: 'right' });
   y += 3;
@@ -40,7 +40,7 @@ export function drawEditorial(doc: Doc, projet: Projet, images: Record<string, s
 
   // ── Surtitre (adresse) ──────────────────────────────────────────────────
   if (projet.adresse) {
-    doc.setFont('helvetica', 'bold');
+    doc.setFont('OpenSans', 'bold');
     doc.setFontSize(9);
     doc.setTextColor(...N70);
     doc.text(projet.adresse.toUpperCase(), L, y);
@@ -48,7 +48,7 @@ export function drawEditorial(doc: Doc, projet: Projet, images: Record<string, s
   }
 
   // ── H1 ──────────────────────────────────────────────────────────────────
-  doc.setFont('times', 'bold');
+  doc.setFont('Newsreader', 'bold');
   doc.setFontSize(28);
   doc.setTextColor(...BK);
   const h1Lines: string[] = doc.splitTextToSize(projet.nom, W);
@@ -57,7 +57,7 @@ export function drawEditorial(doc: Doc, projet: Projet, images: Record<string, s
 
   // ── Pitch ────────────────────────────────────────────────────────────────
   if (projet.pitch) {
-    doc.setFont('times', 'italic');
+    doc.setFont('Newsreader', 'italic');
     doc.setFontSize(11);
     doc.setTextColor(...N70);
     const pitchLines: string[] = doc.splitTextToSize(projet.pitch, W * 0.82);
@@ -94,18 +94,18 @@ export function drawEditorial(doc: Doc, projet: Projet, images: Record<string, s
       const item = infoItems[i];
       const cx = L + i * colW;
 
-      doc.setFont('helvetica', 'bold');
+      doc.setFont('OpenSans', 'bold');
       doc.setFontSize(7);
       doc.setTextColor(...RD);
       doc.text((item.label ?? '').toUpperCase(), cx, y);
 
-      doc.setFont('times', 'normal');
+      doc.setFont('Newsreader', 'normal');
       doc.setFontSize(10);
       doc.setTextColor(...BK);
       doc.text(String(item.value ?? ''), cx, y + lh(7));
 
       if (item.sub) {
-        doc.setFont('helvetica', 'normal');
+        doc.setFont('OpenSans', 'normal');
         doc.setFontSize(8);
         doc.setTextColor(...N70);
         doc.text(item.sub, cx, y + lh(7) + lh(10) + 0.5);
@@ -142,12 +142,12 @@ export function drawEditorial(doc: Doc, projet: Projet, images: Record<string, s
       const cx = L + col * secColW;
       const cy = y + row * 10;
 
-      doc.setFont('helvetica', 'bold');
+      doc.setFont('OpenSans', 'bold');
       doc.setFontSize(6.5);
       doc.setTextColor(...N70);
       doc.text(secItems[i][0].toUpperCase(), cx, cy);
 
-      doc.setFont('helvetica', 'bold');
+      doc.setFont('OpenSans', 'bold');
       doc.setFontSize(9);
       doc.setTextColor(...BK);
       doc.text(secItems[i][1], cx, cy + lh(6.5));
@@ -191,7 +191,7 @@ export function drawEditorial(doc: Doc, projet: Projet, images: Record<string, s
   let ty = contentY;
   const maxTextY = 270;
 
-  doc.setFont('helvetica', 'normal');
+  doc.setFont('OpenSans', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(...BK);
 
@@ -210,7 +210,7 @@ export function drawEditorial(doc: Doc, projet: Projet, images: Record<string, s
     doc.line(L, ty, L + textW, ty);
     ty += 3;
 
-    doc.setFont('helvetica', 'bold');
+    doc.setFont('OpenSans', 'bold');
     doc.setFontSize(8);
     doc.setTextColor(...RD);
     doc.text('CHIFFRES CLÉS', L, ty);
@@ -218,11 +218,11 @@ export function drawEditorial(doc: Doc, projet: Projet, images: Record<string, s
 
     for (const c of projet.chiffresCles) {
       if (ty > maxTextY) break;
-      doc.setFont('helvetica', 'normal');
+      doc.setFont('OpenSans', 'normal');
       doc.setFontSize(8.5);
       doc.setTextColor(...BK);
       doc.text(String(c.label), L, ty);
-      doc.setFont('times', 'bold');
+      doc.setFont('Newsreader', 'bold');
       doc.text(String(c.valeur), L + textW, ty, { align: 'right' });
       ty += lh(8.5) + 0.5;
       doc.setDrawColor(...GR);
@@ -239,12 +239,12 @@ export function drawEditorial(doc: Doc, projet: Projet, images: Record<string, s
   doc.line(L, footerY, R, footerY);
 
   const fY = footerY + 3.5;
-  doc.setFont('times', 'bold');
+  doc.setFont('Newsreader', 'bold');
   doc.setFontSize(14);
   doc.setTextColor(...RD);
   doc.text('.A', L, fY);
 
-  doc.setFont('helvetica', 'normal');
+  doc.setFont('OpenSans', 'normal');
   doc.setFontSize(7);
   doc.setTextColor(...N70);
   doc.text(
@@ -254,6 +254,6 @@ export function drawEditorial(doc: Doc, projet: Projet, images: Record<string, s
     { align: 'center' }
   );
 
-  doc.setFont('helvetica', 'bold');
+  doc.setFont('OpenSans', 'bold');
   doc.text(projet.affaire, R, fY, { align: 'right' });
 }
