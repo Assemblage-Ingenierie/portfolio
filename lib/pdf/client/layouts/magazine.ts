@@ -15,6 +15,10 @@ function lh(pt: number, factor = 1.35): number {
   return (pt / 72) * 25.4 * factor;
 }
 
+function fmt(n: number): string {
+  return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+}
+
 function imgFmt(b64: string): 'JPEG' | 'PNG' {
   return b64.startsWith('data:image/png') ? 'PNG' : 'JPEG';
 }
@@ -135,7 +139,7 @@ export function drawMagazine(doc: Doc, projet: Projet, images: Record<string, st
     {
       label: 'Calendrier',
       value: projet.anneeLivraison?.toString(),
-      sub: projet.surface ? `${projet.surface.toLocaleString('fr-FR')} m²` : undefined,
+      sub: projet.surface ? `${fmt(projet.surface)} m²` : undefined,
     },
   ].filter(i => i.value);
 

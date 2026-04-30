@@ -14,6 +14,11 @@ function lh(pt: number, factor = 1.35): number {
   return (pt / 72) * 25.4 * factor;
 }
 
+// Formater un nombre sans espace fin Unicode (fr-FR produit   non supporté par les subsets TTF)
+function fmt(n: number): string {
+  return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+}
+
 function imgFmt(b64: string): 'JPEG' | 'PNG' {
   return b64.startsWith('data:image/png') ? 'PNG' : 'JPEG';
 }
@@ -29,9 +34,14 @@ export function drawEditorial(doc: Doc, projet: Projet, images: Record<string, s
   doc.setFontSize(8);
   doc.setTextColor(...N70);
   doc.text('Assemblage ingénierie · Référence Projet', L, y);
+  // Puce statut — cercle dessiné + texte (● hors subset TTF)
   doc.setFont('OpenSans', 'bold');
   doc.setTextColor(...RD);
-  doc.text(`● ${projet.statut}`, R, y, { align: 'right' });
+  const statutText = projet.statut;
+  const statutW = doc.getTextWidth(statutText);
+  doc.text(statutText, R, y, { align: 'right' });
+  doc.setFillColor(...RD);
+  doc.circle(R - statutW - 2.5, y - 1, 0.9, 'F');
   y += 3;
   doc.setDrawColor(...RD);
   doc.setLineWidth(0.4);
@@ -40,20 +50,23 @@ export function drawEditorial(doc: Doc, projet: Projet, images: Record<string, s
 
   // ── Surtitre (adresse) ──────────────────────────────────────────────────
   if (projet.adresse) {
-    doc.setFont('OpenSans', 'bold');
+    doc.setFont('OpenSans', 'normal');
     doc.setFontSize(9);
     doc.setTextColor(...N70);
-    doc.text(projet.adresse.toUpperCase(), L, y);
-    y += lh(9) + 1;
+    doc.text(projet.adresse, L, y);
+    y += lh(9) + 3; // gap généreux avant le grand titre
   }
 
   // ── H1 ──────────────────────────────────────────────────────────────────
-  doc.setFont('Newsreader', 'bold');
+  // Newsreader 'normal' (400) correspond au weight 500 du CSS (plus proche visuellement)
+  doc.setFont('Newsreader', 'normal');
   doc.setFontSize(28);
   doc.setTextColor(...BK);
   const h1Lines: string[] = doc.splitTextToSize(projet.nom, W);
+  // Avancer y d'une ligne avant de tracer pour laisser la place aux ascendantes
+  y += lh(28) * 0.75;
   doc.text(h1Lines, L, y);
-  y += h1Lines.length * lh(28) + 2;
+  y += (h1Lines.length - 1) * lh(28) + lh(28) * 0.4 + 3;
 
   // ── Pitch ────────────────────────────────────────────────────────────────
   if (projet.pitch) {
@@ -72,7 +85,7 @@ export function drawEditorial(doc: Doc, projet: Projet, images: Record<string, s
     {
       label: 'Budget · Surface',
       value: projet.budgetHT,
-      sub: projet.surface ? `${projet.surface.toLocaleString('fr-FR')} m²` : undefined,
+      sub: projet.surface ? `${fmt(projet.surface)} m²` : undefined,
     },
     {
       label: 'Calendrier',
