@@ -27,8 +27,7 @@ export default function ProjetView({ projet, isPrint }: Props) {
     <>
       {!isPrint && (
         <ProjetToolbar
-          slug={projet.slug}
-          urlWordpress={projet.urlWordpress}
+          projet={projet}
           layout={layout}
           onLayoutChange={handleLayoutChange}
         />
