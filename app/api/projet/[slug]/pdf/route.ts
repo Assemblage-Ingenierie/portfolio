@@ -1,7 +1,28 @@
+import { existsSync } from 'fs';
 import { NextRequest, NextResponse } from 'next/server';
 import { getProjet } from '@/lib/airtable';
 import { requireApprovedUser } from '@/lib/supabase/requireApprovedUser';
 import { renderPdfHtml } from '@/lib/pdf/renderHtml';
+
+function findLocalChrome(): string {
+  if (process.env.CHROME_EXECUTABLE_PATH) return process.env.CHROME_EXECUTABLE_PATH;
+
+  const localAppData = process.env.LOCALAPPDATA ?? '';
+  const candidates = [
+    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+    `${localAppData}\\Google\\Chrome\\Application\\chrome.exe`,
+    'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+    `${localAppData}\\Microsoft\\Edge\\Application\\msedge.exe`,
+  ];
+
+  const found = candidates.find(p => p && existsSync(p));
+  if (found) return found;
+
+  throw new Error(
+    'Aucun navigateur Chromium trouvé. Installer Chrome ou Edge, ou définir CHROME_EXECUTABLE_PATH dans .env.local'
+  );
+}
 
 export const maxDuration = 60;
 
@@ -34,8 +55,12 @@ export async function GET(
         headless: true,
       });
     } else {
-      const puppeteer = await import('puppeteer');
-      browser = await puppeteer.launch({ headless: true });
+      const puppeteer = (await import('puppeteer-core')).default;
+      browser = await puppeteer.launch({
+        executablePath: findLocalChrome(),
+        headless: true,
+        args: ['--no-sandbox', '--disable-gpu'],
+      });
     }
 
     const page = await browser.newPage();

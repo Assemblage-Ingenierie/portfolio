@@ -11,6 +11,7 @@ function findProjectRoot(dir: string): string {
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
+  serverExternalPackages: ['@sparticuz/chromium', 'puppeteer-core'],
   turbopack: {
     root: findProjectRoot(__dirname),
   },
