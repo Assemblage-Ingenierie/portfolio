@@ -7,8 +7,9 @@ import PrintRunner from '@/components/PrintRunner';
 
 /**
  * Page d'impression : rend le template PDF directement dans le navigateur,
- * paged.js polyfill, puis bouton "Imprimer / PDF" qui ouvre la boîte de
- * dialogue native (Save as PDF). Pas de serveur PDF.
+ * puis bouton "Imprimer / PDF" qui ouvre la boîte de dialogue native du
+ * navigateur (Save as PDF). Pagination via @page A4 + le moteur natif
+ * du navigateur (Chromium/WebKit). Pas de paged.js, pas de Puppeteer serveur.
  *
  * Query param `template` (Solo|Diptyque|...) permet de forcer un template
  * sans dépendre de la valeur Airtable — utile car la propagation Airtable
@@ -34,43 +35,37 @@ export default async function PrintPage({
 
   const bundle = renderTemplate(effectiveProjet);
 
-  // Le CSS @media print masque tous les wrappers AuthGate / barre d'outils,
-  // pour que seul le contenu paginé apparaisse dans la sortie PDF.
-  // #print-source : largeur fixée à A4 pour que paged.js mesure correctement.
-  // Il est ensuite masqué via JS (display:none) dans le callback `after` de paged.js,
-  // une fois la pagination terminée. En @media print, masquage de ceinture-bretelles.
+  // Overrides d'affichage écran (avant impression) :
+  // - fond gris autour de la fiche pour visualiser la "page"
+  // - ombre + centrage de la fiche (210mm de large = A4)
+  // En @media print : tout ça disparaît, seule la fiche est imprimée
+  // au format A4 grâce à la règle @page A4 du CSS template.
   const PRINT_OVERRIDES = `
-    body { background: #ECECEC; margin: 0; }
-    #print-source { width: 210mm; margin: 0 auto; }
-
-    @media print {
-      .print-toolbar,
-      body > button,
-      #print-source { display: none !important; }
-      body { background: white; }
+    body { background: #ECECEC; margin: 0; padding: 24px 0; }
+    #print-source {
+      width: 210mm;
+      margin: 0 auto;
+      background: white;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.12);
     }
 
-    .pagedjs_pages { margin: 24px auto; }
-    .pagedjs_page {
-      box-shadow: 0 2px 16px rgba(0,0,0,0.15);
-      margin: 0 auto 24px auto;
-      background: white;
+    @media print {
+      body { background: white; padding: 0; }
+      .print-toolbar,
+      body > button { display: none !important; }
+      #print-source {
+        width: auto;
+        margin: 0;
+        box-shadow: none;
+      }
     }
   `;
 
-  // Le CSS du template (sans les overrides d'écran) est isolé dans un <style>
-  // dédié pour pouvoir être passé en string à paged.js. Les overrides d'écran
-  // (toolbar, fond gris, ombre des pages…) restent dans un <style> séparé.
-  const TEMPLATE_CSS = SHARED_CSS + bundle.css;
-
   return (
     <>
-      {/* Template CSS — sera extrait et appliqué par paged.js Polisher (incl. @page) */}
-      <style data-template-css="" dangerouslySetInnerHTML={{ __html: TEMPLATE_CSS }} />
-      {/* Overrides écran — marqué comme à ignorer par paged.js mais reste actif pour la toolbar */}
-      <style dangerouslySetInnerHTML={{ __html: PRINT_OVERRIDES }} />
+      <style dangerouslySetInnerHTML={{ __html: SHARED_CSS + bundle.css + PRINT_OVERRIDES }} />
       <div id="print-source" dangerouslySetInnerHTML={{ __html: bundle.body }} />
-      <PrintRunner targetSelector="#print-source" />
+      <PrintRunner />
     </>
   );
 }
