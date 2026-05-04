@@ -83,13 +83,29 @@ const CSS = `
   color: var(--ai-noir);
 }
 
-/* 3ᵉ photo conditionnelle — forcée en colonne 2, en bas. */
+/* 3ᵉ photo conditionnelle — forcée en colonne 2, en bas.
+   Taille adaptative : la photo grandit jusqu'à atteindre la largeur de
+   colonne (84 mm) OU une hauteur plafond (90 mm), selon la première limite
+   atteinte. Ratio préservé via object-fit: contain. */
 .tri-extra-photo {
   break-before: column;
   break-inside: avoid;
   margin-top: 4mm;
-  height: 50mm;
   width: 100%;
+}
+.tri-extra-photo .photo-frame {
+  width: 100%;
+  height: auto;
+}
+/* Override de la règle globale .photo-img (qui empêche l'agrandissement) :
+   pour la photo conditionnelle, on autorise l'agrandissement jusqu'à la
+   largeur de la colonne. La règle plus spécifique gagne. */
+.tri-extra-photo .photo-img {
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+  max-height: 90mm;
+  object-fit: contain;
 }
 `;
 
