@@ -3,18 +3,15 @@
 import { useEffect, useState } from 'react';
 
 /**
- * Charge paged.js depuis CDN, lance Previewer.preview() en mode handler,
- * puis ouvre la boîte de dialogue d'impression du navigateur.
+ * Charge paged.polyfill.js (mode auto) et déclenche window.print() après
+ * pagination. Le PDF est généré en local par le navigateur via "Save as PDF".
  *
- * Le résultat (PDF) est généré en local par Chromium côté utilisateur,
- * via la commande "Enregistrer au format PDF" du dialogue d'impression.
- * Pas de serveur, pas de Puppeteer, pas de limite Vercel.
+ * Pourquoi le polyfill plutôt que le handler explicite : le handler mode
+ * (Previewer.preview() avec arguments) était trop fragile dans le contexte
+ * Next.js + React (gestion des stylesheets et du nœud content). Le polyfill
+ * est l'entrée publique éprouvée et accepte une config via window.PagedConfig.
  */
-export default function PrintRunner({
-  targetSelector,
-}: {
-  targetSelector: string;
-}) {
+export default function PrintRunner({ targetSelector }: { targetSelector: string }) {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -23,40 +20,36 @@ export default function PrintRunner({
 
     async function run() {
       try {
-        await loadPagedJs();
-        if (cancelled) return;
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const Paged = (window as any).Paged;
-        if (!Paged?.Previewer) throw new Error('paged.js non chargé');
-
         const source = document.querySelector(targetSelector) as HTMLElement | null;
         if (!source) throw new Error(`Cible "${targetSelector}" introuvable`);
 
-        // Récupérer le HTML du contenu et le retirer du DOM React (innerHTML, pas outerHTML).
-        // On passe une string à paged.js plutôt que le nœud React directement, sinon
-        // paged.js fait `parentNode.removeChild(node)` ce qui casse l'arbre React.
-        const html = source.innerHTML;
-        source.remove();
+        // Le polyfill prend tout le body comme contenu par défaut. On contraint
+        // au noeud source uniquement (sinon il essaierait de paginer la toolbar).
+        // PagedConfig DOIT être défini avant que le script polyfill ne se charge.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (window as any).PagedConfig = {
+          auto: true,
+          content: source,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          after: (_flow: any) => {
+            if (cancelled) return;
+            setStatus('ready');
+          },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          error: (err: any) => {
+            if (cancelled) return;
+            setStatus('error');
+            setErrorMsg(err?.message ?? String(err));
+          },
+        };
 
-        // Conteneur de rendu dédié pour les pages paginées
-        const renderTarget = document.createElement('div');
-        renderTarget.id = 'pagedjs-target';
-        document.body.appendChild(renderTarget);
+        // Marquer le <style> overrides écran avec [data-pagedjs-ignore]
+        // pour qu'il ne soit pas absorbé par paged.js (et reste actif pour la toolbar).
+        document.querySelectorAll('style:not([data-template-css])').forEach(s => {
+          s.setAttribute('data-pagedjs-ignore', '');
+        });
 
-        // Marquer le <style> overrides écran avec [data-pagedjs-ignore] pour
-        // qu'il ne soit pas absorbé par paged.js (et reste actif pour la toolbar).
-        const overrides = document.querySelectorAll('style:not([data-template-css])');
-        overrides.forEach(s => s.setAttribute('data-pagedjs-ignore', ''));
-
-        const previewer = new Paged.Previewer();
-        // En passant `undefined` pour stylesheets, paged.js extrait automatiquement
-        // les <style> du document (sauf [data-pagedjs-ignore]). Notre template-css
-        // sera donc pris en compte, y compris les règles @page.
-        await previewer.preview(html, undefined, renderTarget);
-
-        if (cancelled) return;
-        setStatus('ready');
+        await loadPagedPolyfill();
       } catch (e) {
         if (cancelled) return;
         setStatus('error');
@@ -103,21 +96,19 @@ export default function PrintRunner({
   );
 }
 
-let pagedJsPromise: Promise<void> | null = null;
+let pagedPromise: Promise<void> | null = null;
 
-function loadPagedJs(): Promise<void> {
-  if (pagedJsPromise) return pagedJsPromise;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  if ((window as any).Paged?.Previewer) return Promise.resolve();
+function loadPagedPolyfill(): Promise<void> {
+  if (pagedPromise) return pagedPromise;
 
-  pagedJsPromise = new Promise<void>((resolve, reject) => {
+  pagedPromise = new Promise<void>((resolve, reject) => {
     const script = document.createElement('script');
-    script.src = 'https://unpkg.com/pagedjs@0.5.0-beta.2/dist/paged.js';
+    script.src = 'https://unpkg.com/pagedjs@0.5.0-beta.2/dist/paged.polyfill.js';
     script.async = true;
     script.onload = () => resolve();
-    script.onerror = () => reject(new Error('Échec du chargement de paged.js'));
+    script.onerror = () => reject(new Error('Échec du chargement de paged.polyfill.js'));
     document.head.appendChild(script);
   });
 
-  return pagedJsPromise;
+  return pagedPromise;
 }
