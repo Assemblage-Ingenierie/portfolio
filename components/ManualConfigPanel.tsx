@@ -24,22 +24,32 @@ const STITLE: React.CSSProperties = {
 const ROW: React.CSSProperties = { display: 'flex', gap: 6, alignItems: 'center', fontSize: '9pt' };
 const SUBROW: React.CSSProperties = { ...ROW, paddingLeft: 8, borderLeft: '2px solid #DFE4E8' };
 
-function Slider({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+interface SliderProps {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  min?: number;
+  max?: number;
+  step?: number;
+  unit?: string;
+}
+
+function Slider({ label, value, onChange, min = 25, max = 100, step = 5, unit = '%' }: SliderProps) {
   return (
     <div style={ROW}>
       <span style={{ minWidth: 60, color: 'var(--ai-noir70)' }}>{label}</span>
       <input
-        type="range" min={25} max={100} step={5}
+        type="range" min={min} max={max} step={step}
         value={value}
         onChange={e => onChange(Number(e.target.value))}
         style={{ flex: 1, accentColor: '#E30513' }}
       />
-      <span style={{ minWidth: 36, textAlign: 'right', fontWeight: 700, color: 'var(--ai-rouge)' }}>{value}%</span>
+      <span style={{ minWidth: 48, textAlign: 'right', fontWeight: 700, color: 'var(--ai-rouge)' }}>{value}{unit}</span>
     </div>
   );
 }
 
-const MAX_EXTRA_PHOTOS_1COL = 5;
+const MAX_EXTRA_PHOTOS = 5;
 
 export default function ManualConfigPanel({ projet, config, onChange }: Props) {
   const photos = allPhotos(projet);
@@ -48,7 +58,7 @@ export default function ManualConfigPanel({ projet, config, onChange }: Props) {
     label: `Photo ${i + 1}${p.filename ? ` — ${p.filename}` : ''}`,
   }));
 
-  // Mutateurs
+  // Mutateurs photo principale
   const setMain = (patch: Partial<PhotoConfig>) =>
     onChange({ ...config, mainPhoto: { ...config.mainPhoto, ...patch } });
   const setMain2 = (patch: Partial<PhotoConfig>) => {
@@ -66,15 +76,13 @@ export default function ManualConfigPanel({ projet, config, onChange }: Props) {
       onChange({ ...config, mainPhotoFormat: format });
     }
   };
-  const setColumns = (n: 1 | 2) => {
-    // En 2-col, on garde uniquement la 1ʳᵉ photo additionnelle.
-    if (n === 2 && (config.extraPhotos?.length ?? 0) > 1) {
-      onChange({ ...config, textColumns: 2, extraPhotos: config.extraPhotos!.slice(0, 1) });
-    } else {
-      onChange({ ...config, textColumns: n });
-    }
-  };
 
+  // Texte
+  const setColumns = (n: 1 | 2) => onChange({ ...config, textColumns: n });
+  const setCol1H = (v: number) => onChange({ ...config, textCol1HeightMm: v });
+  const setCol2H = (v: number) => onChange({ ...config, textCol2HeightMm: v });
+
+  // Photos additionnelles
   const extras = config.extraPhotos ?? [];
   const toggleExtras = () => {
     if (extras.length > 0) {
@@ -87,13 +95,10 @@ export default function ManualConfigPanel({ projet, config, onChange }: Props) {
     }
   };
   const setExtraCount = (n: number) => {
-    const target = Math.max(1, Math.min(MAX_EXTRA_PHOTOS_1COL, n));
+    const target = Math.max(1, Math.min(MAX_EXTRA_PHOTOS, n));
     const next = [...extras];
     while (next.length < target) {
-      next.push({
-        index: Math.min(next.length + 2, photos.length - 1),
-        sizePercent: 100,
-      });
+      next.push({ index: Math.min(next.length + 2, photos.length - 1), sizePercent: 100 });
     }
     if (next.length > target) next.length = target;
     onChange({ ...config, extraPhotos: next });
@@ -164,6 +169,20 @@ export default function ManualConfigPanel({ projet, config, onChange }: Props) {
             </button>
           ))}
         </div>
+        <Slider
+          label={config.textColumns === 1 ? 'Hauteur' : 'Haut. col 1'}
+          value={config.textCol1HeightMm}
+          onChange={setCol1H}
+          min={30} max={220} step={5} unit="mm"
+        />
+        {config.textColumns === 2 && (
+          <Slider
+            label="Haut. col 2"
+            value={config.textCol2HeightMm}
+            onChange={setCol2H}
+            min={30} max={220} step={5} unit="mm"
+          />
+        )}
       </div>
 
       {/* PHOTOS ADDITIONNELLES */}
@@ -173,7 +192,7 @@ export default function ManualConfigPanel({ projet, config, onChange }: Props) {
           <button onClick={toggleExtras} style={radioBtn(extras.length > 0)}>
             {extras.length > 0 ? 'Activée' : 'Désactivée'}
           </button>
-          {extras.length > 0 && config.textColumns === 1 && (
+          {extras.length > 0 && (
             <div style={{ display: 'flex', gap: 4, alignItems: 'center', marginLeft: 12, fontSize: '9pt', color: 'var(--ai-noir70)' }}>
               <span>Nombre :</span>
               <button
@@ -184,8 +203,8 @@ export default function ManualConfigPanel({ projet, config, onChange }: Props) {
               <span style={{ minWidth: 16, textAlign: 'center', fontWeight: 700, color: 'var(--ai-rouge)' }}>{extras.length}</span>
               <button
                 onClick={() => setExtraCount(extras.length + 1)}
-                disabled={extras.length >= MAX_EXTRA_PHOTOS_1COL}
-                style={{ ...radioBtn(false), padding: '2px 8px', cursor: extras.length >= MAX_EXTRA_PHOTOS_1COL ? 'not-allowed' : 'pointer', opacity: extras.length >= MAX_EXTRA_PHOTOS_1COL ? 0.4 : 1 }}
+                disabled={extras.length >= MAX_EXTRA_PHOTOS}
+                style={{ ...radioBtn(false), padding: '2px 8px', cursor: extras.length >= MAX_EXTRA_PHOTOS ? 'not-allowed' : 'pointer', opacity: extras.length >= MAX_EXTRA_PHOTOS ? 0.4 : 1 }}
               >+</button>
             </div>
           )}
