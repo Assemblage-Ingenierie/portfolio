@@ -36,18 +36,12 @@ const CSS = `
 }
 .toc-item {
   display: grid;
-  grid-template-columns: 28mm 1fr 14mm;
+  grid-template-columns: 1fr 14mm;
   align-items: baseline;
   gap: 4mm;
   padding: 3mm 0;
   border-bottom: 1px dotted var(--ai-gris);
   font-family: var(--sans);
-}
-.toc-affaire {
-  font-size: 8pt;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: var(--ai-rouge);
 }
 .toc-meta {
   display: flex;
@@ -101,7 +95,6 @@ export function renderSommaire(projet: Pick<Projet, 'statut' | 'affaire'> | null
     <div class="toc-list">
       ${entries.map(e => `
         <div class="toc-item">
-          <div class="toc-affaire">${esc(e.affaire)}</div>
           <div class="toc-meta">
             <div class="toc-nom">${esc(e.nom)}</div>
             <div class="toc-sub">${esc([e.pole, e.programme].filter(Boolean).join(' · '))}</div>

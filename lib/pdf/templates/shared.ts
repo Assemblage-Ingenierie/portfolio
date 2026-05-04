@@ -99,7 +99,6 @@ html, body { background: white; }
   color: var(--ai-rouge); line-height: 1;
 }
 .t-footer-legal { text-align: center; flex: 1; padding: 0 6mm; }
-.t-footer-ref { text-align: right; font-weight: 600; letter-spacing: 0.05em; }
 
 /* Titre + identité */
 .t-surtitre {
@@ -164,11 +163,10 @@ export function headerHtml(projet: Projet): string {
   </header>`;
 }
 
-export function footerHtml(projet: Projet): string {
+export function footerHtml(_projet: Projet): string {
   return `<footer class="t-footer">
     <span class="t-footer-sigle">.A</span>
     <div class="t-footer-legal"><strong>Assemblage ingénierie</strong> S.A.S · 137 rue d'Aboukir, 75002 Paris · contact@assemblage.net · assemblage.net</div>
-    <div class="t-footer-ref">${esc(projet.affaire)}</div>
   </footer>`;
 }
 
