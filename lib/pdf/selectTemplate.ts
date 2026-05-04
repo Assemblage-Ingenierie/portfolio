@@ -16,7 +16,7 @@ export function autoSelectTemplate(
   return 'Solo';
 }
 
-const TEMPLATE_VALUES: TemplateChoice[] = ['Solo', 'Diptyque', 'Triptyque', 'Mosaïque', 'Galerie'];
+const TEMPLATE_VALUES: TemplateChoice[] = ['Solo', 'Diptyque', 'Triptyque', 'Mosaïque', 'Galerie', 'Manuel'];
 
 export function isTemplateChoice(v: unknown): v is TemplateChoice {
   return typeof v === 'string' && (TEMPLATE_VALUES as string[]).includes(v);
