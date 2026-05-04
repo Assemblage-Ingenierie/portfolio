@@ -8,8 +8,8 @@ import {
 const CSS = `
 .solo-page {
   padding: 14mm 18mm 12mm 18mm;
-  display: grid;
-  grid-template-rows: auto auto auto 1fr auto;
+  display: flex;
+  flex-direction: column;
   gap: 5mm;
 }
 .solo-hero {

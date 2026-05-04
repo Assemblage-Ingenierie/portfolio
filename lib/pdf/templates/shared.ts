@@ -34,13 +34,12 @@ html, body { background: white; }
   --sans: 'Open Sans', system-ui, sans-serif;
 }
 
-/* Page A4 — chaque template définit son propre layout interne */
+/* Page A4 — paged.js wrappe le contenu dans .pagedjs_page (taille A4 via @page).
+   .page reste un simple conteneur sans dimensions fixes, sinon le contenu
+   déborde et génère une 2e page A4 vide. */
 .page {
-  width: 210mm;
-  height: 297mm;
   background: white;
   position: relative;
-  overflow: hidden;
 }
 
 /* Photo : ratio préservé, shrink-only, jamais d'agrandissement */
