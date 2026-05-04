@@ -77,10 +77,10 @@ export default function ManualConfigPanel({ projet, config, onChange }: Props) {
     }
   };
 
-  // Texte
+  // Texte (sliders en % de caractères du texte total)
   const setColumns = (n: 1 | 2) => onChange({ ...config, textColumns: n });
-  const setCol1H = (v: number) => onChange({ ...config, textCol1HeightMm: v });
-  const setCol2H = (v: number) => onChange({ ...config, textCol2HeightMm: v });
+  const setCol1Pct = (v: number) => onChange({ ...config, textCol1Percent: v });
+  const setCol2Pct = (v: number) => onChange({ ...config, textCol2Percent: v });
 
   // Photos additionnelles
   const extras = config.extraPhotos ?? [];
@@ -170,17 +170,17 @@ export default function ManualConfigPanel({ projet, config, onChange }: Props) {
           ))}
         </div>
         <Slider
-          label={config.textColumns === 1 ? 'Hauteur' : 'Haut. col 1'}
-          value={config.textCol1HeightMm}
-          onChange={setCol1H}
-          min={30} max={220} step={5} unit="mm"
+          label={config.textColumns === 1 ? '% texte' : '% col 1'}
+          value={config.textCol1Percent}
+          onChange={setCol1Pct}
+          min={0} max={100} step={5} unit="%"
         />
         {config.textColumns === 2 && (
           <Slider
-            label="Haut. col 2"
-            value={config.textCol2HeightMm}
-            onChange={setCol2H}
-            min={30} max={220} step={5} unit="mm"
+            label="% col 2"
+            value={config.textCol2Percent}
+            onChange={setCol2Pct}
+            min={0} max={100} step={5} unit="%"
           />
         )}
       </div>

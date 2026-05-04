@@ -22,10 +22,12 @@ export interface ManualConfig {
   /** Uniquement utilisé en format portrait (2 photos côte à côte). */
   mainPhoto2?: PhotoConfig;
   textColumns: 1 | 2;
-  /** Hauteur de la 1ʳᵉ colonne de texte en mm (40..200). */
-  textCol1HeightMm: number;
-  /** Hauteur de la 2ᵉ colonne de texte en mm — uniquement utilisé si textColumns === 2. */
-  textCol2HeightMm: number;
+  /** % du texte total à afficher en col 1 (0..100). Le point de coupure exact
+   *  est calé sur le "." le plus proche de cette position. */
+  textCol1Percent: number;
+  /** % du texte total à afficher en col 2 (0..100), démarrant après la fin de col 1.
+   *  Si col1% + col2% < 100, le reste du texte est masqué. */
+  textCol2Percent: number;
   /**
    * Photos additionnelles arrangées en grille (largeur de page / N) sous le texte.
    * Quel que soit le mode texte (1 ou 2 colonnes), les photos vont après le bloc texte.
@@ -38,8 +40,8 @@ export const DEFAULT_MANUAL_CONFIG: ManualConfig = {
   mainPhotoFormat: 'paysage',
   mainPhoto: { index: 0, sizePercent: 100 },
   textColumns: 2,
-  textCol1HeightMm: 80,
-  textCol2HeightMm: 80,
+  textCol1Percent: 50,
+  textCol2Percent: 50,
   extraPhotos: [],
 };
 

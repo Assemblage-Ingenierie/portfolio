@@ -56,8 +56,9 @@ const CSS = `
 }
 
 /* ── Texte ────────────────────────────────────────────
-   Hauteurs contrôlées par sliders. overflow: hidden coupe net
-   le surplus — l'utilisateur voit la coupure et augmente la hauteur.   font-family appliqué à chaque colonne pour cohérence. */
+   La quantité de texte affichée par colonne est contrôlée par les sliders
+   col1Percent / col2Percent (% du texte total). Pas de hauteur explicite :
+   la colonne s'adapte naturellement au contenu fourni. */
 .man-text {
   width: 100%;
 }
@@ -70,23 +71,16 @@ const CSS = `
   hyphens: auto;
   font-family: var(--sans);
 }
-.man-text--1col {
-  height: var(--col1-h, 80mm);
-  overflow: hidden;
-}
 .man-text--2col {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  align-items: start;
 }
 .man-text--2col > .man-col-1 {
-  height: var(--col1-h, 80mm);
-  overflow: hidden;
   padding-right: 6mm;
   border-right: 1px solid var(--ai-gris);
 }
 .man-text--2col > .man-col-2 {
-  height: var(--col2-h, 80mm);
-  overflow: hidden;
   padding-left: 6mm;
 }
 
@@ -110,30 +104,25 @@ function clampPercent(v: number): number {
   return Math.max(0, Math.min(100, Math.round(v)));
 }
 
-function clampMm(v: number, min = 30, max = 250): number {
-  if (Number.isNaN(v)) return 80;
-  return Math.max(min, Math.min(max, Math.round(v)));
-}
-
 /**
- * Trouve l'index du début de la 2ᵉ colonne dans une description complète.
+ * Trouve l'index de coupure le plus proche d'une cible donnée, en se calant
+ * sur un caractère "." pour finir proprement une phrase.
  *
  * Algorithme :
- * - X = floor(length/2)
- * - Deux pointeurs partent de X : un vers la droite, un vers la gauche
+ * - Deux pointeurs partent de `target` (un vers la droite, un vers la gauche)
  * - Le premier qui tombe sur '.' gagne, on coupe à p + 2 (saute "." + espace)
- * - Fallback si aucun '.' : coupe au premier espace après X
- * - Texte court (<40 chars) : pas de coupure, tout reste en col 1
+ * - Fallback si aucun '.' : premier espace après target ; sinon `target`
+ * - Index est clampé dans [0, text.length]
  */
-function findSplitIndex(text: string): number {
+function findSplitIndex(text: string, target: number): number {
   const T = text.length;
-  if (T < 40) return T;
-  const X = Math.floor(T / 2);
+  const X = Math.max(0, Math.min(T, Math.floor(target)));
+  if (T < 40 || X >= T) return T;
   let r = X;
   let l = X;
   while (r < T || l > 0) {
-    if (r < T && text[r] === '.') return r + 2;
-    if (l > 0 && text[l] === '.') return l + 2;
+    if (r < T && text[r] === '.') return Math.min(T, r + 2);
+    if (l > 0 && text[l] === '.') return Math.min(T, l + 2);
     r++;
     l--;
   }
@@ -147,17 +136,27 @@ function paragraphsToHtml(text: string): string {
 }
 
 /**
- * Sépare la description en deux moitiés HTML pour les colonnes 1 et 2.
- * Utilise findSplitIndex pour couper proprement à la fin d'une phrase.
+ * Sépare la description en deux moitiés HTML pour col 1 et col 2.
+ * - col 1 contient les `col1Percent`% premiers caractères, calés sur '.'
+ * - col 2 démarre à la fin de col 1 et contient `col2Percent`% du texte total,
+ *   également calé sur '.' à la fin (le reste après est masqué).
  */
-function splitDescription(description: string): [string, string] {
+function splitDescription(
+  description: string,
+  col1Percent: number,
+  col2Percent: number
+): [string, string] {
   const T = description.length;
   if (T === 0) return ['', ''];
-  const idx = findSplitIndex(description);
-  // Garde-fous : indice hors borne ou trop proche du bord → coupe brute au milieu
-  const safeIdx = idx <= 0 || idx >= T - 1 ? Math.floor(T / 2) : idx;
-  const leftRaw = description.slice(0, safeIdx).trim();
-  const rightRaw = description.slice(safeIdx).trim();
+
+  const target1 = (col1Percent / 100) * T;
+  const splitStart = findSplitIndex(description, target1);
+
+  const target2 = splitStart + (col2Percent / 100) * T;
+  const splitEnd = findSplitIndex(description, target2);
+
+  const leftRaw = description.slice(0, splitStart).trim();
+  const rightRaw = description.slice(splitStart, splitEnd).trim();
   return [paragraphsToHtml(leftRaw), paragraphsToHtml(rightRaw)];
 }
 
@@ -190,17 +189,20 @@ export function renderManuel(projet: Projet, configIn?: ManualConfig): TemplateB
 
   // ── Texte ──
   const description = (projet.description ?? '').trim();
-  const col1H = clampMm(cfg.textCol1HeightMm ?? 80);
-  const col2H = clampMm(cfg.textCol2HeightMm ?? 80);
+  const col1Pct = clampPercent(cfg.textCol1Percent ?? 50);
+  const col2Pct = clampPercent(cfg.textCol2Percent ?? 50);
 
   let textHtml = '';
   if (description.length > 0) {
     if (cfg.textColumns === 1) {
-      const ps = paragraphsToHtml(description);
-      textHtml = `<div class="man-text man-text--1col" style="--col1-h:${col1H}mm">${ps}</div>`;
+      // En 1-col, col1Percent contrôle la quantité de texte affiché.
+      const target = (col1Pct / 100) * description.length;
+      const cutoff = findSplitIndex(description, target);
+      const ps = paragraphsToHtml(description.slice(0, cutoff).trim());
+      textHtml = `<div class="man-text man-text--1col">${ps}</div>`;
     } else {
-      const [leftHtml, rightHtml] = splitDescription(description);
-      textHtml = `<div class="man-text man-text--2col" style="--col1-h:${col1H}mm; --col2-h:${col2H}mm">
+      const [leftHtml, rightHtml] = splitDescription(description, col1Pct, col2Pct);
+      textHtml = `<div class="man-text man-text--2col">
         <div class="man-col-1">${leftHtml}</div>
         <div class="man-col-2">${rightHtml}</div>
       </div>`;
