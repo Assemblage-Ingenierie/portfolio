@@ -37,13 +37,27 @@ export default async function PrintPage({
   // Le CSS @media print masque tous les wrappers AuthGate / barre d'outils,
   // pour que seul le contenu paginé apparaisse dans la sortie PDF.
   const PRINT_OVERRIDES = `
-    body { background: #ECECEC; }
-    /* Le bouton logout d'AuthGate est un button au top du body — masqué en mode impression */
+    body { background: #ECECEC; margin: 0; }
+
+    /* La div source sert de seed à paged.js puis est masquée — sinon elle
+       reste visible (étirée pleine largeur de fenêtre) à côté des .pagedjs_pages,
+       et apparaît aussi dans le print preview du navigateur. */
+    #print-source {
+      position: absolute;
+      left: -10000px;
+      top: 0;
+      width: 210mm;
+      visibility: hidden;
+    }
+
+    /* Bouton logout d'AuthGate au top du body — masqué en mode impression */
     @media print {
       .print-toolbar,
       body > button { display: none !important; }
       body { background: white; }
+      #print-source { display: none !important; }
     }
+
     .pagedjs_pages { margin: 24px auto; }
     .pagedjs_page {
       box-shadow: 0 2px 16px rgba(0,0,0,0.15);
