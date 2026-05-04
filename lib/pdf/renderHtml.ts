@@ -12,6 +12,7 @@ const FONTS = `<link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,300;1,6..72,400;1,6..72,500&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">`;
 
 const CSS = `
+@page { size: A4; margin: 0; }
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 body { background: white; }
 :root {
@@ -27,7 +28,7 @@ body { background: white; }
 
 /* ── Editorial ── */
 .ed-page {
-  width: 210mm; min-height: 297mm;
+  width: 210mm;
   padding: 14mm 18mm 12mm 18mm;
   background: white;
   display: flex; flex-direction: column; gap: 5mm;
@@ -105,7 +106,7 @@ body { background: white; }
 
 /* ── Magazine ── */
 .mag-page {
-  width: 210mm; min-height: 297mm; background: white;
+  width: 210mm; background: white;
   position: relative; display: grid; grid-template-rows: 80mm 1fr auto auto;
 }
 .mag-hero {

@@ -14,7 +14,10 @@ const nextConfig: NextConfig = {
   // Force l'inclusion des binaires Chromium dans le déploiement Vercel
   // (Turbopack préserve import.meta.url donc le chemin est correct, mais les .br ne sont pas tracés auto)
   outputFileTracingIncludes: {
-    '/api/projet/[slug]/pdf': ['./node_modules/@sparticuz/chromium/bin/**'],
+    '/api/projet/[slug]/pdf': [
+      './node_modules/@sparticuz/chromium/bin/**',
+      './node_modules/pagedjs/dist/paged.js',
+    ],
   },
   turbopack: {
     root: findProjectRoot(__dirname),

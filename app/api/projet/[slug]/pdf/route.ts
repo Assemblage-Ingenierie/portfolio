@@ -1,4 +1,5 @@
 import { existsSync } from 'fs';
+import { join } from 'path';
 import { NextRequest, NextResponse } from 'next/server';
 import { getProjet } from '@/lib/airtable';
 import { requireApprovedUser } from '@/lib/supabase/requireApprovedUser';
@@ -68,9 +69,22 @@ export async function GET(
 
     await page.setContent(html, { waitUntil: 'networkidle0', timeout: 30000 });
 
+    // Injecter paged.js en mode handler (pas le polyfill auto-exécuté)
+    const pagedJsPath = join(process.cwd(), 'node_modules/pagedjs/dist/paged.js');
+    await page.addScriptTag({ path: pagedJsPath });
+
+    // Appel explicite Previewer.preview() — handler mode (pas le polyfill auto-exécuté)
+    await page.evaluate(() =>
+      new Promise<void>((resolve, reject) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const previewer = new (window as any).Paged.Previewer();
+        previewer.preview().then(resolve).catch(reject);
+      })
+    );
+
     const pdf = await page.pdf({
-      format: 'A4',
       printBackground: true,
+      preferCSSPageSize: true,
       margin: { top: 0, right: 0, bottom: 0, left: 0 },
     });
 
