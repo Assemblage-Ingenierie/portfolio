@@ -42,12 +42,14 @@ html, body { background: white; }
   position: relative;
 }
 
-/* Photo : ratio préservé, shrink-only, jamais d'agrandissement */
+/* Photo : ratio préservé, shrink-only, jamais d'agrandissement.
+   Fond transparent pour que les éventuelles marges (différences de ratio)
+   se fondent dans la page sans bandes grises visibles. */
 .photo-frame {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--ai-gris-tres-clair);
+  background: transparent;
   overflow: hidden;
 }
 .photo-img {

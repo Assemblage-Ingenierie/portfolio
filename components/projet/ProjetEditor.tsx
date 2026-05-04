@@ -72,7 +72,10 @@ export default function ProjetEditor({ projet }: Props) {
     try {
       // Sauvegarde implicite avant export pour que le PDF reflète l'édition courante
       await handleSave();
-      window.open(`/projet/${projet.slug}/print`, '_blank');
+      window.open(
+        `/projet/${projet.slug}/print?template=${encodeURIComponent(template)}`,
+        '_blank'
+      );
     } catch (e) {
       alert(e instanceof Error ? e.message : 'Erreur export PDF');
     } finally {

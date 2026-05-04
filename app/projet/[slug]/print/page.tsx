@@ -2,23 +2,37 @@ import { getProjet } from '@/lib/airtable';
 import { notFound } from 'next/navigation';
 import { renderTemplate } from '@/lib/pdf/renderHtml';
 import { SHARED_CSS } from '@/lib/pdf/templates/shared';
+import { isTemplateChoice } from '@/lib/pdf/selectTemplate';
 import PrintRunner from '@/components/PrintRunner';
 
 /**
  * Page d'impression : rend le template PDF directement dans le navigateur,
- * paged.js paginé en mode handler, puis bouton "Imprimer / PDF" qui ouvre
- * la boîte de dialogue native (Save as PDF). Pas de serveur PDF.
+ * paged.js polyfill, puis bouton "Imprimer / PDF" qui ouvre la boîte de
+ * dialogue native (Save as PDF). Pas de serveur PDF.
+ *
+ * Query param `template` (Solo|Diptyque|...) permet de forcer un template
+ * sans dépendre de la valeur Airtable — utile car la propagation Airtable
+ * n'est pas instantanée et l'utilisateur peut vouloir tester un autre layout.
  */
 export default async function PrintPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ template?: string }>;
 }) {
   const { slug } = await params;
+  const { template: templateOverride } = await searchParams;
   const projet = await getProjet(slug);
   if (!projet) notFound();
 
-  const bundle = renderTemplate(projet);
+  // Si l'utilisateur passe ?template=... et que la valeur est valide, on prend
+  // celle-ci plutôt que celle d'Airtable (qui peut être périmée ou auto-sélectionnée).
+  const effectiveProjet = isTemplateChoice(templateOverride)
+    ? { ...projet, template: templateOverride }
+    : projet;
+
+  const bundle = renderTemplate(effectiveProjet);
 
   // Le CSS @media print masque tous les wrappers AuthGate / barre d'outils,
   // pour que seul le contenu paginé apparaisse dans la sortie PDF.

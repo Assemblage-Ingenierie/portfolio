@@ -38,7 +38,12 @@ export default function ProjetToolbar({ projet, template, onTemplateChange }: Pr
   function handleDownloadPdf() {
     // Ouvre la page d'impression dans un nouvel onglet : paged.js paginé côté client,
     // puis la boîte de dialogue d'impression du navigateur permet "Save as PDF".
-    window.open(`/projet/${projet.slug}/print`, '_blank');
+    // On passe explicitement le template courant pour s'affranchir de la latence
+    // de propagation Airtable.
+    window.open(
+      `/projet/${projet.slug}/print?template=${encodeURIComponent(template)}`,
+      '_blank'
+    );
   }
 
   const btn: React.CSSProperties = {
