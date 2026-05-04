@@ -116,29 +116,49 @@ function clampMm(v: number, min = 30, max = 250): number {
 }
 
 /**
- * Sépare les paragraphes en deux moitiés à peu près équilibrées en
- * caractères, pour le mode 2-col qui rend chaque moitié dans une colonne
- * indépendante (au lieu de column-count qui ne supporte pas les hauteurs
- * indépendantes par colonne).
+ * Trouve l'index du début de la 2ᵉ colonne dans une description complète.
+ *
+ * Algorithme :
+ * - X = floor(length/2)
+ * - Deux pointeurs partent de X : un vers la droite, un vers la gauche
+ * - Le premier qui tombe sur '.' gagne, on coupe à p + 2 (saute "." + espace)
+ * - Fallback si aucun '.' : coupe au premier espace après X
+ * - Texte court (<40 chars) : pas de coupure, tout reste en col 1
  */
-function splitParagraphs(paragraphs: string[]): [string[], string[]] {
-  if (paragraphs.length === 0) return [[], []];
-  if (paragraphs.length === 1) return [paragraphs, []];
-  const total = paragraphs.reduce((s, p) => s + p.length, 0);
-  const half = total / 2;
-  let acc = 0;
-  for (let i = 0; i < paragraphs.length; i++) {
-    const next = acc + paragraphs[i].length;
-    if (next >= half) {
-      const splitIdx = Math.abs(next - half) < Math.abs(acc - half) ? i + 1 : i;
-      return [
-        paragraphs.slice(0, Math.max(1, splitIdx)),
-        paragraphs.slice(Math.max(1, splitIdx)),
-      ];
-    }
-    acc = next;
+function findSplitIndex(text: string): number {
+  const T = text.length;
+  if (T < 40) return T;
+  const X = Math.floor(T / 2);
+  let r = X;
+  let l = X;
+  while (r < T || l > 0) {
+    if (r < T && text[r] === '.') return r + 2;
+    if (l > 0 && text[l] === '.') return l + 2;
+    r++;
+    l--;
   }
-  return [paragraphs, []];
+  const sp = text.indexOf(' ', X);
+  return sp >= 0 ? sp + 1 : X;
+}
+
+function paragraphsToHtml(text: string): string {
+  if (!text) return '';
+  return text.split(/\n\n+/).filter(Boolean).map(p => `<p>${esc(p)}</p>`).join('');
+}
+
+/**
+ * Sépare la description en deux moitiés HTML pour les colonnes 1 et 2.
+ * Utilise findSplitIndex pour couper proprement à la fin d'une phrase.
+ */
+function splitDescription(description: string): [string, string] {
+  const T = description.length;
+  if (T === 0) return ['', ''];
+  const idx = findSplitIndex(description);
+  // Garde-fous : indice hors borne ou trop proche du bord → coupe brute au milieu
+  const safeIdx = idx <= 0 || idx >= T - 1 ? Math.floor(T / 2) : idx;
+  const leftRaw = description.slice(0, safeIdx).trim();
+  const rightRaw = description.slice(safeIdx).trim();
+  return [paragraphsToHtml(leftRaw), paragraphsToHtml(rightRaw)];
 }
 
 export function renderManuel(projet: Projet, configIn?: ManualConfig): TemplateBundle {
@@ -170,22 +190,19 @@ export function renderManuel(projet: Projet, configIn?: ManualConfig): TemplateB
 
   // ── Texte ──
   const description = (projet.description ?? '').trim();
-  const paragraphs = description.split(/\n\n+/).filter(Boolean);
   const col1H = clampMm(cfg.textCol1HeightMm ?? 80);
   const col2H = clampMm(cfg.textCol2HeightMm ?? 80);
 
   let textHtml = '';
-  if (paragraphs.length > 0) {
+  if (description.length > 0) {
     if (cfg.textColumns === 1) {
-      const ps = paragraphs.map(p => `<p>${esc(p)}</p>`).join('');
+      const ps = paragraphsToHtml(description);
       textHtml = `<div class="man-text man-text--1col" style="--col1-h:${col1H}mm">${ps}</div>`;
     } else {
-      const [left, right] = splitParagraphs(paragraphs);
-      const leftPs = left.map(p => `<p>${esc(p)}</p>`).join('');
-      const rightPs = right.map(p => `<p>${esc(p)}</p>`).join('');
+      const [leftHtml, rightHtml] = splitDescription(description);
       textHtml = `<div class="man-text man-text--2col" style="--col1-h:${col1H}mm; --col2-h:${col2H}mm">
-        <div class="man-col-1">${leftPs}</div>
-        <div class="man-col-2">${rightPs}</div>
+        <div class="man-col-1">${leftHtml}</div>
+        <div class="man-col-2">${rightHtml}</div>
       </div>`;
     }
   }
