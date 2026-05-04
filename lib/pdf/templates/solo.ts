@@ -32,9 +32,9 @@ export function renderSolo(projet: Projet): TemplateBundle {
 
     ${titleBlockHtml(projet, '32pt')}
 
-    ${cover ? `<div class="solo-hero photo-frame">${photoImg(cover, projet.nom)}</div>` : ''}
-
     ${metaGridHtml(projet)}
+
+    ${cover ? `<div class="solo-hero photo-frame">${photoImg(cover, projet.nom)}</div>` : ''}
 
     <div class="solo-content">
       ${descriptionHtml(projet, 2)}

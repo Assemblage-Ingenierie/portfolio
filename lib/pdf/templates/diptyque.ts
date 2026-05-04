@@ -30,12 +30,12 @@ export function renderDiptyque(projet: Projet): TemplateBundle {
 
     ${titleBlockHtml(projet, '30pt')}
 
+    ${metaGridHtml(projet)}
+
     ${(p1 || p2) ? `<div class="dip-photos">
       ${p1 ? `<div class="photo-frame">${photoImg(p1, projet.nom)}</div>` : '<div></div>'}
       ${p2 ? `<div class="photo-frame">${photoImg(p2, projet.nom)}</div>` : '<div></div>'}
     </div>` : ''}
-
-    ${metaGridHtml(projet)}
 
     <div>${descriptionHtml(projet, 2)}</div>
 

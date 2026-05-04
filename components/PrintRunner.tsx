@@ -30,7 +30,13 @@ export default function PrintRunner({ targetSelector }: { targetSelector: string
         (window as any).PagedConfig = {
           auto: true,
           content: source,
-          after: () => setStatus('ready'),
+          after: () => {
+            // Une fois la pagination terminée, on masque la div source.
+            // Sinon elle reste visible à côté des .pagedjs_pages (et apparaît
+            // dans le print preview du navigateur en plus du contenu paginé).
+            source.style.display = 'none';
+            setStatus('ready');
+          },
         };
 
         await loadPagedPolyfill();

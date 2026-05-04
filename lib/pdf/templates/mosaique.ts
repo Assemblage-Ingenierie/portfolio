@@ -58,9 +58,9 @@ export function renderMosaique(projet: Projet): TemplateBundle {
 
     ${titleBlockHtml(projet, '28pt')}
 
-    ${gridHtml}
-
     ${metaGridHtml(projet)}
+
+    ${gridHtml}
 
     <div>${descriptionHtml(projet, 2)}</div>
 

@@ -36,26 +36,18 @@ export default async function PrintPage({
 
   // Le CSS @media print masque tous les wrappers AuthGate / barre d'outils,
   // pour que seul le contenu paginé apparaisse dans la sortie PDF.
+  // #print-source : largeur fixée à A4 pour que paged.js mesure correctement.
+  // Il est ensuite masqué via JS (display:none) dans le callback `after` de paged.js,
+  // une fois la pagination terminée. En @media print, masquage de ceinture-bretelles.
   const PRINT_OVERRIDES = `
     body { background: #ECECEC; margin: 0; }
+    #print-source { width: 210mm; margin: 0 auto; }
 
-    /* La div source sert de seed à paged.js puis est masquée — sinon elle
-       reste visible (étirée pleine largeur de fenêtre) à côté des .pagedjs_pages,
-       et apparaît aussi dans le print preview du navigateur. */
-    #print-source {
-      position: absolute;
-      left: -10000px;
-      top: 0;
-      width: 210mm;
-      visibility: hidden;
-    }
-
-    /* Bouton logout d'AuthGate au top du body — masqué en mode impression */
     @media print {
       .print-toolbar,
-      body > button { display: none !important; }
-      body { background: white; }
+      body > button,
       #print-source { display: none !important; }
+      body { background: white; }
     }
 
     .pagedjs_pages { margin: 24px auto; }
