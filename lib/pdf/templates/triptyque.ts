@@ -1,6 +1,6 @@
 import type { Projet } from '@/types/projet';
 import {
-  TemplateBundle, esc,
+  TemplateBundle, PhotoRef, esc,
   headerHtml, footerHtml, titleBlockHtml, metaGridHtml,
   photoImg, allPhotos,
 } from './shared';
@@ -18,33 +18,60 @@ import {
  * shrinkable (flex: 0 1 auto) et `.tri-text` occupe le reste (flex: 1 1 0).
  */
 
-/** Constantes de calcul d'espace pour la 3ᵉ photo conditionnelle.
- *  Hypothèses pour la zone texte 2 colonnes du Triptyque :
- *  - Largeur d'une colonne : ~84 mm (174 mm utiles - 6 mm gap, /2)
- *  - Hauteur d'une colonne : ~165 mm (après header + titre + bandeau + photos top + footer)
- *  - À 9.5pt / line-height 1.5 → ~50 chars par ligne, ~5 mm par ligne, ~33 lignes par col
- *  - Une colonne pleine ≈ 1650 caractères. */
-const COL_CHARS_FULL = 1650;
-const COL_HEIGHT_MM = 165;
+/** Hypothèses dimensionnelles (en mm) pour estimer l'espace disponible.
+ *  La page A4 fait 297 × 210, padding interne 14/12 + 18/18 → 271 × 174 utiles.
+ *
+ *  Éléments fixes en hauteur (header / titre / bandeau / footer + 5 gaps de 4mm) :
+ *  ≈ 88 mm. Le reste (183 mm) est partagé entre la zone photos du haut et la
+ *  zone texte 2 colonnes. La zone photos varie selon le layout :
+ *
+ *    - Paysage : 1 photo pleine largeur, hauteur = min(110, 174 × ratio_h/w)
+ *    - Portrait : 2 photos côte à côte dans une grille 84mm × 80mm fixe
+ *
+ *  La hauteur de chaque colonne de texte = 271 - 88 - hauteur_photos_haut. */
+const PAGE_INNER_HEIGHT_MM = 271;
+const STATIC_HEIGHT_MM = 88;
+const FULL_WIDTH_MM = 174;
+const PORTRAIT_PHOTOS_HEIGHT_MM = 80;
+const PAYSAGE_PHOTO_MAX_MM = 110;
+
+/** Caractères par ligne et hauteur de ligne dans la zone texte (Open Sans 9.5pt, line-height 1.5). */
 const CHARS_PER_LINE = 50;
 const LINE_HEIGHT_MM = 5;
-const PHOTO_MARGINS_MM = 9; // margin-top (4) + safety (5)
-const MIN_PHOTO_HEIGHT_MM = 30; // en deçà la photo n'a pas de sens visuel
+const PHOTO_MARGINS_MM = 9; // margin-top + safety
+const MIN_PHOTO_HEIGHT_MM = 30;
 
-/** Seuil de ratio h/w en dessous duquel on considère la photo comme paysage. */
+/** Seuil de ratio h/w en dessous duquel on considère la photo 1 comme paysage. */
 const PAYSAGE_RATIO_MAX = 0.5;
 
 /**
- * Calcule la hauteur maximale disponible pour la photo conditionnelle dans
- * la 2ᵉ colonne, en fonction du nombre de caractères du texte qui occupent
- * cette colonne (= total - capacité col 1).
- *
- * Retourne 0 si l'espace est insuffisant (la photo ne sera alors pas rendue).
+ * Estime la hauteur disponible pour les colonnes de texte selon le layout
+ * et la photo 1 (en mode paysage, sa hauteur dépend de son ratio intrinsèque).
  */
-function computeExtraPhotoMaxHeight(descriptionLength: number): number {
-  const charsCol2 = Math.max(0, descriptionLength - COL_CHARS_FULL);
+function computeColumnHeight(isPaysage: boolean, photo1?: PhotoRef): number {
+  if (!isPaysage) {
+    return PAGE_INNER_HEIGHT_MM - STATIC_HEIGHT_MM - PORTRAIT_PHOTOS_HEIGHT_MM;
+  }
+  // Paysage : hauteur photo = min(plafond, largeur × ratio_h/w naturel)
+  const ratio = photo1?.height && photo1?.width
+    ? photo1.height / photo1.width
+    : 0.55; // ratio par défaut raisonnable si dimensions absentes
+  const photoH = Math.min(PAYSAGE_PHOTO_MAX_MM, FULL_WIDTH_MM * ratio);
+  return PAGE_INNER_HEIGHT_MM - STATIC_HEIGHT_MM - photoH;
+}
+
+/**
+ * Estime l'espace restant en bas de la 2ᵉ colonne pour y insérer la 3ᵉ photo,
+ * connaissant la longueur totale du texte et la hauteur d'une colonne.
+ *
+ * Retourne 0 si l'espace est insuffisant (< MIN_PHOTO_HEIGHT_MM) :
+ * la photo ne sera alors pas rendue, plutôt que de déborder.
+ */
+function computeExtraPhotoMaxHeight(descriptionLength: number, colHeightMm: number): number {
+  const colCharsFull = (colHeightMm / LINE_HEIGHT_MM) * CHARS_PER_LINE;
+  const charsCol2 = Math.max(0, descriptionLength - colCharsFull);
   const textHeightCol2 = (charsCol2 / CHARS_PER_LINE) * LINE_HEIGHT_MM;
-  const remaining = COL_HEIGHT_MM - textHeightCol2 - PHOTO_MARGINS_MM;
+  const remaining = colHeightMm - textHeightCol2 - PHOTO_MARGINS_MM;
   return remaining >= MIN_PHOTO_HEIGHT_MM ? remaining : 0;
 }
 
@@ -78,11 +105,12 @@ const CSS = `
   max-height: 110mm;
 }
 .tri-photos--duo {
-  /* Layout portrait : 2 photos côte à côte, 50/50, hauteur ~90mm. */
+  /* Layout portrait : 2 photos côte à côte, 50/50, hauteur fixe alignée
+     sur PORTRAIT_PHOTOS_HEIGHT_MM (80mm). */
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 3mm;
-  height: 90mm;
+  height: 80mm;
 }
 .tri-photos--duo .photo-frame {
   width: 100%;
@@ -104,6 +132,8 @@ const CSS = `
   font-size: 9.5pt;
   line-height: 1.5;
   color: var(--ai-noir);
+  text-align: justify;
+  hyphens: auto;
 }
 
 /* 3ᵉ photo conditionnelle — forcée en colonne 2, en bas.
@@ -158,9 +188,15 @@ export function renderTriptyque(projet: Projet): TemplateBundle {
   const description = (projet.description ?? '').trim();
   const paragraphs = description.split(/\n\n+/).filter(Boolean);
 
-  // Calcul de l'espace disponible pour la 3ᵉ photo en bas de colonne 2.
+  // Hauteur réelle des colonnes de texte = espace disponible après header,
+  // titre, bandeau, footer et la zone photos du haut. La zone photos varie
+  // selon le layout (paysage = dépend du ratio, portrait = fixe).
+  const colHeight = computeColumnHeight(isPaysage, p1);
+
+  // Calcul de l'espace disponible pour la 3ᵉ photo en bas de colonne 2,
+  // en tenant compte du texte qui déborde déjà en col 2.
   // Si remainingHeight < MIN_PHOTO_HEIGHT_MM → 0 → pas de photo.
-  const extraPhotoMaxHeight = computeExtraPhotoMaxHeight(description.length);
+  const extraPhotoMaxHeight = computeExtraPhotoMaxHeight(description.length, colHeight);
 
   // 3ᵉ photo candidate : photo disponible selon le layout
   // - en mode paysage on prend p2 (p1 est déjà utilisée comme hero)
