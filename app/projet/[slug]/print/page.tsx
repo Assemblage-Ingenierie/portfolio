@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { renderTemplate } from '@/lib/pdf/renderHtml';
 import { SHARED_CSS } from '@/lib/pdf/templates/shared';
 import { isTemplateChoice } from '@/lib/pdf/selectTemplate';
+import { decodeConfig } from '@/lib/pdf/manualConfig';
 import PrintRunner from '@/components/PrintRunner';
 
 /**
@@ -20,10 +21,10 @@ export default async function PrintPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ template?: string }>;
+  searchParams: Promise<{ template?: string; config?: string }>;
 }) {
   const { slug } = await params;
-  const { template: templateOverride } = await searchParams;
+  const { template: templateOverride, config: configRaw } = await searchParams;
   const projet = await getProjet(slug);
   if (!projet) notFound();
 
@@ -33,7 +34,12 @@ export default async function PrintPage({
     ? { ...projet, template: templateOverride }
     : projet;
 
-  const bundle = renderTemplate(effectiveProjet);
+  // Si template === 'Manuel' et qu'une config est fournie, on la décode.
+  const manualConfig = effectiveProjet.template === 'Manuel' && configRaw
+    ? decodeConfig(configRaw) ?? undefined
+    : undefined;
+
+  const bundle = renderTemplate(effectiveProjet, manualConfig ? { manualConfig } : undefined);
 
   // Overrides d'affichage écran (avant impression) :
   // - fond gris autour de la fiche pour visualiser la "page"

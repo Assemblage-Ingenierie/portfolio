@@ -5,14 +5,16 @@ import Link from 'next/link';
 import type { Projet, TemplateChoice } from '@/types/projet';
 import { TEMPLATE_OPTIONS } from '@/types/projet';
 import { authHeaders } from '@/lib/supabase/authHeaders';
+import { encodeConfig, ManualConfig } from '@/lib/pdf/manualConfig';
 
 interface Props {
   projet: Projet;
   template: TemplateChoice;
+  manualConfig?: ManualConfig;
   onTemplateChange: (template: TemplateChoice) => void;
 }
 
-export default function ProjetToolbar({ projet, template, onTemplateChange }: Props) {
+export default function ProjetToolbar({ projet, template, manualConfig, onTemplateChange }: Props) {
   const [publishing, setPublishing] = useState(false);
   const [result, setResult] = useState<{ url?: string; error?: string; warning?: string } | null>(null);
 
@@ -36,14 +38,14 @@ export default function ProjetToolbar({ projet, template, onTemplateChange }: Pr
   }
 
   function handleDownloadPdf() {
-    // Ouvre la page d'impression dans un nouvel onglet : paged.js paginé côté client,
-    // puis la boîte de dialogue d'impression du navigateur permet "Save as PDF".
-    // On passe explicitement le template courant pour s'affranchir de la latence
-    // de propagation Airtable.
-    window.open(
-      `/projet/${projet.slug}/print?template=${encodeURIComponent(template)}`,
-      '_blank'
-    );
+    // Ouvre la page d'impression dans un nouvel onglet.
+    // - On passe le template courant (s'affranchit de la latence Airtable)
+    // - Si Manuel, on encode la config en base64 pour la transmettre.
+    const params = new URLSearchParams({ template });
+    if (template === 'Manuel' && manualConfig) {
+      params.set('config', encodeConfig(manualConfig));
+    }
+    window.open(`/projet/${projet.slug}/print?${params.toString()}`, '_blank');
   }
 
   const btn: React.CSSProperties = {
