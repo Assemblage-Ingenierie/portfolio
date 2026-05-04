@@ -14,13 +14,10 @@ import {
  */
 const CSS = `
 .mos-page {
-  width: 100%;
-  height: 100%;
   padding: 14mm 18mm 12mm 18mm;
   display: flex;
   flex-direction: column;
   gap: 4mm;
-  box-sizing: border-box;
 }
 
 .mos-page > header,

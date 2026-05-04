@@ -12,14 +12,12 @@ import {
  * la photo se réduit (shrink-only) pour que tout (texte + photo + footer) tienne sur A4.
  */
 const CSS = `
+/* .solo-page hérite de .page : 210mm × 297mm + box-sizing: border-box. */
 .solo-page {
-  width: 100%;
-  height: 100%;
   padding: 14mm 18mm 12mm 18mm;
   display: flex;
   flex-direction: column;
   gap: 4mm;
-  box-sizing: border-box;
 }
 
 /* Toutes les sections au-dessus de la photo : taille naturelle, pas d'extension */
