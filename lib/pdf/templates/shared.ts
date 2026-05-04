@@ -34,12 +34,20 @@ html, body { background: white; }
   --sans: 'Open Sans', system-ui, sans-serif;
 }
 
-/* Page A4 — paged.js wrappe le contenu dans .pagedjs_page (taille A4 via @page).
-   .page reste un simple conteneur sans dimensions fixes, sinon le contenu
-   déborde et génère une 2e page A4 vide. */
+/* Page A4 fixe : 210 × 297 mm. Tout le contenu d'un template doit tenir
+   strictement dans cette boîte (footer inclus). overflow: hidden garantit
+   qu'aucun débordement n'engendre une 2e page à l'impression. */
 .page {
+  width: 210mm;
+  height: 297mm;
   background: white;
   position: relative;
+  overflow: hidden;
+  /* Pas de saut après cette page : éviter la page blanche surnuméraire */
+  page-break-after: avoid;
+  break-after: avoid;
+  page-break-inside: avoid;
+  break-inside: avoid;
 }
 
 /* Photo : ratio préservé, shrink-only, jamais d'agrandissement.
@@ -198,8 +206,22 @@ export function metaGridHtml(projet: Projet): string {
   </div>`;
 }
 
-export function descriptionHtml(projet: Projet, columns: 1 | 2 = 1): string {
-  const paragraphs = (projet.description ?? '').split(/\n\n+/).filter(Boolean);
+/**
+ * Rend la description.
+ * - columns: 1 ou 2 colonnes
+ * - singleParagraph: si true, fusionne tous les sauts de ligne en un seul
+ *   paragraphe (utilisé par Solo pour avoir un bloc plein largeur compact)
+ */
+export function descriptionHtml(projet: Projet, columns: 1 | 2 = 1, singleParagraph = false): string {
+  const text = (projet.description ?? '').trim();
+  if (!text) return '';
+
+  if (singleParagraph) {
+    const flat = text.replace(/\s*\n+\s*/g, ' ');
+    return `<p class="t-texte-p">${esc(flat)}</p>`;
+  }
+
+  const paragraphs = text.split(/\n\n+/).filter(Boolean);
   if (paragraphs.length === 0) return '';
   const cls = columns === 2 ? 't-texte-cols-2' : '';
   return `<div class="${cls}">
