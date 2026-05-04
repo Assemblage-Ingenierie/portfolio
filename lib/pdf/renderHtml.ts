@@ -2,11 +2,12 @@ import type { Projet } from '@/types/projet';
 import { renderShell, TemplateBundle } from './templates/shared';
 import { renderSolo } from './templates/solo';
 import { renderDiptyque } from './templates/diptyque';
+import { renderTriptyque } from './templates/triptyque';
 import { renderMosaique } from './templates/mosaique';
 
 /**
  * Dispatcher : sélectionne le template selon `projet.template`.
- * Triptyque et Galerie ne sont pas encore implémentés — ils retombent sur Mosaïque pour l'instant.
+ * Galerie n'est pas encore implémenté — il retombe sur Mosaïque pour l'instant.
  */
 export function renderTemplate(projet: Projet): TemplateBundle {
   switch (projet.template) {
@@ -14,9 +15,10 @@ export function renderTemplate(projet: Projet): TemplateBundle {
       return renderSolo(projet);
     case 'Diptyque':
       return renderDiptyque(projet);
+    case 'Triptyque':
+      return renderTriptyque(projet);
     case 'Mosaïque':
-    case 'Triptyque': // TODO: template dédié
-    case 'Galerie':   // TODO: template multi-pages dédié
+    case 'Galerie': // TODO: template multi-pages dédié
       return renderMosaique(projet);
     default:
       return renderSolo(projet);

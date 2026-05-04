@@ -231,9 +231,16 @@ export function photoImg(photo: { url: string; filename?: string }, alt = ''): s
   return `<img class="photo-img" src="${esc(photo.url)}" alt="${esc(alt)}" />`;
 }
 
-export function allPhotos(projet: Projet): { url: string; filename: string }[] {
+export interface PhotoRef {
+  url: string;
+  filename: string;
+  width?: number;
+  height?: number;
+}
+
+export function allPhotos(projet: Projet): PhotoRef[] {
   return [projet.photoCouverture, ...(projet.photosProjet ?? [])].filter(
-    (p): p is { url: string; filename: string } => Boolean(p)
+    (p): p is PhotoRef => Boolean(p)
   );
 }
 

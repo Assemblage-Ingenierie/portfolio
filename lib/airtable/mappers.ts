@@ -8,14 +8,29 @@ import { autoSelectTemplate, isTemplateChoice } from '@/lib/pdf/selectTemplate';
 export function recordToProjet(record: any): Projet {
   const f = record.fields;
 
-  const photoCouverture = f['Photo Couverture']?.[0]
-    ? { url: f['Photo Couverture'][0].url, filename: f['Photo Couverture'][0].filename ?? 'cover.jpg' }
+  // Airtable expose les dimensions via attachment.thumbnails.full / large.
+  // On ne modifie pas la photo elle-même — on lit juste ses dimensions natives
+  // pour permettre à un template de choisir un layout adapté (paysage/portrait).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function dimsFrom(a: any): { width?: number; height?: number } {
+    const t = a?.thumbnails?.full ?? a?.thumbnails?.large;
+    return t ? { width: t.width, height: t.height } : {};
+  }
+
+  const photoCouvertureRaw = f['Photo Couverture']?.[0];
+  const photoCouverture = photoCouvertureRaw
+    ? {
+        url: photoCouvertureRaw.url,
+        filename: photoCouvertureRaw.filename ?? 'cover.jpg',
+        ...dimsFrom(photoCouvertureRaw),
+      }
     : undefined;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const photosProjet = (f['Photos projet'] ?? []).map((a: any) => ({
     url: a.url,
     filename: a.filename ?? 'photo.jpg',
+    ...dimsFrom(a),
   }));
 
   const rawCertification = f['Certification'] ?? '';

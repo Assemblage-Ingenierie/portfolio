@@ -39,8 +39,8 @@ export interface Projet {
   template: TemplateChoice;
   visiblePortfolio: boolean;
 
-  photoCouverture?: { url: string; filename: string };
-  photosProjet?: { url: string; filename: string }[];
+  photoCouverture?: { url: string; filename: string; width?: number; height?: number };
+  photosProjet?: { url: string; filename: string; width?: number; height?: number }[];
 
   certifications: string[];
   materiaux: string[];
