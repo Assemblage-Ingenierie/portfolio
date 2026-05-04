@@ -18,12 +18,35 @@ import {
  * shrinkable (flex: 0 1 auto) et `.tri-text` occupe le reste (flex: 1 1 0).
  */
 
-/** Seuil de longueur de description en dessous duquel on insère la 3ᵉ photo
- *  dans la 2ᵉ colonne (à ce volume, la 2ᵉ colonne est moins qu'à moitié remplie). */
-const SHORT_TEXT_THRESHOLD = 1500;
+/** Constantes de calcul d'espace pour la 3ᵉ photo conditionnelle.
+ *  Hypothèses pour la zone texte 2 colonnes du Triptyque :
+ *  - Largeur d'une colonne : ~84 mm (174 mm utiles - 6 mm gap, /2)
+ *  - Hauteur d'une colonne : ~165 mm (après header + titre + bandeau + photos top + footer)
+ *  - À 9.5pt / line-height 1.5 → ~50 chars par ligne, ~5 mm par ligne, ~33 lignes par col
+ *  - Une colonne pleine ≈ 1650 caractères. */
+const COL_CHARS_FULL = 1650;
+const COL_HEIGHT_MM = 165;
+const CHARS_PER_LINE = 50;
+const LINE_HEIGHT_MM = 5;
+const PHOTO_MARGINS_MM = 9; // margin-top (4) + safety (5)
+const MIN_PHOTO_HEIGHT_MM = 30; // en deçà la photo n'a pas de sens visuel
 
 /** Seuil de ratio h/w en dessous duquel on considère la photo comme paysage. */
 const PAYSAGE_RATIO_MAX = 0.5;
+
+/**
+ * Calcule la hauteur maximale disponible pour la photo conditionnelle dans
+ * la 2ᵉ colonne, en fonction du nombre de caractères du texte qui occupent
+ * cette colonne (= total - capacité col 1).
+ *
+ * Retourne 0 si l'espace est insuffisant (la photo ne sera alors pas rendue).
+ */
+function computeExtraPhotoMaxHeight(descriptionLength: number): number {
+  const charsCol2 = Math.max(0, descriptionLength - COL_CHARS_FULL);
+  const textHeightCol2 = (charsCol2 / CHARS_PER_LINE) * LINE_HEIGHT_MM;
+  const remaining = COL_HEIGHT_MM - textHeightCol2 - PHOTO_MARGINS_MM;
+  return remaining >= MIN_PHOTO_HEIGHT_MM ? remaining : 0;
+}
 
 const CSS = `
 .tri-page {
@@ -85,8 +108,8 @@ const CSS = `
 
 /* 3ᵉ photo conditionnelle — forcée en colonne 2, en bas.
    Taille adaptative : la photo grandit jusqu'à atteindre la largeur de
-   colonne (84 mm) OU une hauteur plafond (90 mm), selon la première limite
-   atteinte. Ratio préservé via object-fit: contain. */
+   colonne (84 mm) OU la hauteur restante de la colonne (passée en var),
+   selon la première limite atteinte. Ratio préservé via object-fit: contain. */
 .tri-extra-photo {
   break-before: column;
   break-inside: avoid;
@@ -99,12 +122,13 @@ const CSS = `
 }
 /* Override de la règle globale .photo-img (qui empêche l'agrandissement) :
    pour la photo conditionnelle, on autorise l'agrandissement jusqu'à la
-   largeur de la colonne. La règle plus spécifique gagne. */
+   largeur de la colonne. La hauteur max est passée via une CSS var calculée
+   par template selon le volume de texte déjà présent en col 2. */
 .tri-extra-photo .photo-img {
   width: 100%;
   height: auto;
   max-width: 100%;
-  max-height: 90mm;
+  max-height: var(--extra-photo-max, 70mm);
   object-fit: contain;
 }
 `;
@@ -133,19 +157,21 @@ export function renderTriptyque(projet: Projet): TemplateBundle {
   // Bloc texte 2 colonnes
   const description = (projet.description ?? '').trim();
   const paragraphs = description.split(/\n\n+/).filter(Boolean);
-  const isShortText = description.length < SHORT_TEXT_THRESHOLD;
 
-  // 3ᵉ photo : si texte court ET il existe une photo disponible
+  // Calcul de l'espace disponible pour la 3ᵉ photo en bas de colonne 2.
+  // Si remainingHeight < MIN_PHOTO_HEIGHT_MM → 0 → pas de photo.
+  const extraPhotoMaxHeight = computeExtraPhotoMaxHeight(description.length);
+
+  // 3ᵉ photo candidate : photo disponible selon le layout
   // - en mode paysage on prend p2 (p1 est déjà utilisée comme hero)
   // - en mode portrait on prend p3 (p1 et p2 sont déjà utilisées en duo)
-  const extraPhoto = isShortText
-    ? (isPaysage ? p2 : p3)
-    : undefined;
+  const extraPhotoCandidate = isPaysage ? p2 : p3;
+  const extraPhoto = extraPhotoMaxHeight > 0 ? extraPhotoCandidate : undefined;
 
   const textHtml = paragraphs.length > 0 || extraPhoto
     ? `<div class="tri-text">
         ${paragraphs.map(p => `<p class="tri-text-p">${esc(p)}</p>`).join('')}
-        ${extraPhoto ? `<div class="tri-extra-photo photo-frame">${photoImg(extraPhoto, projet.nom)}</div>` : ''}
+        ${extraPhoto ? `<div class="tri-extra-photo photo-frame" style="--extra-photo-max:${extraPhotoMaxHeight}mm">${photoImg(extraPhoto, projet.nom)}</div>` : ''}
       </div>`
     : '';
 
