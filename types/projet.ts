@@ -1,3 +1,5 @@
+import type { ManualConfigHistoryEntry } from '@/lib/pdf/manualConfig';
+
 export type Statut =
   | 'En étude'
   | 'En chantier'
@@ -53,4 +55,8 @@ export interface Projet {
   wpPostId?: number;
 
   chiffresCles?: { label: string; valeur: string }[];
+
+  /** Historique des configs Manuel utilisées pour les exports PDF.
+   *  Stocké dans le champ Airtable "Config template manuel" (Long text JSON). */
+  manualConfigHistory?: ManualConfigHistoryEntry[];
 }

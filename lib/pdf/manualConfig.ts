@@ -67,3 +67,35 @@ export function decodeConfig(raw: string): ManualConfig | null {
     return null;
   }
 }
+
+/** Une entrée d'historique = config + horodatage. */
+export interface ManualConfigHistoryEntry {
+  /** Timestamp Unix (ms) du moment où la config a été utilisée pour un export. */
+  ts: number;
+  config: ManualConfig;
+}
+
+/** Nombre maximum d'entrées conservées dans l'historique (anti-bloat Airtable). */
+export const MAX_HISTORY_ENTRIES = 10;
+
+/** Sérialise l'historique en JSON pour stockage dans le champ Airtable
+ *  "Config template manuel" (type Long text). */
+export function serializeHistory(entries: ManualConfigHistoryEntry[]): string {
+  return JSON.stringify(entries.slice(0, MAX_HISTORY_ENTRIES));
+}
+
+/** Désérialise l'historique depuis le contenu Airtable. Tolère les valeurs
+ *  vides, mal formées, ou anciens formats — retourne [] dans ces cas. */
+export function deserializeHistory(raw: unknown): ManualConfigHistoryEntry[] {
+  if (typeof raw !== 'string' || raw.trim() === '') return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (e): e is ManualConfigHistoryEntry =>
+        e && typeof e === 'object' && typeof e.ts === 'number' && e.config && typeof e.config === 'object'
+    );
+  } catch {
+    return [];
+  }
+}
