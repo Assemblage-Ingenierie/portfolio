@@ -2,12 +2,13 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Projet, LayoutChoice } from '@/types/projet';
+import type { Projet, TemplateChoice } from '@/types/projet';
+import { TEMPLATE_OPTIONS } from '@/types/projet';
 import LayoutEditorial from '@/components/layouts/LayoutEditorial';
 import LayoutMagazine from '@/components/layouts/LayoutMagazine';
+import { templateToLegacyLayout } from '@/lib/pdf/templateLayout';
 import Link from 'next/link';
 import { authHeaders } from '@/lib/supabase/authHeaders';
-import { generateAndDownloadPdf } from '@/lib/pdf/client/generatePdf';
 
 interface Props { projet: Projet; }
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
@@ -50,7 +51,7 @@ export default function ProjetEditor({ projet }: Props) {
   const [departement, setDepartement] = useState(projet.departement ?? '');
   const [rehabNeuf, setRehabNeuf] = useState(projet.rehabNeuf ?? '');
   const [statut, setStatut] = useState(projet.statut);
-  const [layout, setLayout] = useState<LayoutChoice>(projet.layout);
+  const [template, setTemplate] = useState<TemplateChoice>(projet.template);
   const [certifications, setCertifications] = useState(projet.certifications.join('\n'));
   const [motsCles, setMotsCles] = useState(projet.motsCles.join(', '));
   const [chiffresClesRaw, setChiffresClesRaw] = useState(
@@ -71,31 +72,21 @@ export default function ProjetEditor({ projet }: Props) {
   async function handleDownloadPdf() {
     setExporting(true);
     try {
-      await generateAndDownloadPdf({
-        ...projet,
-        nom,
-        adresse: adresse || undefined,
-        pitch: pitch || undefined,
-        description,
-        moa: moa || undefined,
-        mandataire: mandataire || undefined,
-        betAssocies: betAssocies || undefined,
-        entreprise: entreprise || undefined,
-        bailleur: bailleur || undefined,
-        referentAi: referentAi || undefined,
-        missionAi: missionAi || undefined,
-        surface: surface ? Number(surface) : undefined,
-        anneeLivraison: annee ? Number(annee) : undefined,
-        programme: programme || undefined,
-        pole: pole || undefined,
-        departement: departement || undefined,
-        rehabNeuf: rehabNeuf || undefined,
-        statut,
-        layout,
-        chiffresCles: parseChiffres(),
-        certifications: certifications.split('\n').map(s => s.trim()).filter(Boolean),
-        motsCles: motsCles.split(',').map(s => s.trim()).filter(Boolean),
+      // Sauvegarde implicite avant export pour que le PDF côté serveur reflète l'édition courante
+      await handleSave();
+      const res = await fetch(`/api/projet/${projet.slug}/pdf`, {
+        headers: await authHeaders(),
       });
+      if (!res.ok) throw new Error(`Erreur ${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${projet.affaire || projet.slug}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
     } catch (e) {
       alert(e instanceof Error ? e.message : 'Erreur export PDF');
     } finally {
@@ -129,7 +120,7 @@ export default function ProjetEditor({ projet }: Props) {
           departement: departement || undefined,
           rehabNeuf: rehabNeuf || undefined,
           statut,
-          layout,
+          template,
           certifications: certifications.split('\n').map(s => s.trim()).filter(Boolean),
           motsCles: motsCles.split(/[,;]+/).map(s => s.trim()).filter(Boolean),
         }),
@@ -179,12 +170,13 @@ export default function ProjetEditor({ projet }: Props) {
 
   if (preview) {
     const overrides = { pitch, description, chiffresCles: parseChiffres() };
+    const legacyLayout = templateToLegacyLayout(template);
     return (
       <>
         {toolbar}
-        {layout === 'Magazine'
-          ? <LayoutMagazine projet={{ ...projet, layout }} overrides={overrides} />
-          : <LayoutEditorial projet={{ ...projet, layout }} overrides={overrides} />}
+        {legacyLayout === 'Magazine'
+          ? <LayoutMagazine projet={{ ...projet, template }} overrides={overrides} />
+          : <LayoutEditorial projet={{ ...projet, template }} overrides={overrides} />}
       </>
     );
   }
@@ -200,11 +192,11 @@ export default function ProjetEditor({ projet }: Props) {
         </h1>
 
         <div style={SECTION}>
-          <div style={STITLE}>Layout</div>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            {(['Editorial', 'Magazine'] as LayoutChoice[]).map(l => (
-              <button key={l} onClick={() => setLayout(l)} style={{ padding: '6px 18px', borderRadius: '2px', cursor: 'pointer', fontFamily: 'var(--sans)', fontSize: '9pt', fontWeight: 700, background: layout === l ? 'var(--ai-violet)' : 'white', color: layout === l ? 'white' : 'var(--ai-noir70)', border: layout === l ? 'none' : '1px solid #DFE4E8' }}>
-                {l}
+          <div style={STITLE}>Template</div>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {TEMPLATE_OPTIONS.map(t => (
+              <button key={t} onClick={() => setTemplate(t)} style={{ padding: '6px 18px', borderRadius: '2px', cursor: 'pointer', fontFamily: 'var(--sans)', fontSize: '9pt', fontWeight: 700, background: template === t ? 'var(--ai-violet)' : 'white', color: template === t ? 'white' : 'var(--ai-noir70)', border: template === t ? 'none' : '1px solid #DFE4E8' }}>
+                {t}
               </button>
             ))}
           </div>

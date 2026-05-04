@@ -1,7 +1,8 @@
-import type { Projet, LayoutChoice } from '@/types/projet';
+import type { Projet, TemplateChoice } from '@/types/projet';
 import { normalizeStatut } from '@/lib/utils/normalize';
 import { parseChiffresCles, parseTagsSiteWeb, formatBudget } from '@/lib/utils/parsers';
 import { formulaValue, linkedValue, selectValue } from './client';
+import { autoSelectTemplate, isTemplateChoice } from '@/lib/pdf/selectTemplate';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function recordToProjet(record: any): Projet {
@@ -37,8 +38,14 @@ export function recordToProjet(record: any): Projet {
     ? Number(rawBudget)
     : undefined;
 
-  const rawLayout = f['Sélectionner'];
-  const layout: LayoutChoice = rawLayout === 'Magazine' ? 'Magazine' : 'Editorial';
+  // Champ renommé Sélectionner → Template ; on lit les deux pendant la transition
+  // et on accepte les valeurs legacy Editorial/Magazine en fallback auto.
+  const rawTemplate = f['Template'] ?? f['Sélectionner'];
+  const description: string = f['Description projet'] ?? '';
+  const tmpProjet = { photoCouverture, photosProjet, description };
+  const template: TemplateChoice = isTemplateChoice(rawTemplate)
+    ? rawTemplate
+    : autoSelectTemplate(tmpProjet);
 
   return {
     affaire: f['Affaire'] ?? '',
@@ -46,7 +53,7 @@ export function recordToProjet(record: any): Projet {
     nom: f['Nom du projet'] ?? '',
     adresse: f['Adresse'] ?? undefined,
     pitch: formulaValue(f['Pitch']),
-    description: f['Description projet'] ?? '',
+    description,
 
     moa: f['Maître d\'ouvrage'] ?? undefined,
     architecte: linkedValue(f['Architecte']),
@@ -66,7 +73,7 @@ export function recordToProjet(record: any): Projet {
     rehabNeuf: selectValue(f['Rehab / Neuf']),
 
     statut: normalizeStatut(f['État avancement']),
-    layout,
+    template,
     visiblePortfolio: f['Visible portfolio'] ?? false,
 
     photoCouverture,

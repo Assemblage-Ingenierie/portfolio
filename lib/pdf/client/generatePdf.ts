@@ -57,7 +57,10 @@ export async function generateAndDownloadPdf(projet: Projet): Promise<void> {
   const { registerFonts } = await import('./fonts');
   await registerFonts(doc);
 
-  if (projet.layout === 'Magazine') {
+  // Mapping legacy : Mosaïque/Galerie → magazine, autres → editorial.
+  // (À terme ce flux client jsPDF sera remplacé par la route PDF serveur paged.js.)
+  const isMagazineLike = projet.template === 'Mosaïque' || projet.template === 'Galerie';
+  if (isMagazineLike) {
     const { drawMagazine } = await import('./layouts/magazine');
     drawMagazine(doc, projet, images);
   } else {

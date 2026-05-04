@@ -6,7 +6,9 @@ export type Statut =
   | 'En pause'
   | 'En consultation';
 
-export type LayoutChoice = 'Editorial' | 'Magazine';
+export type TemplateChoice = 'Solo' | 'Diptyque' | 'Triptyque' | 'Mosaïque' | 'Galerie';
+
+export const TEMPLATE_OPTIONS: TemplateChoice[] = ['Solo', 'Diptyque', 'Triptyque', 'Mosaïque', 'Galerie'];
 
 export interface Projet {
   affaire: string;
@@ -34,7 +36,7 @@ export interface Projet {
   rehabNeuf?: string;
 
   statut: Statut;
-  layout: LayoutChoice;
+  template: TemplateChoice;
   visiblePortfolio: boolean;
 
   photoCouverture?: { url: string; filename: string };

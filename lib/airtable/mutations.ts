@@ -19,7 +19,7 @@ export interface ProjetEditableFields {
   departement?: string;
   rehabNeuf?: string;
   statut?: string;
-  layout?: string;
+  template?: string;
   certifications?: string[];
   motsCles?: string[];
 }
@@ -52,7 +52,7 @@ export async function updateProjetFields(slug: string, fields: ProjetEditableFie
   if (fields.departement !== undefined)    update['Département']        = fields.departement;
   if (fields.rehabNeuf !== undefined)      update['Rehab / Neuf']       = fields.rehabNeuf ? [fields.rehabNeuf] : [];
   if (fields.statut !== undefined)         update['État avancement']    = fields.statut;
-  if (fields.layout !== undefined)         update['Sélectionner']       = fields.layout;
+  if (fields.template !== undefined)       update['Template']           = fields.template;
   if (fields.certifications !== undefined) update['Certification']      = fields.certifications.join('\n');
   if (fields.motsCles !== undefined)       update['Mots-clés']          = fields.motsCles.join(', ');
 

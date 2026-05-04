@@ -209,7 +209,10 @@ function buildWpEditorial(projet: Projet, coverUrl: string | undefined, photoUrl
 }
 
 export function buildWpContent(projet: Projet, coverUrl: string | undefined, photoUrls: string[]): string {
-  return projet.layout === 'Magazine'
+  // En attendant la migration WordPress vers les nouveaux templates, on route
+  // selon le mapping legacy template → 'Editorial' | 'Magazine'.
+  const isMagazineLike = projet.template === 'Mosaïque' || projet.template === 'Galerie';
+  return isMagazineLike
     ? buildWpMagazine(projet, coverUrl, photoUrls)
     : buildWpEditorial(projet, coverUrl, photoUrls);
 }

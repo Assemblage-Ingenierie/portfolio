@@ -2,17 +2,17 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import type { Projet, LayoutChoice } from '@/types/projet';
+import type { Projet, TemplateChoice } from '@/types/projet';
+import { TEMPLATE_OPTIONS } from '@/types/projet';
 import { authHeaders } from '@/lib/supabase/authHeaders';
-import { generateAndDownloadPdf } from '@/lib/pdf/client/generatePdf';
 
 interface Props {
   projet: Projet;
-  layout: LayoutChoice;
-  onLayoutChange: (layout: LayoutChoice) => void;
+  template: TemplateChoice;
+  onTemplateChange: (template: TemplateChoice) => void;
 }
 
-export default function ProjetToolbar({ projet, layout, onLayoutChange }: Props) {
+export default function ProjetToolbar({ projet, template, onTemplateChange }: Props) {
   const [publishing, setPublishing] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [result, setResult] = useState<{ url?: string; error?: string; warning?: string } | null>(null);
@@ -39,7 +39,19 @@ export default function ProjetToolbar({ projet, layout, onLayoutChange }: Props)
   async function handleDownloadPdf() {
     setExporting(true);
     try {
-      await generateAndDownloadPdf({ ...projet, layout });
+      const res = await fetch(`/api/projet/${projet.slug}/pdf`, {
+        headers: await authHeaders(),
+      });
+      if (!res.ok) throw new Error(`Erreur ${res.status}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${projet.affaire || projet.slug}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
     } catch (e) {
       alert(e instanceof Error ? e.message : 'Erreur export PDF');
     } finally {
@@ -56,13 +68,18 @@ export default function ProjetToolbar({ projet, layout, onLayoutChange }: Props)
     <div style={{ background: 'var(--ai-violet)', padding: '10px 24px', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', fontFamily: 'var(--sans)', fontSize: '8pt' }}>
       <Link href="/" style={{ color: 'var(--ai-gris)', textDecoration: 'none', fontWeight: 600 }}>← Portfolio</Link>
       <div style={{ flex: 1 }} />
-      <button
-        onClick={() => onLayoutChange(layout === 'Magazine' ? 'Editorial' : 'Magazine')}
-        style={{ ...btn, background: 'transparent', border: '1px solid var(--ai-gris)', color: 'white' }}
-        title={`Passer en layout ${layout === 'Magazine' ? 'Editorial' : 'Magazine'}`}
+
+      <label style={{ color: 'white', fontWeight: 600, marginRight: 4 }}>Template :</label>
+      <select
+        value={template}
+        onChange={(e) => onTemplateChange(e.target.value as TemplateChoice)}
+        style={{ ...btn, background: 'white', color: 'var(--ai-violet)', border: 'none' }}
       >
-        {layout === 'Magazine' ? 'Editorial' : 'Magazine'}
-      </button>
+        {TEMPLATE_OPTIONS.map(t => (
+          <option key={t} value={t}>{t}</option>
+        ))}
+      </select>
+
       <Link
         href={`/projet/${projet.slug}/edit`}
         style={{ ...btn, background: 'transparent', border: '1px solid var(--ai-gris)', color: 'white', textDecoration: 'none' }}
