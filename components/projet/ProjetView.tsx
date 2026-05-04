@@ -2,9 +2,7 @@
 
 import { useState } from 'react';
 import type { Projet, TemplateChoice } from '@/types/projet';
-import LayoutEditorial from '@/components/layouts/LayoutEditorial';
-import LayoutMagazine from '@/components/layouts/LayoutMagazine';
-import { templateToLegacyLayout } from '@/lib/pdf/templateLayout';
+import TemplatePreview from '@/components/TemplatePreview';
 import { authHeaders } from '@/lib/supabase/authHeaders';
 import ProjetToolbar from './ProjetToolbar';
 
@@ -29,8 +27,6 @@ export default function ProjetView({ projet, isPrint }: Props) {
     }
   }
 
-  const legacyLayout = templateToLegacyLayout(template);
-
   return (
     <>
       {!isPrint && (
@@ -40,10 +36,7 @@ export default function ProjetView({ projet, isPrint }: Props) {
           onTemplateChange={handleTemplateChange}
         />
       )}
-      {legacyLayout === 'Magazine'
-        ? <LayoutMagazine projet={{ ...projet, template }} />
-        : <LayoutEditorial projet={{ ...projet, template }} />
-      }
+      <TemplatePreview projet={{ ...projet, template }} />
     </>
   );
 }

@@ -4,9 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Projet, TemplateChoice } from '@/types/projet';
 import { TEMPLATE_OPTIONS } from '@/types/projet';
-import LayoutEditorial from '@/components/layouts/LayoutEditorial';
-import LayoutMagazine from '@/components/layouts/LayoutMagazine';
-import { templateToLegacyLayout } from '@/lib/pdf/templateLayout';
+import TemplatePreview from '@/components/TemplatePreview';
 import Link from 'next/link';
 import { authHeaders } from '@/lib/supabase/authHeaders';
 
@@ -157,14 +155,36 @@ export default function ProjetEditor({ projet }: Props) {
   );
 
   if (preview) {
-    const overrides = { pitch, description, chiffresCles: parseChiffres() };
-    const legacyLayout = templateToLegacyLayout(template);
+    // Construit un projet enrichi des champs en cours d'édition pour aperçu live
+    const previewProjet: Projet = {
+      ...projet,
+      template,
+      nom,
+      adresse: adresse || undefined,
+      pitch: pitch || undefined,
+      description,
+      moa: moa || undefined,
+      mandataire: mandataire || undefined,
+      betAssocies: betAssocies || undefined,
+      entreprise: entreprise || undefined,
+      bailleur: bailleur || undefined,
+      referentAi: referentAi || undefined,
+      missionAi: missionAi || undefined,
+      surface: surface ? Number(surface) : undefined,
+      anneeLivraison: annee ? Number(annee) : undefined,
+      programme: programme || undefined,
+      pole: pole || undefined,
+      departement: departement || undefined,
+      rehabNeuf: rehabNeuf || undefined,
+      statut,
+      chiffresCles: parseChiffres(),
+      certifications: certifications.split('\n').map(s => s.trim()).filter(Boolean),
+      motsCles: motsCles.split(',').map(s => s.trim()).filter(Boolean),
+    };
     return (
       <>
         {toolbar}
-        {legacyLayout === 'Magazine'
-          ? <LayoutMagazine projet={{ ...projet, template }} overrides={overrides} />
-          : <LayoutEditorial projet={{ ...projet, template }} overrides={overrides} />}
+        <TemplatePreview projet={previewProjet} />
       </>
     );
   }
