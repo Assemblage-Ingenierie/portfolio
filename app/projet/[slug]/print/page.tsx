@@ -46,6 +46,3 @@ export default async function PrintPage({
     </>
   );
 }
-
-// Force le rendu dynamique (toujours frais depuis Airtable) — pas de cache.
-export const dynamic = 'force-dynamic';
