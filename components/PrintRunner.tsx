@@ -12,10 +12,8 @@ import { useEffect, useState } from 'react';
  */
 export default function PrintRunner({
   targetSelector,
-  cssSelector,
 }: {
   targetSelector: string;
-  cssSelector: string;
 }) {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorMsg, setErrorMsg] = useState('');
@@ -35,26 +33,27 @@ export default function PrintRunner({
         const source = document.querySelector(targetSelector) as HTMLElement | null;
         if (!source) throw new Error(`Cible "${targetSelector}" introuvable`);
 
-        // Récupérer l'HTML en string et masquer la source.
-        // Passer une string à paged.js évite les conflits avec la gestion DOM de React
-        // (paged.js essaie sinon de déplacer le nœud, ce qui casse l'arbre React).
+        // Récupérer le HTML du contenu et le retirer du DOM React (innerHTML, pas outerHTML).
+        // On passe une string à paged.js plutôt que le nœud React directement, sinon
+        // paged.js fait `parentNode.removeChild(node)` ce qui casse l'arbre React.
         const html = source.innerHTML;
-        source.style.display = 'none';
+        source.remove();
 
-        // Récupérer le CSS du template (paged.js handler mode ne lit pas
-        // automatiquement les <style> tags du document — il faut les passer
-        // explicitement au Polisher via l'argument stylesheets).
-        const styleEl = document.querySelector(cssSelector) as HTMLStyleElement | null;
-        const cssText = styleEl?.textContent ?? '';
-
-        // Conteneur de rendu dédié pour les pages paged.js
+        // Conteneur de rendu dédié pour les pages paginées
         const renderTarget = document.createElement('div');
         renderTarget.id = 'pagedjs-target';
         document.body.appendChild(renderTarget);
 
+        // Marquer le <style> overrides écran avec [data-pagedjs-ignore] pour
+        // qu'il ne soit pas absorbé par paged.js (et reste actif pour la toolbar).
+        const overrides = document.querySelectorAll('style:not([data-template-css])');
+        overrides.forEach(s => s.setAttribute('data-pagedjs-ignore', ''));
+
         const previewer = new Paged.Previewer();
-        // Format attendu par paged.js Polisher : { type: 'text/css', text: cssString }
-        await previewer.preview(html, [{ type: 'text/css', text: cssText }], renderTarget);
+        // En passant `undefined` pour stylesheets, paged.js extrait automatiquement
+        // les <style> du document (sauf [data-pagedjs-ignore]). Notre template-css
+        // sera donc pris en compte, y compris les règles @page.
+        await previewer.preview(html, undefined, renderTarget);
 
         if (cancelled) return;
         setStatus('ready');
@@ -67,7 +66,7 @@ export default function PrintRunner({
 
     run();
     return () => { cancelled = true; };
-  }, [targetSelector, cssSelector]);
+  }, [targetSelector]);
 
   if (status === 'error') {
     return (

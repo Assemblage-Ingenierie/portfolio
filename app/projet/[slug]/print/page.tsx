@@ -45,10 +45,12 @@ export default async function PrintPage({
 
   return (
     <>
-      <style id="print-template-css" dangerouslySetInnerHTML={{ __html: TEMPLATE_CSS }} />
+      {/* Template CSS — sera extrait et appliqué par paged.js Polisher (incl. @page) */}
+      <style data-template-css="" dangerouslySetInnerHTML={{ __html: TEMPLATE_CSS }} />
+      {/* Overrides écran — marqué comme à ignorer par paged.js mais reste actif pour la toolbar */}
       <style dangerouslySetInnerHTML={{ __html: PRINT_OVERRIDES }} />
       <div id="print-source" dangerouslySetInnerHTML={{ __html: bundle.body }} />
-      <PrintRunner targetSelector="#print-source" cssSelector="#print-template-css" />
+      <PrintRunner targetSelector="#print-source" />
     </>
   );
 }
