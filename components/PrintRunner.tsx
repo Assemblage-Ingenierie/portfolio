@@ -26,14 +26,22 @@ export default function PrintRunner({ targetSelector }: { targetSelector: string
         const Paged = (window as any).Paged;
         if (!Paged?.Previewer) throw new Error('paged.js non chargé');
 
-        const content = document.querySelector(targetSelector) as HTMLElement | null;
-        if (!content) throw new Error(`Cible "${targetSelector}" introuvable`);
+        const source = document.querySelector(targetSelector) as HTMLElement | null;
+        if (!source) throw new Error(`Cible "${targetSelector}" introuvable`);
+
+        // Récupérer l'HTML en string et masquer la source.
+        // Passer une string à paged.js évite les conflits avec la gestion DOM de React
+        // (paged.js essaie sinon de déplacer le nœud, ce qui casse l'arbre React).
+        const html = source.innerHTML;
+        source.style.display = 'none';
+
+        // Conteneur de rendu dédié pour les pages paged.js
+        const renderTarget = document.createElement('div');
+        renderTarget.id = 'pagedjs-target';
+        document.body.appendChild(renderTarget);
 
         const previewer = new Paged.Previewer();
-        await previewer.preview(content, [], document.body);
-
-        // Cacher la source originale (paged.js a cloné le contenu en .pagedjs_pages)
-        content.style.display = 'none';
+        await previewer.preview(html, [], renderTarget);
 
         if (cancelled) return;
         setStatus('ready');
