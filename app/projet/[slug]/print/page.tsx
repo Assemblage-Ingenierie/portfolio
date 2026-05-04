@@ -38,11 +38,17 @@ export default async function PrintPage({
     }
   `;
 
+  // Le CSS du template (sans les overrides d'écran) est isolé dans un <style>
+  // dédié pour pouvoir être passé en string à paged.js. Les overrides d'écran
+  // (toolbar, fond gris, ombre des pages…) restent dans un <style> séparé.
+  const TEMPLATE_CSS = SHARED_CSS + bundle.css;
+
   return (
     <>
-      <style dangerouslySetInnerHTML={{ __html: SHARED_CSS + bundle.css + PRINT_OVERRIDES }} />
+      <style id="print-template-css" dangerouslySetInnerHTML={{ __html: TEMPLATE_CSS }} />
+      <style dangerouslySetInnerHTML={{ __html: PRINT_OVERRIDES }} />
       <div id="print-source" dangerouslySetInnerHTML={{ __html: bundle.body }} />
-      <PrintRunner targetSelector="#print-source" />
+      <PrintRunner targetSelector="#print-source" cssSelector="#print-template-css" />
     </>
   );
 }

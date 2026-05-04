@@ -10,7 +10,13 @@ import { useEffect, useState } from 'react';
  * via la commande "Enregistrer au format PDF" du dialogue d'impression.
  * Pas de serveur, pas de Puppeteer, pas de limite Vercel.
  */
-export default function PrintRunner({ targetSelector }: { targetSelector: string }) {
+export default function PrintRunner({
+  targetSelector,
+  cssSelector,
+}: {
+  targetSelector: string;
+  cssSelector: string;
+}) {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -35,13 +41,20 @@ export default function PrintRunner({ targetSelector }: { targetSelector: string
         const html = source.innerHTML;
         source.style.display = 'none';
 
+        // Récupérer le CSS du template (paged.js handler mode ne lit pas
+        // automatiquement les <style> tags du document — il faut les passer
+        // explicitement au Polisher via l'argument stylesheets).
+        const styleEl = document.querySelector(cssSelector) as HTMLStyleElement | null;
+        const cssText = styleEl?.textContent ?? '';
+
         // Conteneur de rendu dédié pour les pages paged.js
         const renderTarget = document.createElement('div');
         renderTarget.id = 'pagedjs-target';
         document.body.appendChild(renderTarget);
 
         const previewer = new Paged.Previewer();
-        await previewer.preview(html, [], renderTarget);
+        // Format attendu par paged.js Polisher : { type: 'text/css', text: cssString }
+        await previewer.preview(html, [{ type: 'text/css', text: cssText }], renderTarget);
 
         if (cancelled) return;
         setStatus('ready');
@@ -54,7 +67,7 @@ export default function PrintRunner({ targetSelector }: { targetSelector: string
 
     run();
     return () => { cancelled = true; };
-  }, [targetSelector]);
+  }, [targetSelector, cssSelector]);
 
   if (status === 'error') {
     return (
