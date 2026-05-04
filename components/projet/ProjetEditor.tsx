@@ -72,21 +72,9 @@ export default function ProjetEditor({ projet }: Props) {
   async function handleDownloadPdf() {
     setExporting(true);
     try {
-      // Sauvegarde implicite avant export pour que le PDF côté serveur reflète l'édition courante
+      // Sauvegarde implicite avant export pour que le PDF reflète l'édition courante
       await handleSave();
-      const res = await fetch(`/api/projet/${projet.slug}/pdf`, {
-        headers: await authHeaders(),
-      });
-      if (!res.ok) throw new Error(`Erreur ${res.status}`);
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${projet.affaire || projet.slug}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      window.open(`/projet/${projet.slug}/print`, '_blank');
     } catch (e) {
       alert(e instanceof Error ? e.message : 'Erreur export PDF');
     } finally {

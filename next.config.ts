@@ -11,16 +11,6 @@ function findProjectRoot(dir: string): string {
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
-  // @sparticuz/chromium doit être externalisé pour éviter que le bundler le relocalise
-  // (sinon les binaires .br ne sont plus accessibles au runtime via leur chemin relatif).
-  serverExternalPackages: ['@sparticuz/chromium', 'puppeteer-core'],
-  // Force l'inclusion des binaires Chromium + paged.js dans le déploiement Vercel
-  outputFileTracingIncludes: {
-    '/api/projet/[slug]/pdf': [
-      './node_modules/@sparticuz/chromium/bin/**',
-      './node_modules/pagedjs/dist/paged.js',
-    ],
-  },
   turbopack: {
     root: findProjectRoot(__dirname),
   },

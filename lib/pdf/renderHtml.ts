@@ -8,7 +8,7 @@ import { renderMosaique } from './templates/mosaique';
  * Dispatcher : sélectionne le template selon `projet.template`.
  * Triptyque et Galerie ne sont pas encore implémentés — ils retombent sur Mosaïque pour l'instant.
  */
-function renderTemplate(projet: Projet): TemplateBundle {
+export function renderTemplate(projet: Projet): TemplateBundle {
   switch (projet.template) {
     case 'Solo':
       return renderSolo(projet);

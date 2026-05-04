@@ -14,7 +14,6 @@ interface Props {
 
 export default function ProjetToolbar({ projet, template, onTemplateChange }: Props) {
   const [publishing, setPublishing] = useState(false);
-  const [exporting, setExporting] = useState(false);
   const [result, setResult] = useState<{ url?: string; error?: string; warning?: string } | null>(null);
 
   async function handlePublish() {
@@ -36,27 +35,10 @@ export default function ProjetToolbar({ projet, template, onTemplateChange }: Pr
     }
   }
 
-  async function handleDownloadPdf() {
-    setExporting(true);
-    try {
-      const res = await fetch(`/api/projet/${projet.slug}/pdf`, {
-        headers: await authHeaders(),
-      });
-      if (!res.ok) throw new Error(`Erreur ${res.status}`);
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${projet.affaire || projet.slug}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    } catch (e) {
-      alert(e instanceof Error ? e.message : 'Erreur export PDF');
-    } finally {
-      setExporting(false);
-    }
+  function handleDownloadPdf() {
+    // Ouvre la page d'impression dans un nouvel onglet : paged.js paginé côté client,
+    // puis la boîte de dialogue d'impression du navigateur permet "Save as PDF".
+    window.open(`/projet/${projet.slug}/print`, '_blank');
   }
 
   const btn: React.CSSProperties = {
@@ -88,10 +70,9 @@ export default function ProjetToolbar({ projet, template, onTemplateChange }: Pr
       </Link>
       <button
         onClick={handleDownloadPdf}
-        disabled={exporting}
-        style={{ ...btn, background: 'var(--ai-rouge)', color: 'white', border: 'none', opacity: exporting ? 0.7 : 1 }}
+        style={{ ...btn, background: 'var(--ai-rouge)', color: 'white', border: 'none' }}
       >
-        {exporting ? 'Export…' : 'Télécharger PDF'}
+        Télécharger PDF
       </button>
       <button
         style={{ ...btn, background: 'white', color: 'var(--ai-violet)', border: 'none' }}
