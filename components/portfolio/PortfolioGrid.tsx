@@ -163,13 +163,31 @@ export default function PortfolioGrid({ projets }: Props) {
 
       {/* Header */}
       <header style={{ marginBottom: '20px', borderBottom: '2px solid var(--ai-rouge)', paddingBottom: '16px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 16 }}>
           <h1 style={{ fontFamily: 'var(--serif)', fontSize: '28pt', fontWeight: 500, color: 'var(--ai-violet)' }}>
             Portfolio
           </h1>
-          <span style={{ fontFamily: 'var(--sans)', fontSize: '9pt', color: 'var(--ai-noir70)', fontWeight: 600 }}>
-            Assemblage ingénierie · <strong style={{ color: 'var(--ai-rouge)' }}>.A</strong>
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <Link
+              href="/portfolio/builder"
+              style={{
+                padding: '8px 16px',
+                background: 'var(--ai-rouge)',
+                color: 'white',
+                fontFamily: 'var(--sans)',
+                fontSize: '9pt',
+                fontWeight: 700,
+                letterSpacing: '0.05em',
+                textDecoration: 'none',
+                borderRadius: 2,
+              }}
+            >
+              Constituer le portfolio →
+            </Link>
+            <span style={{ fontFamily: 'var(--sans)', fontSize: '9pt', color: 'var(--ai-noir70)', fontWeight: 600 }}>
+              Assemblage ingénierie · <strong style={{ color: 'var(--ai-rouge)' }}>.A</strong>
+            </span>
+          </div>
         </div>
         <p style={{ fontSize: '9pt', color: 'var(--ai-noir70)', marginTop: '4px' }}>
           {filtered.length} / {projets.length} projet{projets.length > 1 ? 's' : ''} · source Airtable

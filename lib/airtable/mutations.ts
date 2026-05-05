@@ -1,4 +1,6 @@
 import { base, TABLE } from './client';
+import type { ManualConfigHistoryEntry } from '@/lib/pdf/manualConfig';
+import { serializeHistory } from '@/lib/pdf/manualConfig';
 
 export interface ProjetEditableFields {
   nom?: string;
@@ -19,9 +21,10 @@ export interface ProjetEditableFields {
   departement?: string;
   rehabNeuf?: string;
   statut?: string;
-  layout?: string;
+  template?: string;
   certifications?: string[];
   motsCles?: string[];
+  manualConfigHistory?: ManualConfigHistoryEntry[];
 }
 
 export async function updateProjetFields(slug: string, fields: ProjetEditableFields): Promise<{ slug: string }> {
@@ -52,9 +55,11 @@ export async function updateProjetFields(slug: string, fields: ProjetEditableFie
   if (fields.departement !== undefined)    update['Département']        = fields.departement;
   if (fields.rehabNeuf !== undefined)      update['Rehab / Neuf']       = fields.rehabNeuf ? [fields.rehabNeuf] : [];
   if (fields.statut !== undefined)         update['État avancement']    = fields.statut;
-  if (fields.layout !== undefined)         update['Sélectionner']       = fields.layout;
+  if (fields.template !== undefined)       update['Template']           = fields.template;
   if (fields.certifications !== undefined) update['Certification']      = fields.certifications.join('\n');
   if (fields.motsCles !== undefined)       update['Mots-clés']          = fields.motsCles.join(', ');
+  if (fields.manualConfigHistory !== undefined)
+    update['Config template manuel'] = serializeHistory(fields.manualConfigHistory);
 
   await base(TABLE).update(records[0].id, update, { typecast: true });
 

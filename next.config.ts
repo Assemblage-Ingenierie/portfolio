@@ -11,11 +11,6 @@ function findProjectRoot(dir: string): string {
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
-  // Force l'inclusion des binaires Chromium dans le déploiement Vercel
-  // (Turbopack préserve import.meta.url donc le chemin est correct, mais les .br ne sont pas tracés auto)
-  outputFileTracingIncludes: {
-    '/api/projet/[slug]/pdf': ['./node_modules/@sparticuz/chromium/bin/**'],
-  },
   turbopack: {
     root: findProjectRoot(__dirname),
   },

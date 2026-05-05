@@ -1,9 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import type { Projet, LayoutChoice } from '@/types/projet';
-import LayoutEditorial from '@/components/layouts/LayoutEditorial';
-import LayoutMagazine from '@/components/layouts/LayoutMagazine';
+import type { Projet, TemplateChoice } from '@/types/projet';
+import TemplatePreview from '@/components/TemplatePreview';
+import ManualConfigPanel from '@/components/ManualConfigPanel';
+import { authHeaders } from '@/lib/supabase/authHeaders';
+import { DEFAULT_MANUAL_CONFIG, ManualConfig } from '@/lib/pdf/manualConfig';
 import ProjetToolbar from './ProjetToolbar';
 
 interface Props {
@@ -12,15 +14,22 @@ interface Props {
 }
 
 export default function ProjetView({ projet, isPrint }: Props) {
-  const [layout, setLayout] = useState<LayoutChoice>(projet.layout);
+  const [template, setTemplate] = useState<TemplateChoice>(projet.template);
+  const [manualConfig, setManualConfig] = useState<ManualConfig>(DEFAULT_MANUAL_CONFIG);
 
-  function handleLayoutChange(newLayout: LayoutChoice) {
-    setLayout(newLayout);
-    fetch(`/api/projet/${projet.slug}/fields`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ layout: newLayout }),
-    }).catch(console.error);
+  async function handleTemplateChange(newTemplate: TemplateChoice) {
+    setTemplate(newTemplate);
+    // 'Manuel' n'est pas persisté en Airtable (pas dans les options du champ Template).
+    if (newTemplate === 'Manuel') return;
+    try {
+      await fetch(`/api/projet/${projet.slug}/fields`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+        body: JSON.stringify({ template: newTemplate }),
+      });
+    } catch (e) {
+      console.error(e);
+    }
   }
 
   return (
@@ -28,14 +37,18 @@ export default function ProjetView({ projet, isPrint }: Props) {
       {!isPrint && (
         <ProjetToolbar
           projet={projet}
-          layout={layout}
-          onLayoutChange={handleLayoutChange}
+          template={template}
+          manualConfig={manualConfig}
+          onTemplateChange={handleTemplateChange}
         />
       )}
-      {layout === 'Magazine'
-        ? <LayoutMagazine projet={{ ...projet, layout }} />
-        : <LayoutEditorial projet={{ ...projet, layout }} />
-      }
+      {!isPrint && template === 'Manuel' && (
+        <ManualConfigPanel projet={projet} config={manualConfig} onChange={setManualConfig} />
+      )}
+      <TemplatePreview
+        projet={{ ...projet, template }}
+        manualConfig={template === 'Manuel' ? manualConfig : undefined}
+      />
     </>
   );
 }

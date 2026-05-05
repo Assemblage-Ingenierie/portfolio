@@ -209,7 +209,8 @@ function buildWpEditorial(projet: Projet, coverUrl: string | undefined, photoUrl
 }
 
 export function buildWpContent(projet: Projet, coverUrl: string | undefined, photoUrls: string[]): string {
-  return projet.layout === 'Magazine'
-    ? buildWpMagazine(projet, coverUrl, photoUrls)
-    : buildWpEditorial(projet, coverUrl, photoUrls);
+  // Tous les templates restants (Solo, Diptyque, Triptyque, Manuel) routent
+  // vers le builder Editorial pour la publication WordPress. buildWpMagazine
+  // est conservé en parallèle pour archivage mais n'est plus appelé.
+  return buildWpEditorial(projet, coverUrl, photoUrls);
 }

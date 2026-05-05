@@ -2,19 +2,20 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import type { Projet, LayoutChoice } from '@/types/projet';
+import type { Projet, TemplateChoice } from '@/types/projet';
+import { TEMPLATE_OPTIONS } from '@/types/projet';
 import { authHeaders } from '@/lib/supabase/authHeaders';
-import { generateAndDownloadPdf } from '@/lib/pdf/client/generatePdf';
+import { encodeConfig, ManualConfig, MAX_HISTORY_ENTRIES, ManualConfigHistoryEntry } from '@/lib/pdf/manualConfig';
 
 interface Props {
   projet: Projet;
-  layout: LayoutChoice;
-  onLayoutChange: (layout: LayoutChoice) => void;
+  template: TemplateChoice;
+  manualConfig?: ManualConfig;
+  onTemplateChange: (template: TemplateChoice) => void;
 }
 
-export default function ProjetToolbar({ projet, layout, onLayoutChange }: Props) {
+export default function ProjetToolbar({ projet, template, manualConfig, onTemplateChange }: Props) {
   const [publishing, setPublishing] = useState(false);
-  const [exporting, setExporting] = useState(false);
   const [result, setResult] = useState<{ url?: string; error?: string; warning?: string } | null>(null);
 
   async function handlePublish() {
@@ -37,14 +38,29 @@ export default function ProjetToolbar({ projet, layout, onLayoutChange }: Props)
   }
 
   async function handleDownloadPdf() {
-    setExporting(true);
-    try {
-      await generateAndDownloadPdf({ ...projet, layout });
-    } catch (e) {
-      alert(e instanceof Error ? e.message : 'Erreur export PDF');
-    } finally {
-      setExporting(false);
+    const params = new URLSearchParams({ template });
+
+    if (template === 'Manuel' && manualConfig) {
+      params.set('config', encodeConfig(manualConfig));
+
+      // Persistance : prepend la config courante dans l'historique Airtable.
+      // Fire-and-forget pour ne pas bloquer l'ouverture du print.
+      try {
+        const newEntry: ManualConfigHistoryEntry = { ts: Date.now(), config: manualConfig };
+        const previous = projet.manualConfigHistory ?? [];
+        const newHistory = [newEntry, ...previous].slice(0, MAX_HISTORY_ENTRIES);
+        // PATCH async sans await — l'utilisateur ouvre le print sans délai
+        fetch(`/api/projet/${projet.slug}/fields`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+          body: JSON.stringify({ manualConfigHistory: newHistory }),
+        }).catch(err => console.error('historique config Manuel non sauvegardé:', err));
+      } catch (e) {
+        console.error('erreur persistance historique:', e);
+      }
     }
+
+    window.open(`/projet/${projet.slug}/print?${params.toString()}`, '_blank');
   }
 
   const btn: React.CSSProperties = {
@@ -56,13 +72,18 @@ export default function ProjetToolbar({ projet, layout, onLayoutChange }: Props)
     <div style={{ background: 'var(--ai-violet)', padding: '10px 24px', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', fontFamily: 'var(--sans)', fontSize: '8pt' }}>
       <Link href="/" style={{ color: 'var(--ai-gris)', textDecoration: 'none', fontWeight: 600 }}>← Portfolio</Link>
       <div style={{ flex: 1 }} />
-      <button
-        onClick={() => onLayoutChange(layout === 'Magazine' ? 'Editorial' : 'Magazine')}
-        style={{ ...btn, background: 'transparent', border: '1px solid var(--ai-gris)', color: 'white' }}
-        title={`Passer en layout ${layout === 'Magazine' ? 'Editorial' : 'Magazine'}`}
+
+      <label style={{ color: 'white', fontWeight: 600, marginRight: 4 }}>Template :</label>
+      <select
+        value={template}
+        onChange={(e) => onTemplateChange(e.target.value as TemplateChoice)}
+        style={{ ...btn, background: 'white', color: 'var(--ai-violet)', border: 'none' }}
       >
-        {layout === 'Magazine' ? 'Editorial' : 'Magazine'}
-      </button>
+        {TEMPLATE_OPTIONS.map(t => (
+          <option key={t} value={t}>{t}</option>
+        ))}
+      </select>
+
       <Link
         href={`/projet/${projet.slug}/edit`}
         style={{ ...btn, background: 'transparent', border: '1px solid var(--ai-gris)', color: 'white', textDecoration: 'none' }}
@@ -71,10 +92,9 @@ export default function ProjetToolbar({ projet, layout, onLayoutChange }: Props)
       </Link>
       <button
         onClick={handleDownloadPdf}
-        disabled={exporting}
-        style={{ ...btn, background: 'var(--ai-rouge)', color: 'white', border: 'none', opacity: exporting ? 0.7 : 1 }}
+        style={{ ...btn, background: 'var(--ai-rouge)', color: 'white', border: 'none' }}
       >
-        {exporting ? 'Export…' : 'Télécharger PDF'}
+        Télécharger PDF
       </button>
       <button
         style={{ ...btn, background: 'white', color: 'var(--ai-violet)', border: 'none' }}

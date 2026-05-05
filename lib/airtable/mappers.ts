@@ -1,20 +1,37 @@
-import type { Projet, LayoutChoice } from '@/types/projet';
+import type { Projet, TemplateChoice } from '@/types/projet';
 import { normalizeStatut } from '@/lib/utils/normalize';
 import { parseChiffresCles, parseTagsSiteWeb, formatBudget } from '@/lib/utils/parsers';
 import { formulaValue, linkedValue, selectValue } from './client';
+import { autoSelectTemplate, isTemplateChoice } from '@/lib/pdf/selectTemplate';
+import { deserializeHistory } from '@/lib/pdf/manualConfig';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function recordToProjet(record: any): Projet {
   const f = record.fields;
 
-  const photoCouverture = f['Photo Couverture']?.[0]
-    ? { url: f['Photo Couverture'][0].url, filename: f['Photo Couverture'][0].filename ?? 'cover.jpg' }
+  // Airtable expose les dimensions via attachment.thumbnails.full / large.
+  // On ne modifie pas la photo elle-même — on lit juste ses dimensions natives
+  // pour permettre à un template de choisir un layout adapté (paysage/portrait).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function dimsFrom(a: any): { width?: number; height?: number } {
+    const t = a?.thumbnails?.full ?? a?.thumbnails?.large;
+    return t ? { width: t.width, height: t.height } : {};
+  }
+
+  const photoCouvertureRaw = f['Photo Couverture']?.[0];
+  const photoCouverture = photoCouvertureRaw
+    ? {
+        url: photoCouvertureRaw.url,
+        filename: photoCouvertureRaw.filename ?? 'cover.jpg',
+        ...dimsFrom(photoCouvertureRaw),
+      }
     : undefined;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const photosProjet = (f['Photos projet'] ?? []).map((a: any) => ({
     url: a.url,
     filename: a.filename ?? 'photo.jpg',
+    ...dimsFrom(a),
   }));
 
   const rawCertification = f['Certification'] ?? '';
@@ -37,8 +54,14 @@ export function recordToProjet(record: any): Projet {
     ? Number(rawBudget)
     : undefined;
 
-  const rawLayout = f['Sélectionner'];
-  const layout: LayoutChoice = rawLayout === 'Magazine' ? 'Magazine' : 'Editorial';
+  // Champ renommé Sélectionner → Template ; on lit les deux pendant la transition
+  // et on accepte les valeurs legacy Editorial/Magazine en fallback auto.
+  const rawTemplate = f['Template'] ?? f['Sélectionner'];
+  const description: string = f['Description projet'] ?? '';
+  const tmpProjet = { photoCouverture, photosProjet, description };
+  const template: TemplateChoice = isTemplateChoice(rawTemplate)
+    ? rawTemplate
+    : autoSelectTemplate(tmpProjet);
 
   return {
     affaire: f['Affaire'] ?? '',
@@ -46,7 +69,7 @@ export function recordToProjet(record: any): Projet {
     nom: f['Nom du projet'] ?? '',
     adresse: f['Adresse'] ?? undefined,
     pitch: formulaValue(f['Pitch']),
-    description: f['Description projet'] ?? '',
+    description,
 
     moa: f['Maître d\'ouvrage'] ?? undefined,
     architecte: linkedValue(f['Architecte']),
@@ -66,7 +89,7 @@ export function recordToProjet(record: any): Projet {
     rehabNeuf: selectValue(f['Rehab / Neuf']),
 
     statut: normalizeStatut(f['État avancement']),
-    layout,
+    template,
     visiblePortfolio: f['Visible portfolio'] ?? false,
 
     photoCouverture,
@@ -80,5 +103,6 @@ export function recordToProjet(record: any): Projet {
     budgetRaw,
     urlWordpress: f['URL'] ?? undefined,
     chiffresCles: parseChiffresCles(formulaValue(f['Chiffres clefs'])),
+    manualConfigHistory: deserializeHistory(f['Config template manuel']),
   };
 }

@@ -1,3 +1,5 @@
+import type { ManualConfigHistoryEntry } from '@/lib/pdf/manualConfig';
+
 export type Statut =
   | 'En étude'
   | 'En chantier'
@@ -6,7 +8,9 @@ export type Statut =
   | 'En pause'
   | 'En consultation';
 
-export type LayoutChoice = 'Editorial' | 'Magazine';
+export type TemplateChoice = 'Solo' | 'Diptyque' | 'Triptyque' | 'Manuel';
+
+export const TEMPLATE_OPTIONS: TemplateChoice[] = ['Solo', 'Diptyque', 'Triptyque', 'Manuel'];
 
 export interface Projet {
   affaire: string;
@@ -34,11 +38,11 @@ export interface Projet {
   rehabNeuf?: string;
 
   statut: Statut;
-  layout: LayoutChoice;
+  template: TemplateChoice;
   visiblePortfolio: boolean;
 
-  photoCouverture?: { url: string; filename: string };
-  photosProjet?: { url: string; filename: string }[];
+  photoCouverture?: { url: string; filename: string; width?: number; height?: number };
+  photosProjet?: { url: string; filename: string; width?: number; height?: number }[];
 
   certifications: string[];
   materiaux: string[];
@@ -51,4 +55,8 @@ export interface Projet {
   wpPostId?: number;
 
   chiffresCles?: { label: string; valeur: string }[];
+
+  /** Historique des configs Manuel utilisées pour les exports PDF.
+   *  Stocké dans le champ Airtable "Config template manuel" (Long text JSON). */
+  manualConfigHistory?: ManualConfigHistoryEntry[];
 }
