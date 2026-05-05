@@ -8,9 +8,9 @@ export type Statut =
   | 'En pause'
   | 'En consultation';
 
-export type TemplateChoice = 'Solo' | 'Diptyque' | 'Triptyque' | 'Manuel';
+export type TemplateChoice = 'Solo' | 'Diptyque' | 'Triptyque' | 'Manuel' | 'Référence';
 
-export const TEMPLATE_OPTIONS: TemplateChoice[] = ['Solo', 'Diptyque', 'Triptyque', 'Manuel'];
+export const TEMPLATE_OPTIONS: TemplateChoice[] = ['Solo', 'Diptyque', 'Triptyque', 'Manuel', 'Référence'];
 
 export interface Projet {
   affaire: string;
