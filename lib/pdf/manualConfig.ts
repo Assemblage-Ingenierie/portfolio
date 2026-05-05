@@ -14,6 +14,9 @@ export interface PhotoConfig {
   index: number;
   /** Pourcentage 25..100 — contrôle max-height (= % du plafond du conteneur). */
   sizePercent: number;
+  /** Décalage horizontal 0..100 (0 = gauche, 50 = centre, 100 = droite).
+   *  Utilisé uniquement pour les photos additionnelles. Default = 50. */
+  offsetPercent?: number;
 }
 
 export interface ManualConfig {

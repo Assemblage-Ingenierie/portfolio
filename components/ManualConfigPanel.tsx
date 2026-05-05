@@ -221,6 +221,14 @@ export default function ManualConfigPanel({ projet, config, onChange }: Props) {
             <div style={SUBROW}>
               <Slider label={`Taille ${i + 1}`} value={e.sizePercent} onChange={v => setExtraAt(i, { sizePercent: v })} />
             </div>
+            <div style={SUBROW}>
+              <Slider
+                label={`Position ${i + 1}`}
+                value={e.offsetPercent ?? 50}
+                onChange={v => setExtraAt(i, { offsetPercent: v })}
+                min={0} max={100} step={5}
+              />
+            </div>
           </div>
         ))}
       </div>

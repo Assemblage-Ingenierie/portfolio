@@ -90,7 +90,12 @@ const CSS = `
   gap: 3mm;
   width: 100%;
 }
-.man-extra-grid .photo-frame { width: 100%; height: auto; }
+.man-extra-grid .photo-frame {
+  width: 100%;
+  height: auto;
+  /* Décalage horizontal — slider 0..100 dans l'UI mappé à -50%..+50% de la largeur de cellule */
+  transform: translateX(var(--photo-x-offset, 0%));
+}
 .man-extra-grid .photo-img {
   width: 100%; height: auto;
   max-width: 100%;
@@ -220,7 +225,10 @@ export function renderManuel(projet: Projet, configIn?: ManualConfig): TemplateB
       const ph = photos[e.index]!;
       const pct = clampPercent(e.sizePercent);
       const maxMm = EXTRA_GRID_MAX_MM * pct / 100;
-      return `<div class="photo-frame" style="--extra-cell-max:${maxMm}mm">${photoImg(ph, projet.nom)}</div>`;
+      // offsetPercent (0..100) → translateX (-50%..+50% de la largeur de cellule)
+      const offsetPct = clampPercent(e.offsetPercent ?? 50);
+      const translatePct = offsetPct - 50;
+      return `<div class="photo-frame" style="--extra-cell-max:${maxMm}mm; --photo-x-offset:${translatePct}%">${photoImg(ph, projet.nom)}</div>`;
     }).join('');
     extraHtml = `<div class="man-extra-grid" style="grid-template-columns:repeat(${extraPhotos.length},1fr);">${cells}</div>`;
   }
