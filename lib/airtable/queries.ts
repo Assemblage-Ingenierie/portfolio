@@ -40,3 +40,17 @@ export async function getProjet(slug: string): Promise<Projet | null> {
   if (records.length === 0) return null;
   return recordToProjet(records[0]);
 }
+
+export async function getProjetByAffaire(affaire: string): Promise<Projet | null> {
+  if (!/^[a-zA-Z0-9_-]+$/.test(affaire)) return null;
+  if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) return null;
+  const records = await base(TABLE)
+    .select({
+      filterByFormula: `{Affaire} = "${affaire}"`,
+      maxRecords: 1,
+    })
+    .all();
+
+  if (records.length === 0) return null;
+  return recordToProjet(records[0]);
+}

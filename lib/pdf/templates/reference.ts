@@ -1,37 +1,79 @@
 import type { Projet } from '@/types/projet';
 import {
   TemplateBundle,
-  headerHtml, footerHtml, esc,
+  esc,
   photoImg, allPhotos,
 } from './shared';
 
 const CSS = `
-.ref-page {
-  padding: 10mm 16mm 10mm 16mm;
-  display: flex;
-  flex-direction: column;
-  gap: 3.5mm;
+:root {
+  --ai-rouge: #E30513;
+  --ai-violet: #30323E;
+  --ai-gris: #DFE4E8;
+  --ai-gris-tres-clair: #F2F2F2;
+  --ai-noir70: #4D4D4D;
+  --ai-noir: #000000;
+  --serif: 'Newsreader', Georgia, serif;
+  --sans: 'Open Sans', system-ui, sans-serif;
 }
 
-.ref-page > * { flex: 0 0 auto; }
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { background: white; font-family: var(--sans); color: var(--ai-noir); }
 
-.ref-hero {
+.ref-wrap {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 32px 40px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Header */
+.ref-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  border-bottom: 1.5px solid var(--ai-rouge);
+  padding-bottom: 8px;
+}
+.ref-header-label {
+  font-family: var(--sans);
+  font-size: 8pt;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ai-noir70);
+}
+.ref-header-statut {
+  font-family: var(--sans);
+  font-size: 8pt;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ai-rouge);
+}
+
+/* Photo couverture */
+.ref-cover {
   width: 100%;
-  height: 58mm;
+  height: 340px;
   overflow: hidden;
   background: var(--ai-gris-tres-clair);
 }
-.ref-hero .photo-img {
+.ref-cover img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
 
+/* Titre */
 .ref-title-row {
   display: flex;
   align-items: baseline;
-  gap: 6mm;
+  gap: 14px;
+  flex-wrap: wrap;
 }
 .ref-affaire {
   font-family: var(--sans);
@@ -40,10 +82,11 @@ const CSS = `
   letter-spacing: 0.12em;
   color: var(--ai-rouge);
   white-space: nowrap;
+  flex-shrink: 0;
 }
 .ref-h1 {
   font-family: var(--serif);
-  font-size: 20pt;
+  font-size: 28pt;
   font-weight: 500;
   color: var(--ai-noir);
   line-height: 1.05;
@@ -55,29 +98,43 @@ const CSS = `
   font-weight: 600;
   color: var(--ai-noir70);
   background: var(--ai-gris-tres-clair);
-  padding: 1.5mm 3mm;
-  border-radius: 1px;
+  padding: 3px 8px;
+  border-radius: 2px;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
+/* Sous-titre */
 .ref-subtitle {
   font-family: var(--sans);
-  font-size: 8.5pt;
+  font-size: 9pt;
   color: var(--ai-noir70);
   display: flex;
-  gap: 3mm;
+  gap: 8px;
   flex-wrap: wrap;
+  align-items: center;
 }
-.ref-subtitle-sep { color: var(--ai-gris); }
+.ref-subtitle-sep { color: var(--ai-gris); user-select: none; }
 
+/* Pitch */
+.ref-pitch {
+  font-family: var(--serif);
+  font-size: 13pt;
+  font-style: italic;
+  font-weight: 300;
+  color: var(--ai-noir70);
+  line-height: 1.4;
+}
+
+/* Grille données clés */
 .ref-meta {
   display: grid;
   border-top: 1.5px solid var(--ai-noir);
   border-bottom: 1.5px solid var(--ai-noir);
-  padding: 2.5mm 0;
+  padding: 10px 0;
 }
 .ref-meta-item {
-  padding: 0 2.5mm;
+  padding: 0 12px;
   border-right: 1px solid var(--ai-gris);
 }
 .ref-meta-item:first-child { padding-left: 0; }
@@ -89,44 +146,70 @@ const CSS = `
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--ai-rouge);
-  margin-bottom: 1mm;
+  margin-bottom: 3px;
   display: block;
 }
 .ref-meta-value {
   font-family: var(--serif);
-  font-size: 10pt;
+  font-size: 11pt;
   font-weight: 500;
   color: var(--ai-noir);
   line-height: 1.2;
 }
 
-.ref-pitch {
-  font-family: var(--serif);
-  font-size: 10.5pt;
-  font-style: italic;
-  font-weight: 300;
-  color: var(--ai-noir70);
-  line-height: 1.35;
-}
-
+/* Description */
 .ref-description {
   font-family: var(--sans);
-  font-size: 9pt;
-  line-height: 1.5;
+  font-size: 9.5pt;
+  line-height: 1.65;
   color: var(--ai-noir);
   column-count: 2;
-  column-gap: 6mm;
+  column-gap: 32px;
   column-rule: 1px solid var(--ai-gris);
 }
-.ref-description p { margin-bottom: 2mm; break-inside: avoid; }
+.ref-description p { margin-bottom: 10px; break-inside: avoid; }
 
+/* Photos projet */
+.ref-photos-title {
+  font-family: var(--sans);
+  font-size: 7pt;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--ai-rouge);
+  border-top: 1px solid var(--ai-gris);
+  padding-top: 14px;
+}
+.ref-photos-grid {
+  display: grid;
+  gap: 8px;
+}
+.ref-photos-grid img {
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+  display: block;
+  background: var(--ai-gris-tres-clair);
+}
+
+/* Intervenants */
+.ref-section-title {
+  font-family: var(--sans);
+  font-size: 7pt;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--ai-rouge);
+  border-top: 1px solid var(--ai-gris);
+  padding-top: 14px;
+  margin-bottom: 10px;
+}
 .ref-actors {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  border-top: 1px solid var(--ai-gris);
-  padding-top: 2.5mm;
+  gap: 12px 0;
 }
-.ref-actor-item { padding: 0 3mm 2mm 0; }
+.ref-actor-item {}
 .ref-actor-label {
   font-family: var(--sans);
   font-size: 6.5pt;
@@ -135,31 +218,32 @@ const CSS = `
   text-transform: uppercase;
   color: var(--ai-noir70);
   display: block;
-  margin-bottom: 0.5mm;
+  margin-bottom: 2px;
 }
 .ref-actor-value {
   font-family: var(--sans);
-  font-size: 8.5pt;
+  font-size: 9pt;
   color: var(--ai-noir);
 }
 
+/* Tags */
 .ref-tags-row {
   display: flex;
-  gap: 2mm;
+  gap: 6px;
   flex-wrap: wrap;
   align-items: center;
   border-top: 1px solid var(--ai-gris);
-  padding-top: 2.5mm;
+  padding-top: 14px;
 }
 .ref-badge {
   font-family: var(--sans);
-  font-size: 7pt;
+  font-size: 7.5pt;
   font-weight: 600;
-  letter-spacing: 0.05em;
-  padding: 1mm 2.5mm;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
   background: var(--ai-gris-tres-clair);
   border: 1px solid var(--ai-gris);
-  border-radius: 1px;
+  border-radius: 2px;
   color: var(--ai-noir70);
 }
 .ref-badge-cert {
@@ -167,11 +251,31 @@ const CSS = `
   border-color: var(--ai-violet);
   color: white;
 }
+
+/* Footer */
+.ref-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--ai-gris);
+  padding-top: 10px;
+  font-family: var(--sans);
+  font-size: 7.5pt;
+  color: var(--ai-noir70);
+}
+.ref-footer-sigle {
+  font-family: var(--serif);
+  font-size: 18pt;
+  font-weight: 700;
+  color: var(--ai-rouge);
+  line-height: 1;
+}
 `;
 
 export function renderReference(projet: Projet): TemplateBundle {
   const photos = allPhotos(projet);
   const cover = photos[0];
+  const extraPhotos = photos.slice(1);
 
   const subtitleParts = [projet.adresse, projet.programme, projet.missionAi].filter(Boolean);
   const subtitle = subtitleParts.length
@@ -209,6 +313,16 @@ export function renderReference(projet: Projet): TemplateBundle {
        </div>`
     : '';
 
+  // Grille photos : 1 col si 1 photo, 2 cols si 2, 3 cols si ≥ 3
+  const photosBlock = extraPhotos.length
+    ? `<div>
+        <div class="ref-photos-title">Photos du projet</div>
+        <div class="ref-photos-grid" style="margin-top:10px;grid-template-columns:repeat(${Math.min(extraPhotos.length, 3)},1fr);">
+          ${extraPhotos.map(p => `<img src="${esc(p.url)}" alt="${esc(projet.nom)}" />`).join('')}
+        </div>
+       </div>`
+    : '';
+
   const actors: { label: string; value: string }[] = [
     projet.mandataire  ? { label: 'Mandataire',   value: projet.mandataire }  : null,
     projet.architecte  ? { label: 'Architecte',   value: projet.architecte }  : null,
@@ -219,13 +333,16 @@ export function renderReference(projet: Projet): TemplateBundle {
   ].filter((a): a is { label: string; value: string } => a !== null);
 
   const actorsBlock = actors.length
-    ? `<div class="ref-actors">
-        ${actors.map(a => `
-          <div class="ref-actor-item">
-            <span class="ref-actor-label">${esc(a.label)}</span>
-            <span class="ref-actor-value">${esc(a.value)}</span>
-          </div>
-        `).join('')}
+    ? `<div>
+        <div class="ref-section-title">Intervenants</div>
+        <div class="ref-actors">
+          ${actors.map(a => `
+            <div class="ref-actor-item">
+              <span class="ref-actor-label">${esc(a.label)}</span>
+              <span class="ref-actor-value">${esc(a.value)}</span>
+            </div>
+          `).join('')}
+        </div>
        </div>`
     : '';
 
@@ -241,16 +358,18 @@ export function renderReference(projet: Projet): TemplateBundle {
        </div>`
     : '';
 
-  const body = `<article class="page ref-page">
-    ${headerHtml(projet)}
+  const body = `<div class="ref-wrap">
+    <header class="ref-header">
+      <span class="ref-header-label">Assemblage ingénierie · Référence Projet</span>
+      <span class="ref-header-statut">● ${esc(projet.statut)}</span>
+    </header>
 
-    ${cover ? `<div class="ref-hero photo-frame">${photoImg(cover, projet.nom)}</div>` : ''}
+    ${cover ? `<div class="ref-cover">${photoImg(cover, projet.nom)}</div>` : ''}
 
     <div class="ref-title-row">
       ${projet.affaire ? `<span class="ref-affaire">${esc(projet.affaire)}</span>` : ''}
       <h1 class="ref-h1">${esc(projet.nom)}</h1>
       ${projet.pole ? `<span class="ref-tag">${esc(projet.pole)}</span>` : ''}
-      <span class="ref-tag" style="color:var(--ai-rouge);">${esc(projet.statut)}</span>
     </div>
 
     ${subtitle}
@@ -261,12 +380,18 @@ export function renderReference(projet: Projet): TemplateBundle {
 
     ${description}
 
+    ${photosBlock}
+
     ${actorsBlock}
 
     ${tagsBlock}
 
-    ${footerHtml(projet)}
-  </article>`;
+    <footer class="ref-footer">
+      <span class="ref-footer-sigle">.A</span>
+      <span>Assemblage ingénierie · Références projets</span>
+      <span>${projet.affaire ?? ''}</span>
+    </footer>
+  </div>`;
 
   return { body, css: CSS };
 }
