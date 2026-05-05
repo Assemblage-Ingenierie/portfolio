@@ -4,6 +4,7 @@ import { renderSolo } from './templates/solo';
 import { renderDiptyque } from './templates/diptyque';
 import { renderTriptyque } from './templates/triptyque';
 import { renderManuel } from './templates/manuel';
+import { renderReference } from './templates/reference';
 import type { ManualConfig } from './manualConfig';
 
 export interface RenderOptions {
@@ -24,6 +25,8 @@ export function renderTemplate(projet: Projet, options?: RenderOptions): Templat
       return renderTriptyque(projet);
     case 'Manuel':
       return renderManuel(projet, options?.manualConfig);
+    case 'Référence':
+      return renderReference(projet);
     default:
       return renderTriptyque(projet);
   }
