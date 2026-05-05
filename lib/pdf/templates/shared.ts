@@ -166,7 +166,6 @@ export function headerHtml(projet: Projet): string {
 export function footerHtml(_projet: Projet): string {
   return `<footer class="t-footer">
     <span class="t-footer-sigle">.A</span>
-    <div class="t-footer-legal"><strong>Assemblage ingénierie</strong> S.A.S · 137 rue d'Aboukir, 75002 Paris · contact@assemblage.net · assemblage.net</div>
   </footer>`;
 }
 
@@ -188,7 +187,6 @@ export function metaGridHtml(projet: Projet): string {
   if (projet.anneeLivraison) items.push({
     label: 'Année',
     value: String(projet.anneeLivraison),
-    sub: projet.missionAi ?? undefined,
   });
 
   if (items.length === 0) return '';

@@ -4,19 +4,17 @@ export function nbPhotos(projet: Pick<Projet, 'photoCouverture' | 'photosProjet'
   return (projet.photoCouverture ? 1 : 0) + (projet.photosProjet?.length ?? 0);
 }
 
+/**
+ * Template par défaut quand aucune valeur n'est sauvegardée en Airtable.
+ * Triptyque est le choix par défaut depuis la suppression de Mosaïque/Galerie.
+ */
 export function autoSelectTemplate(
-  projet: Pick<Projet, 'photoCouverture' | 'photosProjet' | 'description'>
+  _projet: Pick<Projet, 'photoCouverture' | 'photosProjet' | 'description'>
 ): TemplateChoice {
-  const n = nbPhotos(projet);
-  const len = projet.description?.length ?? 0;
-  if (len > 2500) return 'Galerie';
-  if (n >= 4) return 'Mosaïque';
-  if (n === 3) return 'Triptyque';
-  if (n === 2) return 'Diptyque';
-  return 'Solo';
+  return 'Triptyque';
 }
 
-const TEMPLATE_VALUES: TemplateChoice[] = ['Solo', 'Diptyque', 'Triptyque', 'Mosaïque', 'Galerie', 'Manuel'];
+const TEMPLATE_VALUES: TemplateChoice[] = ['Solo', 'Diptyque', 'Triptyque', 'Manuel'];
 
 export function isTemplateChoice(v: unknown): v is TemplateChoice {
   return typeof v === 'string' && (TEMPLATE_VALUES as string[]).includes(v);

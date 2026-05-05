@@ -209,10 +209,8 @@ function buildWpEditorial(projet: Projet, coverUrl: string | undefined, photoUrl
 }
 
 export function buildWpContent(projet: Projet, coverUrl: string | undefined, photoUrls: string[]): string {
-  // En attendant la migration WordPress vers les nouveaux templates, on route
-  // selon le mapping legacy template → 'Editorial' | 'Magazine'.
-  const isMagazineLike = projet.template === 'Mosaïque' || projet.template === 'Galerie';
-  return isMagazineLike
-    ? buildWpMagazine(projet, coverUrl, photoUrls)
-    : buildWpEditorial(projet, coverUrl, photoUrls);
+  // Tous les templates restants (Solo, Diptyque, Triptyque, Manuel) routent
+  // vers le builder Editorial pour la publication WordPress. buildWpMagazine
+  // est conservé en parallèle pour archivage mais n'est plus appelé.
+  return buildWpEditorial(projet, coverUrl, photoUrls);
 }

@@ -3,7 +3,6 @@ import { renderShell, TemplateBundle } from './templates/shared';
 import { renderSolo } from './templates/solo';
 import { renderDiptyque } from './templates/diptyque';
 import { renderTriptyque } from './templates/triptyque';
-import { renderMosaique } from './templates/mosaique';
 import { renderManuel } from './templates/manuel';
 import type { ManualConfig } from './manualConfig';
 
@@ -13,7 +12,7 @@ export interface RenderOptions {
 
 /**
  * Dispatcher : sélectionne le template selon `projet.template`.
- * Galerie n'est pas encore implémenté — il retombe sur Mosaïque pour l'instant.
+ * Les templates supportés sont Solo, Diptyque, Triptyque (défaut) et Manuel.
  */
 export function renderTemplate(projet: Projet, options?: RenderOptions): TemplateBundle {
   switch (projet.template) {
@@ -25,11 +24,8 @@ export function renderTemplate(projet: Projet, options?: RenderOptions): Templat
       return renderTriptyque(projet);
     case 'Manuel':
       return renderManuel(projet, options?.manualConfig);
-    case 'Mosaïque':
-    case 'Galerie': // TODO: template multi-pages dédié
-      return renderMosaique(projet);
     default:
-      return renderSolo(projet);
+      return renderTriptyque(projet);
   }
 }
 

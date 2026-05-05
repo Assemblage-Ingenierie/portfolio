@@ -1,21 +1,12 @@
 import type { TemplateChoice } from '@/types/projet';
 
 /**
- * Mapping legacy template → ancien layout 'Editorial' | 'Magazine'
- * utilisé pour le rendu on-screen et la publication WordPress en attendant
- * que ces deux flux soient migrés vers le système de templates.
+ * Mapping legacy template → ancien layout WordPress.
+ * Depuis la suppression de Mosaïque/Galerie, tous les templates restants
+ * (Solo, Diptyque, Triptyque, Manuel) routent vers la version Editorial.
  */
 export type LegacyLayout = 'Editorial' | 'Magazine';
 
-export function templateToLegacyLayout(template: TemplateChoice): LegacyLayout {
-  switch (template) {
-    case 'Mosaïque':
-    case 'Galerie':
-      return 'Magazine';
-    case 'Solo':
-    case 'Diptyque':
-    case 'Triptyque':
-    default:
-      return 'Editorial';
-  }
+export function templateToLegacyLayout(_template: TemplateChoice): LegacyLayout {
+  return 'Editorial';
 }
