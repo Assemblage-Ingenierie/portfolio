@@ -162,11 +162,11 @@ function buildWpEditorial(projet: Projet, coverUrl: string | undefined, photoUrl
   return `
 <article style="font-family:${SANS};color:#000;line-height:1.6;">
 
-  <!-- Titre + pitch -->
+  ${pitch ? `
+  <!-- Pitch (le titre est déjà rendu par le thème WP depuis post.title) -->
   <header style="margin:0 0 40px;">
-    <h1 style="font-family:${SERIF};font-size:48px;font-weight:400;line-height:1.05;letter-spacing:-0.02em;color:#000;margin:0 0 16px;">${esc(projet.nom)}</h1>
-    ${pitch ? `<p style="font-family:${SERIF};font-size:20px;font-style:italic;line-height:1.4;color:${VIOLET};margin:0;max-width:780px;">${pitch}</p>` : ''}
-  </header>
+    <p style="font-family:${SERIF};font-size:20px;font-style:italic;line-height:1.4;color:${VIOLET};margin:0;max-width:780px;">${pitch}</p>
+  </header>` : ''}
 
   <!-- Photo couverture (gauche) + champs clés (droite) -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start;margin-bottom:48px;">
