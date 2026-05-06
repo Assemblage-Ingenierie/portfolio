@@ -136,10 +136,10 @@ function lightboxHtml(allPhotos: string[], alt: string): string {
   if (allPhotos.length === 0) return '';
   const photosJson = JSON.stringify(allPhotos);
   return `
-<div id="ai-lightbox" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.75);align-items:center;justify-content:center;flex-direction:column;padding:80px 60px 60px;">
+<div id="ai-lightbox" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.75);align-items:center;justify-content:flex-start;flex-direction:column;padding:0 60px 60px;overflow-y:auto;">
   <button id="ai-lb-close" style="position:absolute;top:20px;right:28px;background:none;border:none;color:white;font-size:36px;line-height:1;cursor:pointer;opacity:0.8;">×</button>
   <button id="ai-lb-prev" style="position:absolute;left:16px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.12);border:none;color:white;font-size:48px;line-height:1;cursor:pointer;padding:12px 18px;border-radius:4px;">‹</button>
-  <img id="ai-lb-img" src="" alt="${esc(alt)}" style="max-width:90vw;max-height:calc(100vh - 160px);object-fit:contain;display:block;border-radius:2px;" />
+  <img id="ai-lb-img" src="" alt="${esc(alt)}" style="max-width:90vw;max-height:calc(100vh - 160px);object-fit:contain;display:block;border-radius:2px;margin-top:100px;flex-shrink:0;" />
   <div id="ai-lb-counter" style="position:absolute;bottom:20px;color:white;font-family:${SANS};font-size:13px;opacity:0.6;letter-spacing:0.08em;"></div>
   <button id="ai-lb-next" style="position:absolute;right:16px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.12);border:none;color:white;font-size:48px;line-height:1;cursor:pointer;padding:12px 18px;border-radius:4px;">›</button>
 </div>
