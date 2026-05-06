@@ -5,7 +5,9 @@ function wpApi(): string {
 function authHeaders(): Record<string, string> {
   const user = process.env.WP_USER ?? '';
   const pass = (process.env.WP_APP_PASSWORD ?? '').replace(/\s/g, '');
-  console.log('[WP] user set:', !!user, '| pass set:', !!pass, '| pass length:', pass.length, '| base_url:', process.env.WP_BASE_URL);
+  console.log('[WP-USER]', user || 'VIDE');
+  console.log('[WP-PASS-LEN]', pass.length);
+  console.log('[WP-URL]', process.env.WP_BASE_URL || 'VIDE');
   const token = Buffer.from(`${user}:${pass}`).toString('base64');
   return { Authorization: `Basic ${token}` };
 }
