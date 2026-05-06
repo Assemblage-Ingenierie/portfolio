@@ -17,7 +17,7 @@ export interface Projet {
   slug: string;
   nom: string;
   adresse?: string;
-  ville?: string;
+  lieu?: string;
   pitch?: string;
   description: string;
 

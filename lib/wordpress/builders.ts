@@ -68,7 +68,7 @@ function buildWpMagazine(projet: Projet, coverUrl: string | undefined, photoUrls
     <div style="position:absolute;bottom:0;left:0;right:0;padding:20px 28px;z-index:2;">
       ${badge ? `<div style="display:inline-block;background:${ROUGE};color:white;padding:2px 10px;font-family:${SANS};font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;margin-bottom:8px;">${badge}</div>` : ''}
       <h1 style="font-family:${SERIF};font-size:34px;font-weight:400;line-height:1;letter-spacing:-0.02em;color:white;margin:0 0 6px;">${esc(projet.nom)}</h1>
-      ${projet.ville ? `<div style="font-family:${SANS};font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.85);">${esc(projet.ville)}</div>` : ''}
+      ${projet.lieu ? `<div style="font-family:${SANS};font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.85);">${esc(projet.lieu)}</div>` : ''}
     </div>
   </div>
 
@@ -146,7 +146,7 @@ function buildWpEditorial(projet: Projet, coverUrl: string | undefined, photoUrl
     : projet.statut || (projet.anneeLivraison ? String(projet.anneeLivraison) : undefined);
 
   const champsCles: { label: string; value?: string; highlight?: boolean }[] = [
-    { label: 'Ville',             value: projet.ville },
+    { label: 'Lieu',              value: projet.lieu },
     { label: "Maître d'ouvrage", value: projet.moa },
     { label: 'Architecte',       value: projet.architecte },
     { label: 'Mission AI',       value: projet.missionAi, highlight: true },

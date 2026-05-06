@@ -68,7 +68,7 @@ export function recordToProjet(record: any): Projet {
     slug: f['Slug'] ?? '',
     nom: f['Nom du projet'] ?? '',
     adresse: f['Adresse'] ?? undefined,
-    ville: f['Ville'] ?? undefined,
+    lieu: f['Lieu'] ?? undefined,
     pitch: formulaValue(f['Pitch']),
     description,
 

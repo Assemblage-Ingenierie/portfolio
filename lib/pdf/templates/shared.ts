@@ -171,7 +171,7 @@ export function footerHtml(_projet: Projet): string {
 
 export function titleBlockHtml(projet: Projet, h1Size = '32pt'): string {
   return `<div class="t-title-block">
-    ${projet.ville ? `<div class="t-surtitre">${esc(projet.ville)}</div>` : ''}
+    ${projet.lieu ? `<div class="t-surtitre">${esc(projet.lieu)}</div>` : ''}
     <h1 class="t-h1" style="font-size:${h1Size}; line-height:1.05;">${esc(projet.nom)}</h1>
     ${projet.pitch ? `<p class="t-pitch">${esc(projet.pitch)}</p>` : ''}
   </div>`;
