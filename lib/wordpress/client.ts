@@ -26,6 +26,10 @@ export async function uploadMedia(
   imageUrl: string,
   filename: string
 ): Promise<{ id: number; url: string }> {
+  // DEBUG: vérifie que l'auth Basic atteint bien WP (vs strippé par Apache/Nginx)
+  const me = await fetch(`${wpApi()}/users/me`, { headers: authHeaders() });
+  console.log('[WP-AUTH-CHECK] status:', me.status, '| body:', (await me.text()).slice(0, 200));
+
   const imageRes = await fetch(imageUrl);
   if (!imageRes.ok) throw new Error(`Failed to fetch image: ${imageUrl}`);
   const buffer = await imageRes.arrayBuffer();
