@@ -148,6 +148,10 @@ function lightboxHtml(allPhotos: string[], alt: string): string {
   var photos=${photosJson};
   var idx=0;
   var lb=document.getElementById('ai-lightbox');
+  // Déplacer le lightbox vers document.body pour échapper à tout contexte
+  // d'empilement créé par un parent (transform, filter, will-change…)
+  // qui empêcherait position:fixed de couvrir tout le viewport.
+  if(lb&&lb.parentNode!==document.body){document.body.appendChild(lb);}
   var lbImg=document.getElementById('ai-lb-img');
   var lbCounter=document.getElementById('ai-lb-counter');
   function show(i){
