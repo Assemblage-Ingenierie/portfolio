@@ -119,26 +119,40 @@ function buildWpMagazine(projet: Projet, coverUrl: string | undefined, photoUrls
 </div>`;
 }
 
+function imageHero(url: string, alt: string): string {
+  // Photo de couverture pleine largeur, aspect 16:9 préservé (pas de crop fixe).
+  return `
+    <figure style="margin:0 0 20px;aspect-ratio:16/9;overflow:hidden;background:${GRIS};">
+      <img src="${esc(url)}" alt="${esc(alt)}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;" />
+    </figure>`;
+}
+
+function imageGallery(urls: string[], alt: string): string {
+  // Galerie pleine largeur, nombre de colonnes adaptatif au nombre de photos.
+  // Chaque cellule en aspect 4:3 → photos correctement proportionnées quel que
+  // soit leur ratio source. Utilise <img> (lazy-load + alt) plutôt que
+  // background-image qui cropait brutalement la photo dans un rectangle plat.
+  if (urls.length === 0) return '';
+  const cols = urls.length === 1 ? 1 : urls.length === 2 ? 2 : 3;
+  return `
+    <div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:6px;margin-top:8px;">
+      ${urls.map((u, i) => `
+        <figure style="margin:0;aspect-ratio:4/3;overflow:hidden;background:${GRIS};">
+          <img src="${esc(u)}" alt="${esc(alt)} — photo ${i + 1}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;" />
+        </figure>`).join('')}
+    </div>`;
+}
+
 function buildWpEditorial(projet: Projet, coverUrl: string | undefined, photoUrls: string[]): string {
   const pitch = esc(projet.pitch ?? '');
   const description = projet.description ?? '';
   const paragraphs = description.split(/\n\n+/).filter(Boolean);
   const chiffresCles = projet.chiffresCles ?? [];
 
-  const allPhotos = [coverUrl, ...photoUrls].filter(Boolean) as string[];
-
   const hasSecondaire = !!(
     projet.pole || projet.departement || projet.programme || projet.rehabNeuf ||
     projet.mandataire || projet.betAssocies || projet.entreprise || projet.bailleur
   );
-
-  const photoGrid = allPhotos.length > 0
-    ? `<div style="display:grid;grid-template-columns:${allPhotos.length === 1 ? '1fr' : allPhotos.length === 2 ? '1fr 1fr' : '2fr 1fr 1fr'};gap:4px;height:160px;margin-top:16px;">
-        ${allPhotos.slice(0, 4).map(u =>
-          `<div style="background-image:url(${u});background-size:cover;background-position:center;background-color:${GRIS};"></div>`
-        ).join('')}
-      </div>`
-    : '';
 
   return `
 <div style="font-family:${SANS};max-width:900px;margin:0 auto;background:white;">
@@ -155,6 +169,8 @@ function buildWpEditorial(projet: Projet, coverUrl: string | undefined, photoUrl
     <h1 style="font-family:${SERIF};font-size:34px;font-weight:400;line-height:1;letter-spacing:-0.02em;color:#000;margin:0 0 10px;">${esc(projet.nom)}</h1>
     ${pitch ? `<p style="font-family:${SERIF};font-size:15px;font-style:italic;line-height:1.4;color:${VIOLET};margin:0;">${pitch}</p>` : ''}
   </div>
+
+  ${coverUrl ? imageHero(coverUrl, projet.nom) : ''}
 
   <!-- Info grid -->
   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding:14px 0;border-top:1px solid ${GRIS};border-bottom:1px solid ${GRIS};margin-bottom:20px;">
@@ -178,23 +194,24 @@ function buildWpEditorial(projet: Projet, coverUrl: string | undefined, photoUrl
     ].filter(f => !!f.value).map(f => infoItem(f.label, f.value)).join('')}
   </div>` : ''}
 
-  <!-- Contenu : texte + photos -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:20px;">
-    <div>
-      ${paragraphs.map((p, i) => `<p style="font-family:${SANS};font-size:11px;line-height:1.6;color:#000;margin-bottom:8px;${i === 0 ? `font-size:12px;font-weight:500;` : ''}">${esc(p)}</p>`).join('')}
-      ${chiffresCles.length > 0 ? `
-        <div style="border-top:1px solid ${ROUGE};padding-top:10px;margin-top:10px;">
-          <div style="font-family:${SANS};font-size:8px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:${ROUGE};margin-bottom:6px;">Chiffres clés</div>
-          ${chiffresCles.map(c => `
-            <div style="display:flex;justify-content:space-between;font-family:${SANS};font-size:10px;padding:4px 0;border-bottom:1px dotted ${GRIS};">
-              ${esc(c.label)} <strong style="font-family:${SERIF};font-weight:600;">${esc(c.valeur)}</strong>
-            </div>`).join('')}
-        </div>` : ''}
-    </div>
-    <div>
-      ${photoGrid}
-    </div>
+  <!-- Description : 2 colonnes pleine largeur -->
+  <div style="columns:2;column-gap:24px;column-rule:1px solid ${GRIS};margin-bottom:20px;">
+    ${paragraphs.map((p, i) => `<p style="font-family:${SANS};font-size:11px;line-height:1.6;color:#000;margin:0 0 8px;break-inside:avoid;${i === 0 ? `font-size:12px;font-weight:500;` : ''}">${esc(p)}</p>`).join('')}
   </div>
+
+  ${chiffresCles.length > 0 ? `
+    <div style="border-top:1px solid ${ROUGE};padding-top:10px;margin-bottom:20px;">
+      <div style="font-family:${SANS};font-size:8px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:${ROUGE};margin-bottom:6px;">Chiffres clés</div>
+      <div style="display:grid;grid-template-columns:repeat(${Math.min(chiffresCles.length, 4)},1fr);gap:12px;">
+        ${chiffresCles.map(c => `
+          <div style="font-family:${SANS};font-size:10px;padding:4px 0;border-bottom:1px dotted ${GRIS};">
+            ${esc(c.label)} <strong style="font-family:${SERIF};font-weight:600;">${esc(c.valeur)}</strong>
+          </div>`).join('')}
+      </div>
+    </div>` : ''}
+
+  <!-- Galerie photos (cover déjà affichée en hero plus haut) -->
+  ${imageGallery(photoUrls, projet.nom)}
 
   <!-- Footer -->
   <div style="background:${VIOLET};color:white;padding:10px 28px;display:flex;justify-content:space-between;align-items:center;font-family:${SANS};font-size:9px;">

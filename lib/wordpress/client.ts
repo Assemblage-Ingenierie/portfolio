@@ -5,9 +5,6 @@ function wpApi(): string {
 function authHeaders(): Record<string, string> {
   const user = process.env.WP_USER ?? '';
   const pass = (process.env.WP_APP_PASSWORD ?? '').replace(/\s/g, '');
-  console.log('[WP-USER]', user || 'VIDE');
-  console.log('[WP-PASS-LEN]', pass.length);
-  console.log('[WP-URL]', process.env.WP_BASE_URL || 'VIDE');
   const token = Buffer.from(`${user}:${pass}`).toString('base64');
   return { Authorization: `Basic ${token}` };
 }
@@ -26,10 +23,6 @@ export async function uploadMedia(
   imageUrl: string,
   filename: string
 ): Promise<{ id: number; url: string }> {
-  // DEBUG: vérifie que l'auth Basic atteint bien WP (vs strippé par Apache/Nginx)
-  const me = await fetch(`${wpApi()}/users/me`, { headers: authHeaders() });
-  console.log('[WP-AUTH-CHECK] status:', me.status, '| body:', (await me.text()).slice(0, 200));
-
   const imageRes = await fetch(imageUrl);
   if (!imageRes.ok) throw new Error(`Failed to fetch image: ${imageUrl}`);
   const buffer = await imageRes.arrayBuffer();
