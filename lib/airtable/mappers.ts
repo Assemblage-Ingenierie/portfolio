@@ -3,7 +3,7 @@ import { normalizeStatut } from '@/lib/utils/normalize';
 import { parseChiffresCles, parseTagsSiteWeb, formatBudget } from '@/lib/utils/parsers';
 import { formulaValue, linkedValue, selectValue } from './client';
 import { autoSelectTemplate, isTemplateChoice } from '@/lib/pdf/selectTemplate';
-import { deserializeConfig, deserializeHistory } from '@/lib/pdf/manualConfig';
+import { deserializeConfig } from '@/lib/pdf/manualConfig';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function recordToProjet(record: any): Projet {
@@ -103,10 +103,6 @@ export function recordToProjet(record: any): Projet {
     budgetRaw,
     urlWordpress: f['URL'] ?? undefined,
     chiffresCles: parseChiffresCles(formulaValue(f['Chiffres clefs'])),
-    manualConfigHistory: deserializeHistory(f['Config template manuel']),
-    // fldBHee96Nsn8rkWx — lu via returnFieldsByFieldId (le champ n'est accessible
-    // par ID que si la query utilise returnFieldsByFieldId: true, non activé globalement).
-    // Pour l'instant on tente les deux formes : par ID direct si Airtable l'expose.
-    savedManualConfig: deserializeConfig(f['fldBHee96Nsn8rkWx'] ?? null) ?? undefined,
+    savedManualConfig: deserializeConfig(f['Config template manuel']) ?? undefined,
   };
 }

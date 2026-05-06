@@ -15,7 +15,9 @@ interface Props {
 
 export default function ProjetView({ projet, isPrint }: Props) {
   const [template, setTemplate] = useState<TemplateChoice>(projet.template);
-  const [manualConfig, setManualConfig] = useState<ManualConfig>(DEFAULT_MANUAL_CONFIG);
+  const [manualConfig, setManualConfig] = useState<ManualConfig>(
+    projet.savedManualConfig ?? DEFAULT_MANUAL_CONFIG
+  );
 
   async function handleTemplateChange(newTemplate: TemplateChoice) {
     setTemplate(newTemplate);

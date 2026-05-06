@@ -5,7 +5,7 @@ import Link from 'next/link';
 import type { Projet, TemplateChoice } from '@/types/projet';
 import { TEMPLATE_OPTIONS } from '@/types/projet';
 import { authHeaders } from '@/lib/supabase/authHeaders';
-import { encodeConfig, ManualConfig, MAX_HISTORY_ENTRIES, ManualConfigHistoryEntry } from '@/lib/pdf/manualConfig';
+import { encodeConfig, ManualConfig } from '@/lib/pdf/manualConfig';
 
 interface Props {
   projet: Projet;
@@ -58,27 +58,9 @@ export default function ProjetToolbar({ projet, template, manualConfig, onTempla
 
   async function handleDownloadPdf() {
     const params = new URLSearchParams({ template });
-
     if (template === 'Manuel' && manualConfig) {
       params.set('config', encodeConfig(manualConfig));
-
-      // Persistance : prepend la config courante dans l'historique Airtable.
-      // Fire-and-forget pour ne pas bloquer l'ouverture du print.
-      try {
-        const newEntry: ManualConfigHistoryEntry = { ts: Date.now(), config: manualConfig };
-        const previous = projet.manualConfigHistory ?? [];
-        const newHistory = [newEntry, ...previous].slice(0, MAX_HISTORY_ENTRIES);
-        // PATCH async sans await — l'utilisateur ouvre le print sans délai
-        fetch(`/api/projet/${projet.slug}/fields`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
-          body: JSON.stringify({ manualConfigHistory: newHistory }),
-        }).catch(err => console.error('historique config Manuel non sauvegardé:', err));
-      } catch (e) {
-        console.error('erreur persistance historique:', e);
-      }
     }
-
     window.open(`/projet/${projet.slug}/print?${params.toString()}`, '_blank');
   }
 
