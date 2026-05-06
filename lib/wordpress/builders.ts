@@ -119,18 +119,60 @@ function buildWpMagazine(projet: Projet, coverUrl: string | undefined, photoUrls
 </div>`;
 }
 
-function imageGallery(urls: string[], alt: string): string {
-  // Galerie pleine largeur, nombre de colonnes adaptatif (1, 2 ou 3).
-  // <img> (lazy + alt) plutôt que background-image — meilleur SEO + responsive WP.
+// startIdx : index lightbox de la première photo (0 = couverture, 1+ = galerie)
+function imageGallery(urls: string[], alt: string, startIdx = 1): string {
   if (urls.length === 0) return '';
   const cols = urls.length === 1 ? 1 : urls.length === 2 ? 2 : 3;
   return `
     <div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:12px;margin:40px 0;">
       ${urls.map((u, i) => `
-        <figure style="margin:0;aspect-ratio:4/3;overflow:hidden;background:${GRIS};">
-          <img src="${esc(u)}" alt="${esc(alt)} — photo ${i + 1}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;" />
+        <figure data-ai-idx="${startIdx + i}" style="margin:0;aspect-ratio:4/3;overflow:hidden;background:${GRIS};cursor:pointer;">
+          <img src="${esc(u)}" alt="${esc(alt)} — photo ${startIdx + i}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;" />
         </figure>`).join('')}
     </div>`;
+}
+
+function lightboxHtml(allPhotos: string[], alt: string): string {
+  if (allPhotos.length === 0) return '';
+  const photosJson = JSON.stringify(allPhotos);
+  return `
+<div id="ai-lightbox" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.92);align-items:center;justify-content:center;flex-direction:column;">
+  <button id="ai-lb-close" style="position:absolute;top:20px;right:28px;background:none;border:none;color:white;font-size:36px;line-height:1;cursor:pointer;opacity:0.8;">×</button>
+  <button id="ai-lb-prev" style="position:absolute;left:16px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.12);border:none;color:white;font-size:48px;line-height:1;cursor:pointer;padding:12px 18px;border-radius:4px;">‹</button>
+  <img id="ai-lb-img" src="" alt="${esc(alt)}" style="max-width:90vw;max-height:88vh;object-fit:contain;display:block;border-radius:2px;" />
+  <div id="ai-lb-counter" style="position:absolute;bottom:20px;color:white;font-family:${SANS};font-size:13px;opacity:0.6;letter-spacing:0.08em;"></div>
+  <button id="ai-lb-next" style="position:absolute;right:16px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.12);border:none;color:white;font-size:48px;line-height:1;cursor:pointer;padding:12px 18px;border-radius:4px;">›</button>
+</div>
+<script>
+(function(){
+  var photos=${photosJson};
+  var idx=0;
+  var lb=document.getElementById('ai-lightbox');
+  var lbImg=document.getElementById('ai-lb-img');
+  var lbCounter=document.getElementById('ai-lb-counter');
+  function show(i){
+    idx=(i+photos.length)%photos.length;
+    lbImg.src=photos[idx];
+    lbCounter.textContent=(idx+1)+' / '+photos.length;
+    lb.style.display='flex';
+    document.body.style.overflow='hidden';
+  }
+  function close(){lb.style.display='none';document.body.style.overflow='';}
+  document.getElementById('ai-lb-prev').onclick=function(e){e.stopPropagation();show(idx-1);};
+  document.getElementById('ai-lb-next').onclick=function(e){e.stopPropagation();show(idx+1);};
+  document.getElementById('ai-lb-close').onclick=close;
+  lb.onclick=function(e){if(e.target===lb)close();};
+  document.addEventListener('keydown',function(e){
+    if(lb.style.display==='none')return;
+    if(e.key==='ArrowLeft')show(idx-1);
+    if(e.key==='ArrowRight')show(idx+1);
+    if(e.key==='Escape')close();
+  });
+  document.querySelectorAll('[data-ai-idx]').forEach(function(el){
+    el.addEventListener('click',function(){show(parseInt(el.getAttribute('data-ai-idx'),10));});
+  });
+})();
+</script>`;
 }
 
 function buildWpEditorial(projet: Projet, coverUrl: string | undefined, photoUrls: string[]): string {
@@ -138,6 +180,7 @@ function buildWpEditorial(projet: Projet, coverUrl: string | undefined, photoUrl
   const description = projet.description ?? '';
   const paragraphs = description.split(/\n\n+/).filter(Boolean);
   const chiffresCles = projet.chiffresCles ?? [];
+  const allPhotos = [coverUrl, ...photoUrls].filter((u): u is string => !!u);
 
   // Champs clés affichés à droite de la photo de couverture, dans l'ordre souhaité.
   // Mission AI mise en valeur en rouge. Filtre les champs vides automatiquement.
@@ -172,8 +215,8 @@ function buildWpEditorial(projet: Projet, coverUrl: string | undefined, photoUrl
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start;margin-bottom:48px;">
     <div>
       ${coverUrl
-        ? `<figure style="margin:0;aspect-ratio:4/3;overflow:hidden;background:${GRIS};">
-            <img src="${esc(coverUrl)}" alt="${esc(projet.nom)}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;" />
+        ? `<figure data-ai-idx="0" style="margin:0;aspect-ratio:4/3;overflow:hidden;background:${GRIS};cursor:pointer;">
+            <img src="${esc(coverUrl)}" alt="${esc(projet.nom)}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;" />
           </figure>`
         : ''}
     </div>
@@ -202,8 +245,10 @@ function buildWpEditorial(projet: Projet, coverUrl: string | undefined, photoUrl
       </div>
     </div>` : ''}
 
-  <!-- Galerie des photos restantes (cover déjà affichée en haut) -->
-  ${imageGallery(photoUrls, projet.nom)}
+  <!-- Galerie des photos restantes (cover déjà affichée en haut, idx 0) -->
+  ${imageGallery(photoUrls, projet.nom, 1)}
+
+  ${lightboxHtml(allPhotos, projet.nom)}
 
 </article>`;
 }
