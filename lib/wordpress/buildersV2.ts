@@ -4,10 +4,11 @@ import { esc, lightboxHtml, ROUGE, VIOLET, GRIS, NOIR70, SERIF, SANS } from './b
 /**
  * Variante V2 — layout magazine inspiré de la mise en page « Brunoy ».
  * - Titre rendu par le thème WP (post.title)
- * - Photo principale pleine largeur (cliquable pour lightbox)
- * - Description en 2 colonnes
- * - Photos additionnelles en 2 colonnes sous le texte
- * - Champs clés en grille compacte sous les photos
+ * - Pitch en italique centré
+ * - Champs clés en grille compacte (juste sous le titre)
+ * - Photo principale à 70% de la largeur centrée (cliquable pour lightbox)
+ * - Description + photos additionnelles en flux 2 colonnes
+ * - Chiffres clés en bas
  */
 function buildWpEditorialV2(projet: Projet, coverUrl: string | undefined, photoUrls: string[]): string {
   const pitch = esc(projet.pitch ?? '');
@@ -53,25 +54,14 @@ function buildWpEditorialV2(projet: Projet, coverUrl: string | undefined, photoU
 <article style="font-family:${SANS};color:#000;line-height:1.6;max-width:1100px;margin:0 auto;">
 
   ${pitch ? `
-  <header style="margin:0 0 32px;text-align:center;">
+  <header style="margin:0 0 24px;text-align:center;">
     <p style="font-family:${SERIF};font-size:22px;font-style:italic;line-height:1.4;color:${VIOLET};margin:0 auto;max-width:780px;">${pitch}</p>
   </header>` : ''}
 
-  <!-- Photo principale pleine largeur (cliquable, idx 0 du carrousel) -->
-  ${coverUrl ? `
-    <figure data-ai-idx="0" style="margin:0 0 40px;cursor:pointer;background:${GRIS};">
-      <img src="${esc(coverUrl)}" alt="${esc(projet.nom)}" loading="lazy" style="width:100%;height:auto;display:block;pointer-events:none;" />
-    </figure>` : ''}
-
-  <!-- Description + photos additionnelles en flux 2 colonnes -->
-  <div style="column-count:2;column-gap:40px;column-rule:1px solid ${GRIS};margin-bottom:48px;">
-    ${colonnesContent}
-  </div>
-
   ${champsCles.length > 0 ? `
-  <!-- Champs clés en grille compacte -->
-  <div style="border-top:2px solid ${ROUGE};padding-top:24px;margin-bottom:40px;">
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px 32px;">
+  <!-- Champs clés en grille compacte — juste sous le titre -->
+  <div style="border-top:2px solid ${ROUGE};border-bottom:1px solid ${GRIS};padding:20px 0;margin-bottom:32px;">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px 28px;">
       ${champsCles.map(f => `
         <div style="${f.highlight ? `color:${ROUGE};` : ''}">
           <div style="font-family:${SANS};font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${f.highlight ? ROUGE : NOIR70};margin-bottom:4px;">${esc(f.label)}</div>
@@ -79,6 +69,17 @@ function buildWpEditorialV2(projet: Projet, coverUrl: string | undefined, photoU
         </div>`).join('')}
     </div>
   </div>` : ''}
+
+  <!-- Photo principale ~70% de la largeur (cliquable, idx 0 du carrousel) -->
+  ${coverUrl ? `
+    <figure data-ai-idx="0" style="margin:0 auto 40px;cursor:pointer;background:${GRIS};width:70%;">
+      <img src="${esc(coverUrl)}" alt="${esc(projet.nom)}" loading="lazy" style="width:100%;height:auto;display:block;pointer-events:none;" />
+    </figure>` : ''}
+
+  <!-- Description + photos additionnelles en flux 2 colonnes -->
+  <div style="column-count:2;column-gap:40px;column-rule:1px solid ${GRIS};margin-bottom:48px;">
+    ${colonnesContent}
+  </div>
 
   ${chiffresCles.length > 0 ? `
   <!-- Chiffres clés -->
