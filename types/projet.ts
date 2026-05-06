@@ -1,4 +1,4 @@
-import type { ManualConfigHistoryEntry } from '@/lib/pdf/manualConfig';
+import type { ManualConfig } from '@/lib/pdf/manualConfig';
 
 export type Statut =
   | 'En étude'
@@ -56,7 +56,7 @@ export interface Projet {
 
   chiffresCles?: { label: string; valeur: string }[];
 
-  /** Historique des configs Manuel utilisées pour les exports PDF.
+  /** Mise en page Manuel sauvegardée explicitement par l'utilisateur.
    *  Stocké dans le champ Airtable "Config template manuel" (Long text JSON). */
-  manualConfigHistory?: ManualConfigHistoryEntry[];
+  savedManualConfig?: ManualConfig;
 }

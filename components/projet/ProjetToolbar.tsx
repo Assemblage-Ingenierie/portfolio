@@ -5,7 +5,7 @@ import Link from 'next/link';
 import type { Projet, TemplateChoice } from '@/types/projet';
 import { TEMPLATE_OPTIONS } from '@/types/projet';
 import { authHeaders } from '@/lib/supabase/authHeaders';
-import { encodeConfig, ManualConfig, MAX_HISTORY_ENTRIES, ManualConfigHistoryEntry } from '@/lib/pdf/manualConfig';
+import { encodeConfig, ManualConfig } from '@/lib/pdf/manualConfig';
 
 interface Props {
   projet: Projet;
@@ -17,6 +17,7 @@ interface Props {
 export default function ProjetToolbar({ projet, template, manualConfig, onTemplateChange }: Props) {
   const [publishing, setPublishing] = useState(false);
   const [result, setResult] = useState<{ url?: string; error?: string; warning?: string } | null>(null);
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   async function handlePublish() {
     if (!confirm('Publier cette fiche sur WordPress en brouillon ?')) return;
@@ -37,29 +38,29 @@ export default function ProjetToolbar({ projet, template, manualConfig, onTempla
     }
   }
 
+  async function handleSaveLayout() {
+    if (!manualConfig) return;
+    setSaveState('saving');
+    try {
+      const res = await fetch(`/api/projet/${projet.slug}/fields`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+        body: JSON.stringify({ savedManualConfig: manualConfig }),
+      });
+      if (!res.ok) throw new Error('Erreur serveur');
+      setSaveState('saved');
+      setTimeout(() => setSaveState('idle'), 3000);
+    } catch {
+      setSaveState('error');
+      setTimeout(() => setSaveState('idle'), 4000);
+    }
+  }
+
   async function handleDownloadPdf() {
     const params = new URLSearchParams({ template });
-
     if (template === 'Manuel' && manualConfig) {
       params.set('config', encodeConfig(manualConfig));
-
-      // Persistance : prepend la config courante dans l'historique Airtable.
-      // Fire-and-forget pour ne pas bloquer l'ouverture du print.
-      try {
-        const newEntry: ManualConfigHistoryEntry = { ts: Date.now(), config: manualConfig };
-        const previous = projet.manualConfigHistory ?? [];
-        const newHistory = [newEntry, ...previous].slice(0, MAX_HISTORY_ENTRIES);
-        // PATCH async sans await — l'utilisateur ouvre le print sans délai
-        fetch(`/api/projet/${projet.slug}/fields`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
-          body: JSON.stringify({ manualConfigHistory: newHistory }),
-        }).catch(err => console.error('historique config Manuel non sauvegardé:', err));
-      } catch (e) {
-        console.error('erreur persistance historique:', e);
-      }
     }
-
     window.open(`/projet/${projet.slug}/print?${params.toString()}`, '_blank');
   }
 
@@ -90,6 +91,15 @@ export default function ProjetToolbar({ projet, template, manualConfig, onTempla
       >
         Modifier
       </Link>
+      {template === 'Manuel' && (
+        <button
+          onClick={handleSaveLayout}
+          disabled={saveState === 'saving' || !manualConfig}
+          style={{ ...btn, background: saveState === 'saved' ? '#4caf50' : saveState === 'error' ? '#e53935' : 'white', color: saveState === 'idle' ? 'var(--ai-violet)' : 'white', border: 'none' }}
+        >
+          {saveState === 'saving' ? 'Sauvegarde…' : saveState === 'saved' ? '✓ Mise en page sauvegardée' : saveState === 'error' ? '✗ Erreur' : 'Sauvegarder la mise en page'}
+        </button>
+      )}
       <button
         onClick={handleDownloadPdf}
         style={{ ...btn, background: 'var(--ai-rouge)', color: 'white', border: 'none' }}

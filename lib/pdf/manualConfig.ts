@@ -81,6 +81,23 @@ export interface ManualConfigHistoryEntry {
 /** Nombre maximum d'entrées conservées dans l'historique (anti-bloat Airtable). */
 export const MAX_HISTORY_ENTRIES = 10;
 
+/** Sérialise une config unique en JSON pour stockage dans un champ Airtable Long text. */
+export function serializeConfig(config: ManualConfig): string {
+  return JSON.stringify(config);
+}
+
+/** Désérialise une config unique depuis un champ Airtable. Retourne null si invalide. */
+export function deserializeConfig(raw: unknown): ManualConfig | null {
+  if (typeof raw !== 'string' || raw.trim() === '') return null;
+  try {
+    const obj = JSON.parse(raw);
+    if (!obj || typeof obj !== 'object') return null;
+    return obj as ManualConfig;
+  } catch {
+    return null;
+  }
+}
+
 /** Sérialise l'historique en JSON pour stockage dans le champ Airtable
  *  "Config template manuel" (type Long text). */
 export function serializeHistory(entries: ManualConfigHistoryEntry[]): string {

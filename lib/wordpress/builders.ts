@@ -119,93 +119,93 @@ function buildWpMagazine(projet: Projet, coverUrl: string | undefined, photoUrls
 </div>`;
 }
 
+function imageGallery(urls: string[], alt: string): string {
+  // Galerie pleine largeur, nombre de colonnes adaptatif (1, 2 ou 3).
+  // <img> (lazy + alt) plutôt que background-image — meilleur SEO + responsive WP.
+  if (urls.length === 0) return '';
+  const cols = urls.length === 1 ? 1 : urls.length === 2 ? 2 : 3;
+  return `
+    <div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:12px;margin:40px 0;">
+      ${urls.map((u, i) => `
+        <figure style="margin:0;aspect-ratio:4/3;overflow:hidden;background:${GRIS};">
+          <img src="${esc(u)}" alt="${esc(alt)} — photo ${i + 1}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;" />
+        </figure>`).join('')}
+    </div>`;
+}
+
 function buildWpEditorial(projet: Projet, coverUrl: string | undefined, photoUrls: string[]): string {
   const pitch = esc(projet.pitch ?? '');
   const description = projet.description ?? '';
   const paragraphs = description.split(/\n\n+/).filter(Boolean);
   const chiffresCles = projet.chiffresCles ?? [];
 
-  const allPhotos = [coverUrl, ...photoUrls].filter(Boolean) as string[];
+  // Champs clés affichés à droite de la photo de couverture, dans l'ordre souhaité.
+  // Mission AI mise en valeur en rouge. Filtre les champs vides automatiquement.
+  const etat = projet.statut && projet.anneeLivraison
+    ? `${projet.statut} en ${projet.anneeLivraison}`
+    : projet.statut || (projet.anneeLivraison ? String(projet.anneeLivraison) : undefined);
 
-  const hasSecondaire = !!(
-    projet.pole || projet.departement || projet.programme || projet.rehabNeuf ||
-    projet.mandataire || projet.betAssocies || projet.entreprise || projet.bailleur
-  );
-
-  const photoGrid = allPhotos.length > 0
-    ? `<div style="display:grid;grid-template-columns:${allPhotos.length === 1 ? '1fr' : allPhotos.length === 2 ? '1fr 1fr' : '2fr 1fr 1fr'};gap:4px;height:160px;margin-top:16px;">
-        ${allPhotos.slice(0, 4).map(u =>
-          `<div style="background-image:url(${u});background-size:cover;background-position:center;background-color:${GRIS};"></div>`
-        ).join('')}
-      </div>`
-    : '';
+  const champsCles: { label: string; value?: string; highlight?: boolean }[] = [
+    { label: 'Adresse',          value: projet.adresse },
+    { label: "Maître d'ouvrage", value: projet.moa },
+    { label: 'Architecte',       value: projet.architecte },
+    { label: 'Mission AI',       value: projet.missionAi, highlight: true },
+    { label: 'Mandataire',       value: projet.mandataire },
+    { label: 'BET associés',     value: projet.betAssocies },
+    { label: 'Entreprise',       value: projet.entreprise },
+    { label: 'Bailleur',         value: projet.bailleur },
+    { label: 'Surface',          value: projet.surface ? `${projet.surface.toLocaleString('fr-FR')} m²` : undefined },
+    { label: 'Budget',           value: projet.budgetHT },
+    { label: 'État',             value: etat },
+  ].filter(f => !!f.value);
 
   return `
-<div style="font-family:${SANS};max-width:900px;margin:0 auto;background:white;">
+<article style="font-family:${SANS};color:#000;line-height:1.6;">
 
-  <!-- Header -->
-  <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid ${ROUGE};padding-bottom:6px;margin-bottom:16px;">
-    <div style="font-family:${SANS};font-size:9px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:${VIOLET};">Assemblage ingénierie · Référence Projet</div>
-    <div style="font-family:${SANS};font-size:9px;font-weight:600;color:${NOIR70};">● ${esc(projet.statut)}</div>
-  </div>
+  ${pitch ? `
+  <!-- Pitch (le titre est déjà rendu par le thème WP depuis post.title) -->
+  <header style="margin:0 0 40px;">
+    <p style="font-family:${SERIF};font-size:20px;font-style:italic;line-height:1.4;color:${VIOLET};margin:0;max-width:780px;">${pitch}</p>
+  </header>` : ''}
 
-  <!-- Titre -->
-  <div style="margin-bottom:20px;">
-    ${projet.adresse ? `<div style="font-family:${SANS};font-size:9px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:${ROUGE};margin-bottom:6px;">${esc(projet.adresse)}</div>` : ''}
-    <h1 style="font-family:${SERIF};font-size:34px;font-weight:400;line-height:1;letter-spacing:-0.02em;color:#000;margin:0 0 10px;">${esc(projet.nom)}</h1>
-    ${pitch ? `<p style="font-family:${SERIF};font-size:15px;font-style:italic;line-height:1.4;color:${VIOLET};margin:0;">${pitch}</p>` : ''}
-  </div>
-
-  <!-- Info grid -->
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding:14px 0;border-top:1px solid ${GRIS};border-bottom:1px solid ${GRIS};margin-bottom:20px;">
-    ${infoItem("Maître d'ouvrage", projet.moa)}
-    ${infoItem('Architecte', projet.architecte)}
-    ${infoItem('Budget · Surface', projet.budgetHT, projet.surface ? `${projet.surface.toLocaleString('fr-FR')} m²` : undefined)}
-    ${infoItem('Calendrier', projet.anneeLivraison, projet.missionAi ?? undefined)}
-  </div>
-
-  ${hasSecondaire ? `
-  <div style="display:flex;flex-wrap:wrap;gap:12px 24px;padding-bottom:14px;border-bottom:1px dotted ${GRIS};margin-bottom:20px;">
-    ${[
-      { label: 'Pôle', value: projet.pole },
-      { label: 'Département', value: projet.departement },
-      { label: 'Programme', value: projet.programme },
-      { label: 'Rehab / Neuf', value: projet.rehabNeuf },
-      { label: 'Mandataire', value: projet.mandataire },
-      { label: 'BET associés', value: projet.betAssocies },
-      { label: 'Entreprise', value: projet.entreprise },
-      { label: 'Bailleur', value: projet.bailleur },
-    ].filter(f => !!f.value).map(f => infoItem(f.label, f.value)).join('')}
-  </div>` : ''}
-
-  <!-- Contenu : texte + photos -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:20px;">
+  <!-- Photo couverture (gauche) + champs clés (droite) -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start;margin-bottom:48px;">
     <div>
-      ${paragraphs.map((p, i) => `<p style="font-family:${SANS};font-size:11px;line-height:1.6;color:#000;margin-bottom:8px;${i === 0 ? `font-size:12px;font-weight:500;` : ''}">${esc(p)}</p>`).join('')}
-      ${chiffresCles.length > 0 ? `
-        <div style="border-top:1px solid ${ROUGE};padding-top:10px;margin-top:10px;">
-          <div style="font-family:${SANS};font-size:8px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:${ROUGE};margin-bottom:6px;">Chiffres clés</div>
-          ${chiffresCles.map(c => `
-            <div style="display:flex;justify-content:space-between;font-family:${SANS};font-size:10px;padding:4px 0;border-bottom:1px dotted ${GRIS};">
-              ${esc(c.label)} <strong style="font-family:${SERIF};font-weight:600;">${esc(c.valeur)}</strong>
-            </div>`).join('')}
-        </div>` : ''}
+      ${coverUrl
+        ? `<figure style="margin:0;aspect-ratio:4/3;overflow:hidden;background:${GRIS};">
+            <img src="${esc(coverUrl)}" alt="${esc(projet.nom)}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;" />
+          </figure>`
+        : ''}
     </div>
-    <div>
-      ${photoGrid}
-    </div>
+    <ul style="list-style:none;margin:0;padding:0;font-family:${SANS};font-size:16px;line-height:1.6;color:#000;">
+      ${champsCles.map(f => `
+        <li style="padding:6px 0;${f.highlight ? `color:${ROUGE};` : ''}">
+          <strong style="font-weight:600;">${esc(f.label)} :</strong> ${esc(f.value!)}
+        </li>`).join('')}
+    </ul>
   </div>
 
-  <!-- Footer -->
-  <div style="background:${VIOLET};color:white;padding:10px 28px;display:flex;justify-content:space-between;align-items:center;font-family:${SANS};font-size:9px;">
-    <span style="font-family:${SERIF};font-size:16px;font-weight:700;color:${ROUGE};">.A</span>
-    <div style="text-align:center;flex:1;padding:0 16px;opacity:0.8;">
-      <strong>Assemblage ingénierie</strong> S.A.S · 137 rue d'Aboukir, 75002 Paris · contact@assemblage.net · assemblage.net
-    </div>
-    <div style="text-transform:uppercase;letter-spacing:0.08em;font-weight:600;color:${ROUGE};">${esc(projet.affaire)}</div>
+  <!-- Description pleine largeur, 1 colonne -->
+  <div style="border-top:1px dotted ${ROUGE};padding-top:32px;margin-bottom:48px;">
+    ${paragraphs.map(p => `<p style="font-family:${SANS};font-size:16px;line-height:1.7;color:#1a1a1a;margin:0 0 20px;">${esc(p)}</p>`).join('')}
   </div>
 
-</div>`;
+  ${chiffresCles.length > 0 ? `
+    <div style="border-top:2px solid ${ROUGE};padding-top:24px;margin-bottom:48px;">
+      <div style="font-family:${SANS};font-size:11px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:${ROUGE};margin-bottom:20px;">Chiffres clés</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:24px;">
+        ${chiffresCles.map(c => `
+          <div>
+            <div style="font-family:${SERIF};font-size:36px;font-weight:600;line-height:1;color:${VIOLET};letter-spacing:-0.02em;">${esc(c.valeur)}</div>
+            <div style="font-family:${SANS};font-size:12px;font-weight:600;color:${NOIR70};letter-spacing:0.05em;text-transform:uppercase;margin-top:8px;">${esc(c.label)}</div>
+          </div>`).join('')}
+      </div>
+    </div>` : ''}
+
+  <!-- Galerie des photos restantes (cover déjà affichée en haut) -->
+  ${imageGallery(photoUrls, projet.nom)}
+
+</article>`;
 }
 
 export function buildWpContent(projet: Projet, coverUrl: string | undefined, photoUrls: string[]): string {

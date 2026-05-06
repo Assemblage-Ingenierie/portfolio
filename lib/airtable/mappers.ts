@@ -3,7 +3,7 @@ import { normalizeStatut } from '@/lib/utils/normalize';
 import { parseChiffresCles, parseTagsSiteWeb, formatBudget } from '@/lib/utils/parsers';
 import { formulaValue, linkedValue, selectValue } from './client';
 import { autoSelectTemplate, isTemplateChoice } from '@/lib/pdf/selectTemplate';
-import { deserializeHistory } from '@/lib/pdf/manualConfig';
+import { deserializeConfig } from '@/lib/pdf/manualConfig';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function recordToProjet(record: any): Projet {
@@ -103,6 +103,6 @@ export function recordToProjet(record: any): Projet {
     budgetRaw,
     urlWordpress: f['URL'] ?? undefined,
     chiffresCles: parseChiffresCles(formulaValue(f['Chiffres clefs'])),
-    manualConfigHistory: deserializeHistory(f['Config template manuel']),
+    savedManualConfig: deserializeConfig(f['Config template manuel']) ?? undefined,
   };
 }
