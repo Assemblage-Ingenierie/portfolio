@@ -119,14 +119,6 @@ function buildWpMagazine(projet: Projet, coverUrl: string | undefined, photoUrls
 </div>`;
 }
 
-function imageHero(url: string, alt: string): string {
-  // Hero pleine largeur, ratio 16:9 préservé.
-  return `
-    <figure style="margin:0 0 40px;aspect-ratio:16/9;overflow:hidden;background:${GRIS};">
-      <img src="${esc(url)}" alt="${esc(alt)}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;" />
-    </figure>`;
-}
-
 function imageGallery(urls: string[], alt: string): string {
   // Galerie pleine largeur, nombre de colonnes adaptatif (1, 2 ou 3).
   // <img> (lazy + alt) plutôt que background-image — meilleur SEO + responsive WP.
@@ -141,50 +133,61 @@ function imageGallery(urls: string[], alt: string): string {
     </div>`;
 }
 
-function webInfoItem(label: string, value?: string | number, sub?: string): string {
-  if (!value && value !== 0) return '';
-  return `
-    <div>
-      <div style="font-family:${SANS};font-size:11px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:${NOIR70};margin-bottom:6px;">${label}</div>
-      <div style="font-family:${SERIF};font-size:18px;font-weight:600;line-height:1.3;color:#000;">${esc(value)}</div>
-      ${sub ? `<div style="font-family:${SANS};font-size:14px;color:${NOIR70};margin-top:4px;">${esc(sub)}</div>` : ''}
-    </div>`;
-}
-
 function buildWpEditorial(projet: Projet, coverUrl: string | undefined, photoUrls: string[]): string {
   const pitch = esc(projet.pitch ?? '');
   const description = projet.description ?? '';
   const paragraphs = description.split(/\n\n+/).filter(Boolean);
   const chiffresCles = projet.chiffresCles ?? [];
 
-  const hasSecondaire = !!(
-    projet.pole || projet.departement || projet.programme || projet.rehabNeuf ||
-    projet.mandataire || projet.betAssocies || projet.entreprise || projet.bailleur
-  );
+  // Champs clés affichés à droite de la photo de couverture, dans l'ordre souhaité.
+  // Mission AI mise en valeur en rouge. Filtre les champs vides automatiquement.
+  const etat = projet.statut && projet.anneeLivraison
+    ? `${projet.statut} en ${projet.anneeLivraison}`
+    : projet.statut || (projet.anneeLivraison ? String(projet.anneeLivraison) : undefined);
+
+  const champsCles: { label: string; value?: string; highlight?: boolean }[] = [
+    { label: 'Adresse',          value: projet.adresse },
+    { label: "Maître d'ouvrage", value: projet.moa },
+    { label: 'Architecte',       value: projet.architecte },
+    { label: 'Mission AI',       value: projet.missionAi, highlight: true },
+    { label: 'Mandataire',       value: projet.mandataire },
+    { label: 'BET associés',     value: projet.betAssocies },
+    { label: 'Entreprise',       value: projet.entreprise },
+    { label: 'Bailleur',         value: projet.bailleur },
+    { label: 'Surface',          value: projet.surface ? `${projet.surface.toLocaleString('fr-FR')} m²` : undefined },
+    { label: 'Budget',           value: projet.budgetHT },
+    { label: 'État',             value: etat },
+  ].filter(f => !!f.value);
 
   return `
 <article style="font-family:${SANS};color:#000;line-height:1.6;">
 
-  <!-- Titre -->
-  <header style="margin:0 0 32px;">
-    ${projet.adresse ? `<div style="font-family:${SANS};font-size:13px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:${ROUGE};margin-bottom:14px;">${esc(projet.adresse)}</div>` : ''}
-    <h1 style="font-family:${SERIF};font-size:52px;font-weight:400;line-height:1.05;letter-spacing:-0.02em;color:#000;margin:0 0 20px;">${esc(projet.nom)}</h1>
-    ${pitch ? `<p style="font-family:${SERIF};font-size:22px;font-style:italic;line-height:1.4;color:${VIOLET};margin:0;max-width:780px;">${pitch}</p>` : ''}
+  <!-- Titre + pitch -->
+  <header style="margin:0 0 40px;">
+    <h1 style="font-family:${SERIF};font-size:48px;font-weight:400;line-height:1.05;letter-spacing:-0.02em;color:#000;margin:0 0 16px;">${esc(projet.nom)}</h1>
+    ${pitch ? `<p style="font-family:${SERIF};font-size:20px;font-style:italic;line-height:1.4;color:${VIOLET};margin:0;max-width:780px;">${pitch}</p>` : ''}
   </header>
 
-  ${coverUrl ? imageHero(coverUrl, projet.nom) : ''}
-
-  <!-- Infos principales -->
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:32px;padding:32px 0;border-top:1px solid ${GRIS};border-bottom:1px solid ${GRIS};margin-bottom:48px;">
-    ${webInfoItem("Maître d'ouvrage", projet.moa)}
-    ${webInfoItem('Architecte', projet.architecte)}
-    ${webInfoItem('Budget · Surface', projet.budgetHT, projet.surface ? `${projet.surface.toLocaleString('fr-FR')} m²` : undefined)}
-    ${webInfoItem('Calendrier', projet.anneeLivraison, projet.missionAi ?? undefined)}
+  <!-- Photo couverture (gauche) + champs clés (droite) -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start;margin-bottom:48px;">
+    <div>
+      ${coverUrl
+        ? `<figure style="margin:0;aspect-ratio:4/3;overflow:hidden;background:${GRIS};">
+            <img src="${esc(coverUrl)}" alt="${esc(projet.nom)}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;" />
+          </figure>`
+        : ''}
+    </div>
+    <ul style="list-style:none;margin:0;padding:0;font-family:${SANS};font-size:16px;line-height:1.6;color:#000;">
+      ${champsCles.map(f => `
+        <li style="padding:6px 0;${f.highlight ? `color:${ROUGE};` : ''}">
+          <strong style="font-weight:600;">${esc(f.label)} :</strong> ${esc(f.value!)}
+        </li>`).join('')}
+    </ul>
   </div>
 
-  <!-- Description : colonne lisible (max 720px) -->
-  <div style="max-width:720px;margin:0 auto 48px;">
-    ${paragraphs.map((p, i) => `<p style="font-family:${SANS};font-size:17px;line-height:1.7;color:#1a1a1a;margin:0 0 20px;${i === 0 ? `font-size:19px;font-weight:500;color:#000;` : ''}">${esc(p)}</p>`).join('')}
+  <!-- Description pleine largeur, 1 colonne -->
+  <div style="border-top:1px dotted ${ROUGE};padding-top:32px;margin-bottom:48px;">
+    ${paragraphs.map(p => `<p style="font-family:${SANS};font-size:16px;line-height:1.7;color:#1a1a1a;margin:0 0 20px;">${esc(p)}</p>`).join('')}
   </div>
 
   ${chiffresCles.length > 0 ? `
@@ -199,25 +202,8 @@ function buildWpEditorial(projet: Projet, coverUrl: string | undefined, photoUrl
       </div>
     </div>` : ''}
 
-  <!-- Galerie photos pleine largeur -->
+  <!-- Galerie des photos restantes (cover déjà affichée en haut) -->
   ${imageGallery(photoUrls, projet.nom)}
-
-  ${hasSecondaire ? `
-  <!-- Infos secondaires -->
-  <aside style="margin-top:48px;padding:32px 0;border-top:1px solid ${GRIS};">
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:24px;">
-      ${[
-        { label: 'Pôle', value: projet.pole },
-        { label: 'Département', value: projet.departement },
-        { label: 'Programme', value: projet.programme },
-        { label: 'Rehab / Neuf', value: projet.rehabNeuf },
-        { label: 'Mandataire', value: projet.mandataire },
-        { label: 'BET associés', value: projet.betAssocies },
-        { label: 'Entreprise', value: projet.entreprise },
-        { label: 'Bailleur', value: projet.bailleur },
-      ].filter(f => !!f.value).map(f => webInfoItem(f.label, f.value)).join('')}
-    </div>
-  </aside>` : ''}
 
 </article>`;
 }
