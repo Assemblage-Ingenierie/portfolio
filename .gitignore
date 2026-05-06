@@ -42,6 +42,8 @@ yarn-error.log*
 
 # claude code local settings
 .claude/settings.local.json
+.claude/worktrees/
+.claude/code-reviewer.md
 
 # typescript
 *.tsbuildinfo
