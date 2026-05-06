@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getProjet, updateProjetUrl } from '@/lib/airtable';
 import { uploadMedia, createOrUpdatePost, extractWpPostId } from '@/lib/wordpress';
 import { buildWpContent } from '@/lib/wordpress/builders';
+import { buildWpContentV2 } from '@/lib/wordpress/buildersV2';
 import { requireApprovedUser } from '@/lib/supabase/requireApprovedUser';
 
 const ALLOWED_IMAGE_HOSTS = ['dl.airtable.com', 'v5.airtableusercontent.com', 'airtableusercontent.com'];
@@ -29,6 +30,15 @@ export async function POST(
     return NextResponse.json({ error: 'Projet introuvable' }, { status: 404 });
   }
 
+  // Variante de mise en page : v1 (par défaut) ou v2
+  let variant: 'v1' | 'v2' = 'v1';
+  try {
+    const body = await req.json();
+    if (body?.variant === 'v2') variant = 'v2';
+  } catch {
+    // Pas de body — variante v1 par défaut
+  }
+
   try {
     // 1. Upload cover photo
     let coverId: number | undefined;
@@ -52,7 +62,9 @@ export async function POST(
     }
 
     // 3. Build styled WordPress HTML matching the defined layout
-    const content = buildWpContent(projet, coverUrl, photoUrls);
+    const content = variant === 'v2'
+      ? buildWpContentV2(projet, coverUrl, photoUrls)
+      : buildWpContent(projet, coverUrl, photoUrls);
 
     // 4. Create or update post
     const existingId = projet.urlWordpress ? extractWpPostId(projet.urlWordpress) : undefined;

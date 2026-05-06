@@ -1,6 +1,6 @@
 import type { Projet } from '@/types/projet';
 
-function esc(value: string | number | undefined | null): string {
+export function esc(value: string | number | undefined | null): string {
   if (value === undefined || value === null) return '';
   return String(value)
     .replace(/&/g, '&amp;')
@@ -9,12 +9,12 @@ function esc(value: string | number | undefined | null): string {
     .replace(/"/g, '&quot;');
 }
 
-const ROUGE  = '#E30513';
-const VIOLET = '#30323E';
-const GRIS   = '#DFE4E8';
-const NOIR70 = '#4D4D4D';
-const SERIF  = 'Georgia, serif';
-const SANS   = "'Open Sans', system-ui, sans-serif";
+export const ROUGE  = '#E30513';
+export const VIOLET = '#30323E';
+export const GRIS   = '#DFE4E8';
+export const NOIR70 = '#4D4D4D';
+export const SERIF  = 'Georgia, serif';
+export const SANS   = "'Open Sans', system-ui, sans-serif";
 
 function infoItem(label: string, value?: string | number, sub?: string): string {
   if (!value && value !== 0) return '';
@@ -120,7 +120,7 @@ function buildWpMagazine(projet: Projet, coverUrl: string | undefined, photoUrls
 }
 
 // startIdx : index lightbox de la première photo (0 = couverture, 1+ = galerie)
-function imageGallery(urls: string[], alt: string, startIdx = 1): string {
+export function imageGallery(urls: string[], alt: string, startIdx = 1): string {
   if (urls.length === 0) return '';
   const cols = urls.length === 1 ? 1 : urls.length === 2 ? 2 : 3;
   return `
@@ -132,7 +132,7 @@ function imageGallery(urls: string[], alt: string, startIdx = 1): string {
     </div>`;
 }
 
-function lightboxHtml(allPhotos: string[], alt: string): string {
+export function lightboxHtml(allPhotos: string[], alt: string): string {
   if (allPhotos.length === 0) return '';
   const photosJson = JSON.stringify(allPhotos);
   return `

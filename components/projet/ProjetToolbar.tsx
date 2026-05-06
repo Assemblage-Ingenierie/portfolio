@@ -19,14 +19,16 @@ export default function ProjetToolbar({ projet, template, manualConfig, onTempla
   const [result, setResult] = useState<{ url?: string; error?: string; warning?: string } | null>(null);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
-  async function handlePublish() {
-    if (!confirm('Publier cette fiche sur WordPress en brouillon ?')) return;
+  async function handlePublish(variant: 'v1' | 'v2') {
+    const label = variant === 'v2' ? 'Export WP 2' : 'Export WP 1';
+    if (!confirm(`Publier cette fiche sur WordPress (${label}) en brouillon ?`)) return;
     setPublishing(true);
     setResult(null);
     try {
       const res = await fetch(`/api/projet/${projet.slug}/publish`, {
         method: 'POST',
-        headers: await authHeaders(),
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+        body: JSON.stringify({ variant }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Erreur inconnue');
@@ -108,10 +110,17 @@ export default function ProjetToolbar({ projet, template, manualConfig, onTempla
       </button>
       <button
         style={{ ...btn, background: 'white', color: 'var(--ai-violet)', border: 'none' }}
-        onClick={handlePublish}
+        onClick={() => handlePublish('v1')}
         disabled={publishing}
       >
-        {publishing ? 'Publication…' : 'Publier sur WordPress'}
+        {publishing ? 'Publication…' : 'Export WP 1'}
+      </button>
+      <button
+        style={{ ...btn, background: 'white', color: 'var(--ai-violet)', border: 'none' }}
+        onClick={() => handlePublish('v2')}
+        disabled={publishing}
+      >
+        {publishing ? 'Publication…' : 'Export WP 2'}
       </button>
       {projet.urlWordpress && (
         <a
