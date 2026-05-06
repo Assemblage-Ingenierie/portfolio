@@ -17,6 +17,7 @@ interface Props {
 export default function ProjetToolbar({ projet, template, manualConfig, onTemplateChange }: Props) {
   const [publishing, setPublishing] = useState(false);
   const [result, setResult] = useState<{ url?: string; error?: string; warning?: string } | null>(null);
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   async function handlePublish() {
     if (!confirm('Publier cette fiche sur WordPress en brouillon ?')) return;
@@ -34,6 +35,24 @@ export default function ProjetToolbar({ projet, template, manualConfig, onTempla
       setResult({ error: e instanceof Error ? e.message : 'Erreur' });
     } finally {
       setPublishing(false);
+    }
+  }
+
+  async function handleSaveLayout() {
+    if (!manualConfig) return;
+    setSaveState('saving');
+    try {
+      const res = await fetch(`/api/projet/${projet.slug}/fields`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+        body: JSON.stringify({ savedManualConfig: manualConfig }),
+      });
+      if (!res.ok) throw new Error('Erreur serveur');
+      setSaveState('saved');
+      setTimeout(() => setSaveState('idle'), 3000);
+    } catch {
+      setSaveState('error');
+      setTimeout(() => setSaveState('idle'), 4000);
     }
   }
 
@@ -90,6 +109,15 @@ export default function ProjetToolbar({ projet, template, manualConfig, onTempla
       >
         Modifier
       </Link>
+      {template === 'Manuel' && (
+        <button
+          onClick={handleSaveLayout}
+          disabled={saveState === 'saving' || !manualConfig}
+          style={{ ...btn, background: saveState === 'saved' ? '#4caf50' : saveState === 'error' ? '#e53935' : 'white', color: saveState === 'idle' ? 'var(--ai-violet)' : 'white', border: 'none' }}
+        >
+          {saveState === 'saving' ? 'Sauvegarde…' : saveState === 'saved' ? '✓ Mise en page sauvegardée' : saveState === 'error' ? '✗ Erreur' : 'Sauvegarder la mise en page'}
+        </button>
+      )}
       <button
         onClick={handleDownloadPdf}
         style={{ ...btn, background: 'var(--ai-rouge)', color: 'white', border: 'none' }}
