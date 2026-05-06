@@ -120,26 +120,34 @@ function buildWpMagazine(projet: Projet, coverUrl: string | undefined, photoUrls
 }
 
 function imageHero(url: string, alt: string): string {
-  // Photo de couverture pleine largeur, aspect 16:9 préservé (pas de crop fixe).
+  // Hero pleine largeur, ratio 16:9 préservé.
   return `
-    <figure style="margin:0 0 20px;aspect-ratio:16/9;overflow:hidden;background:${GRIS};">
+    <figure style="margin:0 0 40px;aspect-ratio:16/9;overflow:hidden;background:${GRIS};">
       <img src="${esc(url)}" alt="${esc(alt)}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;" />
     </figure>`;
 }
 
 function imageGallery(urls: string[], alt: string): string {
-  // Galerie pleine largeur, nombre de colonnes adaptatif au nombre de photos.
-  // Chaque cellule en aspect 4:3 → photos correctement proportionnées quel que
-  // soit leur ratio source. Utilise <img> (lazy-load + alt) plutôt que
-  // background-image qui cropait brutalement la photo dans un rectangle plat.
+  // Galerie pleine largeur, nombre de colonnes adaptatif (1, 2 ou 3).
+  // <img> (lazy + alt) plutôt que background-image — meilleur SEO + responsive WP.
   if (urls.length === 0) return '';
   const cols = urls.length === 1 ? 1 : urls.length === 2 ? 2 : 3;
   return `
-    <div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:6px;margin-top:8px;">
+    <div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:12px;margin:40px 0;">
       ${urls.map((u, i) => `
         <figure style="margin:0;aspect-ratio:4/3;overflow:hidden;background:${GRIS};">
           <img src="${esc(u)}" alt="${esc(alt)} — photo ${i + 1}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;" />
         </figure>`).join('')}
+    </div>`;
+}
+
+function webInfoItem(label: string, value?: string | number, sub?: string): string {
+  if (!value && value !== 0) return '';
+  return `
+    <div>
+      <div style="font-family:${SANS};font-size:11px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:${NOIR70};margin-bottom:6px;">${label}</div>
+      <div style="font-family:${SERIF};font-size:18px;font-weight:600;line-height:1.3;color:#000;">${esc(value)}</div>
+      ${sub ? `<div style="font-family:${SANS};font-size:14px;color:${NOIR70};margin-top:4px;">${esc(sub)}</div>` : ''}
     </div>`;
 }
 
@@ -155,74 +163,63 @@ function buildWpEditorial(projet: Projet, coverUrl: string | undefined, photoUrl
   );
 
   return `
-<div style="font-family:${SANS};max-width:900px;margin:0 auto;background:white;">
-
-  <!-- Header -->
-  <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid ${ROUGE};padding-bottom:6px;margin-bottom:16px;">
-    <div style="font-family:${SANS};font-size:9px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:${VIOLET};">Assemblage ingénierie · Référence Projet</div>
-    <div style="font-family:${SANS};font-size:9px;font-weight:600;color:${NOIR70};">● ${esc(projet.statut)}</div>
-  </div>
+<article style="font-family:${SANS};color:#000;line-height:1.6;">
 
   <!-- Titre -->
-  <div style="margin-bottom:20px;">
-    ${projet.adresse ? `<div style="font-family:${SANS};font-size:9px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:${ROUGE};margin-bottom:6px;">${esc(projet.adresse)}</div>` : ''}
-    <h1 style="font-family:${SERIF};font-size:34px;font-weight:400;line-height:1;letter-spacing:-0.02em;color:#000;margin:0 0 10px;">${esc(projet.nom)}</h1>
-    ${pitch ? `<p style="font-family:${SERIF};font-size:15px;font-style:italic;line-height:1.4;color:${VIOLET};margin:0;">${pitch}</p>` : ''}
-  </div>
+  <header style="margin:0 0 32px;">
+    ${projet.adresse ? `<div style="font-family:${SANS};font-size:13px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:${ROUGE};margin-bottom:14px;">${esc(projet.adresse)}</div>` : ''}
+    <h1 style="font-family:${SERIF};font-size:52px;font-weight:400;line-height:1.05;letter-spacing:-0.02em;color:#000;margin:0 0 20px;">${esc(projet.nom)}</h1>
+    ${pitch ? `<p style="font-family:${SERIF};font-size:22px;font-style:italic;line-height:1.4;color:${VIOLET};margin:0;max-width:780px;">${pitch}</p>` : ''}
+  </header>
 
   ${coverUrl ? imageHero(coverUrl, projet.nom) : ''}
 
-  <!-- Info grid -->
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;padding:14px 0;border-top:1px solid ${GRIS};border-bottom:1px solid ${GRIS};margin-bottom:20px;">
-    ${infoItem("Maître d'ouvrage", projet.moa)}
-    ${infoItem('Architecte', projet.architecte)}
-    ${infoItem('Budget · Surface', projet.budgetHT, projet.surface ? `${projet.surface.toLocaleString('fr-FR')} m²` : undefined)}
-    ${infoItem('Calendrier', projet.anneeLivraison, projet.missionAi ?? undefined)}
+  <!-- Infos principales -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:32px;padding:32px 0;border-top:1px solid ${GRIS};border-bottom:1px solid ${GRIS};margin-bottom:48px;">
+    ${webInfoItem("Maître d'ouvrage", projet.moa)}
+    ${webInfoItem('Architecte', projet.architecte)}
+    ${webInfoItem('Budget · Surface', projet.budgetHT, projet.surface ? `${projet.surface.toLocaleString('fr-FR')} m²` : undefined)}
+    ${webInfoItem('Calendrier', projet.anneeLivraison, projet.missionAi ?? undefined)}
   </div>
 
-  ${hasSecondaire ? `
-  <div style="display:flex;flex-wrap:wrap;gap:12px 24px;padding-bottom:14px;border-bottom:1px dotted ${GRIS};margin-bottom:20px;">
-    ${[
-      { label: 'Pôle', value: projet.pole },
-      { label: 'Département', value: projet.departement },
-      { label: 'Programme', value: projet.programme },
-      { label: 'Rehab / Neuf', value: projet.rehabNeuf },
-      { label: 'Mandataire', value: projet.mandataire },
-      { label: 'BET associés', value: projet.betAssocies },
-      { label: 'Entreprise', value: projet.entreprise },
-      { label: 'Bailleur', value: projet.bailleur },
-    ].filter(f => !!f.value).map(f => infoItem(f.label, f.value)).join('')}
-  </div>` : ''}
-
-  <!-- Description : 2 colonnes pleine largeur -->
-  <div style="columns:2;column-gap:24px;column-rule:1px solid ${GRIS};margin-bottom:20px;">
-    ${paragraphs.map((p, i) => `<p style="font-family:${SANS};font-size:11px;line-height:1.6;color:#000;margin:0 0 8px;break-inside:avoid;${i === 0 ? `font-size:12px;font-weight:500;` : ''}">${esc(p)}</p>`).join('')}
+  <!-- Description : colonne lisible (max 720px) -->
+  <div style="max-width:720px;margin:0 auto 48px;">
+    ${paragraphs.map((p, i) => `<p style="font-family:${SANS};font-size:17px;line-height:1.7;color:#1a1a1a;margin:0 0 20px;${i === 0 ? `font-size:19px;font-weight:500;color:#000;` : ''}">${esc(p)}</p>`).join('')}
   </div>
 
   ${chiffresCles.length > 0 ? `
-    <div style="border-top:1px solid ${ROUGE};padding-top:10px;margin-bottom:20px;">
-      <div style="font-family:${SANS};font-size:8px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:${ROUGE};margin-bottom:6px;">Chiffres clés</div>
-      <div style="display:grid;grid-template-columns:repeat(${Math.min(chiffresCles.length, 4)},1fr);gap:12px;">
+    <div style="border-top:2px solid ${ROUGE};padding-top:24px;margin-bottom:48px;">
+      <div style="font-family:${SANS};font-size:11px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:${ROUGE};margin-bottom:20px;">Chiffres clés</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:24px;">
         ${chiffresCles.map(c => `
-          <div style="font-family:${SANS};font-size:10px;padding:4px 0;border-bottom:1px dotted ${GRIS};">
-            ${esc(c.label)} <strong style="font-family:${SERIF};font-weight:600;">${esc(c.valeur)}</strong>
+          <div>
+            <div style="font-family:${SERIF};font-size:36px;font-weight:600;line-height:1;color:${VIOLET};letter-spacing:-0.02em;">${esc(c.valeur)}</div>
+            <div style="font-family:${SANS};font-size:12px;font-weight:600;color:${NOIR70};letter-spacing:0.05em;text-transform:uppercase;margin-top:8px;">${esc(c.label)}</div>
           </div>`).join('')}
       </div>
     </div>` : ''}
 
-  <!-- Galerie photos (cover déjà affichée en hero plus haut) -->
+  <!-- Galerie photos pleine largeur -->
   ${imageGallery(photoUrls, projet.nom)}
 
-  <!-- Footer -->
-  <div style="background:${VIOLET};color:white;padding:10px 28px;display:flex;justify-content:space-between;align-items:center;font-family:${SANS};font-size:9px;">
-    <span style="font-family:${SERIF};font-size:16px;font-weight:700;color:${ROUGE};">.A</span>
-    <div style="text-align:center;flex:1;padding:0 16px;opacity:0.8;">
-      <strong>Assemblage ingénierie</strong> S.A.S · 137 rue d'Aboukir, 75002 Paris · contact@assemblage.net · assemblage.net
+  ${hasSecondaire ? `
+  <!-- Infos secondaires -->
+  <aside style="margin-top:48px;padding:32px 0;border-top:1px solid ${GRIS};">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:24px;">
+      ${[
+        { label: 'Pôle', value: projet.pole },
+        { label: 'Département', value: projet.departement },
+        { label: 'Programme', value: projet.programme },
+        { label: 'Rehab / Neuf', value: projet.rehabNeuf },
+        { label: 'Mandataire', value: projet.mandataire },
+        { label: 'BET associés', value: projet.betAssocies },
+        { label: 'Entreprise', value: projet.entreprise },
+        { label: 'Bailleur', value: projet.bailleur },
+      ].filter(f => !!f.value).map(f => webInfoItem(f.label, f.value)).join('')}
     </div>
-    <div style="text-transform:uppercase;letter-spacing:0.08em;font-weight:600;color:${ROUGE};">${esc(projet.affaire)}</div>
-  </div>
+  </aside>` : ''}
 
-</div>`;
+</article>`;
 }
 
 export function buildWpContent(projet: Projet, coverUrl: string | undefined, photoUrls: string[]): string {
