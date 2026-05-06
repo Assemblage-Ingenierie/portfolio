@@ -136,7 +136,7 @@ function lightboxHtml(allPhotos: string[], alt: string): string {
   if (allPhotos.length === 0) return '';
   const photosJson = JSON.stringify(allPhotos);
   return `
-<div id="ai-lightbox" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.75);align-items:center;justify-content:center;flex-direction:column;">
+<div id="ai-lightbox" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.75);align-items:center;justify-content:center;flex-direction:column;padding-top:80px;">
   <button id="ai-lb-close" style="position:absolute;top:20px;right:28px;background:none;border:none;color:white;font-size:36px;line-height:1;cursor:pointer;opacity:0.8;">×</button>
   <button id="ai-lb-prev" style="position:absolute;left:16px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.12);border:none;color:white;font-size:48px;line-height:1;cursor:pointer;padding:12px 18px;border-radius:4px;">‹</button>
   <img id="ai-lb-img" src="" alt="${esc(alt)}" style="max-width:90vw;max-height:88vh;object-fit:contain;display:block;border-radius:2px;" />
