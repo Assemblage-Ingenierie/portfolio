@@ -70,7 +70,7 @@ function buildWpEditorialV2(projet: Projet, coverUrl: string | undefined, photoU
       ${champsCles.map(f => `
         <div style="${f.highlight ? `color:${ROUGE};` : ''}">
           <div style="font-family:${SANS};font-size:12px;font-weight:400;letter-spacing:0.06em;font-variant:small-caps;color:${f.highlight ? ROUGE : NOIR70};margin-bottom:4px;">${esc(f.label)}</div>
-          <div style="font-family:${SERIF};font-size:15px;font-weight:400;line-height:1.3;">${esc(f.value!)}</div>
+          <div style="font-family:${SERIF};font-size:15px;font-weight:400;font-variant:small-caps;line-height:1.3;">${esc(f.value!)}</div>
         </div>`).join('')}
     </div>
   </div>` : ''}

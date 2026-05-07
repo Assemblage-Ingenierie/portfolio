@@ -141,8 +141,9 @@ html, body { background: white; }
   margin-bottom: 1mm; display: block;
 }
 .t-meta-value {
-  font-family: var(--serif); font-size: 10.5pt; font-weight: 400;
-  line-height: 1.2; color: var(--ai-noir);
+  font-family: var(--serif); font-size: 11pt; font-weight: 400;
+  font-variant: small-caps; letter-spacing: 0.01em;
+  line-height: 1.25; color: var(--ai-noir);
 }
 .t-meta-sub {
   font-family: var(--sans); font-size: 8pt; font-weight: 400;

@@ -2,14 +2,14 @@
 
 import { useEffect, useRef, useState } from 'react';
 import TurndownService from 'turndown';
-import { Marked } from 'marked';
+import { marked } from 'marked';
 
 // Conversions HTML <-> Markdown.
 // On préserve <u> (souligné, pas standard markdown mais supporté par Airtable
 // via HTML inline) et on garde GFM (listes, liens, gras, italique).
 const td = new TurndownService({ headingStyle: 'atx', bulletListMarker: '-' });
 td.keep(['u']);
-const md = new Marked({ gfm: true, breaks: true });
+marked.setOptions({ gfm: true, breaks: true });
 
 interface Props {
   value: string;          // markdown
@@ -38,7 +38,8 @@ export default function RichTextEditor({ value, onChange, placeholder, minRows =
   // Init au mount : convertit le markdown initial en HTML
   useEffect(() => {
     if (ref.current && ref.current.innerHTML === '') {
-      ref.current.innerHTML = md.parse(value || '', { async: false }) as string;
+      const out = marked.parse(value || '');
+      ref.current.innerHTML = typeof out === 'string' ? out : '';
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

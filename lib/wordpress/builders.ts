@@ -233,8 +233,8 @@ function buildWpEditorial(projet: Projet, coverUrl: string | undefined, photoUrl
     </div>
     <ul style="list-style:none;margin:0;padding:0;font-family:${SANS};font-size:16px;line-height:1.6;color:#000;">
       ${champsCles.map(f => `
-        <li style="padding:6px 0;${f.highlight ? `color:${ROUGE};` : ''}">
-          <span style="font-weight:400;font-variant:small-caps;letter-spacing:0.04em;">${esc(f.label)} :</span> ${esc(f.value!)}
+        <li style="padding:6px 0;${f.highlight ? `color:${ROUGE};` : ''}font-variant:small-caps;font-weight:400;">
+          <span style="letter-spacing:0.04em;">${esc(f.label)} :</span> ${esc(f.value!)}
         </li>`).join('')}
     </ul>
   </div>
