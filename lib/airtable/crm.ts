@@ -1,8 +1,10 @@
 import Airtable from 'airtable';
 
-// Field ID stable du champ "Nom" dans la table synchronisée (préservé
-// depuis la base source CRM AI lors de la sync).
-const FIELD_NOM_ID = 'fldFkUQonHXldxbZ1';
+// On lit par NOM de champ et pas par ID : Airtable réattribue souvent les
+// field IDs lors de la création d'une table synchronisée (les noms sont
+// préservés, mais pas les IDs). Utiliser un ID inexistant peut renvoyer
+// un 403 NOT_AUTHORIZED plutôt qu'une erreur 404 explicite.
+const FIELD_NOM = 'Nom';
 
 /**
  * Les linked records ne traversent jamais les bases dans Airtable :
@@ -53,14 +55,13 @@ export async function fetchCrmNames(recordIds: string[]): Promise<Map<string, st
   try {
     const records = await table.select({
       filterByFormula: formula,
-      fields: [FIELD_NOM_ID],
-      returnFieldsByFieldId: true,
+      fields: [FIELD_NOM],
     }).all();
 
     console.log(`[crm] received ${records.length} records back`);
     records.forEach((r) => {
-      const nom = r.fields[FIELD_NOM_ID];
-      console.log(`[crm] record ${r.id} → ${typeof nom === 'string' ? nom : '(empty/non-string)'}`);
+      const nom = r.fields[FIELD_NOM];
+      console.log(`[crm] record ${r.id} → ${typeof nom === 'string' ? nom : `(${JSON.stringify(nom)})`}`);
       if (typeof nom === 'string' && nom.trim()) {
         map.set(r.id, nom.trim());
       }
