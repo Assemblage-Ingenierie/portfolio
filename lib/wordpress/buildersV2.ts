@@ -21,6 +21,10 @@ function buildWpEditorialV2(projet: Projet, coverUrl: string | undefined, photoU
     ? `${projet.statut} en ${projet.anneeLivraison}`
     : projet.statut || (projet.anneeLivraison ? String(projet.anneeLivraison) : undefined);
 
+  const programme = projet.programmePrincipal && projet.programmeSecondaire
+    ? `${projet.programmePrincipal} (${projet.programmeSecondaire})`
+    : projet.programmePrincipal ?? projet.programmeSecondaire;
+
   const champsCles: { label: string; value?: string; highlight?: boolean }[] = [
     { label: 'Lieu',              value: projet.lieu },
     { label: "Maître d'ouvrage",  value: projet.moa },
@@ -30,6 +34,7 @@ function buildWpEditorialV2(projet: Projet, coverUrl: string | undefined, photoU
     { label: 'BET associés',      value: projet.betAssocies },
     { label: 'Entreprise',        value: projet.entreprise },
     { label: 'Bailleur',          value: projet.bailleur },
+    { label: 'Programme',         value: programme },
     { label: 'Surface',           value: projet.surface ? `${projet.surface.toLocaleString('fr-FR')} m²` : undefined },
     { label: 'Budget',            value: projet.budgetHT },
     { label: 'État',              value: etat },

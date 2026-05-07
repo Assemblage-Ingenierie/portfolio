@@ -157,9 +157,13 @@ html, body { background: white; }
 `;
 
 export function headerHtml(projet: Projet): string {
+  // Année maintenant placée dans le bandeau de statut, à la suite de
+  // l'état du chantier ("Livré · 2025") pour libérer une colonne dans
+  // le bandeau métadonnées (qui accueille désormais le Programme).
+  const annee = projet.anneeLivraison ? ` · ${esc(String(projet.anneeLivraison))}` : '';
   return `<header class="t-header">
     <div class="t-header-meta">Assemblage ingénierie · Référence Projet</div>
-    <div class="t-header-statut">● ${esc(projet.statut)}</div>
+    <div class="t-header-statut">● ${esc(projet.statut)}${annee}</div>
   </header>`;
 }
 
@@ -184,9 +188,13 @@ export function metaGridHtml(projet: Projet): string {
   if (projet.architecte) items.push({ label: 'Architecte', value: projet.architecte });
   if (projet.budgetHT) items.push({ label: 'Budget', value: projet.budgetHT });
   if (projet.surface) items.push({ label: 'Surface', value: `${projet.surface.toLocaleString('fr-FR')} m²` });
-  if (projet.anneeLivraison) items.push({
-    label: 'Année',
-    value: String(projet.anneeLivraison),
+  // Année déplacée dans le bandeau de statut (cf. headerHtml) — la colonne
+  // libérée accueille le Programme : programme principal en valeur, programme
+  // secondaire en sous-titre.
+  if (projet.programmePrincipal || projet.programmeSecondaire) items.push({
+    label: 'Programme',
+    value: projet.programmePrincipal ?? projet.programmeSecondaire ?? '',
+    sub: projet.programmePrincipal ? projet.programmeSecondaire : undefined,
   });
 
   if (items.length === 0) return '';

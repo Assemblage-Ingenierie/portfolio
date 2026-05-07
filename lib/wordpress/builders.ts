@@ -192,6 +192,13 @@ function buildWpEditorial(projet: Projet, coverUrl: string | undefined, photoUrl
     ? `${projet.statut} en ${projet.anneeLivraison}`
     : projet.statut || (projet.anneeLivraison ? String(projet.anneeLivraison) : undefined);
 
+  // Programme : principal en valeur, secondaire en complément entre parenthèses
+  // (variante WP — pas de structure "sub" comme dans le PDF, on reste sur
+  // une liste à puces, donc on combine sur une ligne).
+  const programme = projet.programmePrincipal && projet.programmeSecondaire
+    ? `${projet.programmePrincipal} (${projet.programmeSecondaire})`
+    : projet.programmePrincipal ?? projet.programmeSecondaire;
+
   const champsCles: { label: string; value?: string; highlight?: boolean }[] = [
     { label: 'Lieu',              value: projet.lieu },
     { label: "Maître d'ouvrage", value: projet.moa },
@@ -201,6 +208,7 @@ function buildWpEditorial(projet: Projet, coverUrl: string | undefined, photoUrl
     { label: 'BET associés',     value: projet.betAssocies },
     { label: 'Entreprise',       value: projet.entreprise },
     { label: 'Bailleur',         value: projet.bailleur },
+    { label: 'Programme',        value: programme },
     { label: 'Surface',          value: projet.surface ? `${projet.surface.toLocaleString('fr-FR')} m²` : undefined },
     { label: 'Budget',           value: projet.budgetHT },
     { label: 'État',             value: etat },

@@ -34,6 +34,8 @@ export interface Projet {
   anneeLivraison?: number;
   missionAi?: string;
   programme?: string;
+  programmePrincipal?: string;
+  programmeSecondaire?: string;
   pole?: string;
   departement?: string;
   rehabNeuf?: string;
