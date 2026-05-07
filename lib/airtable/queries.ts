@@ -87,8 +87,9 @@ export async function getProjets(): Promise<Projet[]> {
       fetchProgrammes(filter),
     ]);
 
-    // 2. Collecte des record IDs CRM depuis Architecte / Mandataire / Entreprise
+    // 2. Collecte des record IDs CRM depuis MOA / Architecte / Mandataire / Entreprise
     const crmIds = records.flatMap((r) => [
+      ...extractIds(r.fields["Maître d'ouvrage"]),
       ...extractIds(r.fields['Architecte']),
       ...extractIds(r.fields['Mandataire']),
       ...extractIds(r.fields['Entreprise']),
@@ -129,6 +130,7 @@ export async function getProjet(slug: string): Promise<Projet | null> {
 
     const r = records[0];
     const crmIds = [
+      ...extractIds(r.fields["Maître d'ouvrage"]),
       ...extractIds(r.fields['Architecte']),
       ...extractIds(r.fields['Mandataire']),
       ...extractIds(r.fields['Entreprise']),
@@ -136,6 +138,7 @@ export async function getProjet(slug: string): Promise<Projet | null> {
     // Debug : on log même en succès pour pouvoir tracer pourquoi un champ
     // n'est pas résolu (le console.error de fetchCrmNames ne se déclenche
     // que sur exception, pas sur résultat vide)
+    console.log(`[crm-debug] ${slug} moa field raw:`, JSON.stringify(r.fields["Maître d'ouvrage"]));
     console.log(`[crm-debug] ${slug} architecte field raw:`, JSON.stringify(r.fields['Architecte']));
     console.log(`[crm-debug] ${slug} mandataire field raw:`, JSON.stringify(r.fields['Mandataire']));
     console.log(`[crm-debug] ${slug} entreprise field raw:`, JSON.stringify(r.fields['Entreprise']));

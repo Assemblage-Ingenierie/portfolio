@@ -114,7 +114,8 @@ export function recordToProjet(record: any, aux?: AuxValues): Projet {
     pitch: formulaValue(f['Pitch']),
     description,
 
-    moa: f["Maître d'ouvrage"] ?? undefined,
+    // MOA aussi linked record (sync CRM) → résolution via crmNames
+    moa: resolveCrm(f["Maître d'ouvrage"], aux?.crmNames) ?? (typeof f["Maître d'ouvrage"] === 'string' ? f["Maître d'ouvrage"] : undefined),
     // Architecte / Mandataire / Entreprise : champs linked records pointant
     // vers la base CRM AI. En cellFormat=json ils reviennent en array de
     // record IDs (recXXX…). On résout les noms via la map crmNames
