@@ -1,6 +1,7 @@
 import type { Projet } from '@/types/projet';
+import { renderMarkdown } from '@/lib/utils/markdown';
 import {
-  TemplateBundle, esc,
+  TemplateBundle,
   headerHtml, footerHtml, titleBlockHtml, metaGridHtml,
   photoImg, allPhotos,
 } from './shared';
@@ -71,6 +72,12 @@ const CSS = `
   hyphens: auto;
   font-family: var(--sans);
 }
+.man-text strong { font-weight: 700; }
+.man-text em { font-style: italic; }
+.man-text u { text-decoration: underline; }
+.man-text a { color: var(--ai-rouge); text-decoration: underline; }
+.man-text ul, .man-text ol { margin: 0 0 2.5mm 5mm; padding: 0; font-size: 9.5pt; line-height: 1.5; }
+.man-text li { margin-bottom: 0.8mm; }
 .man-text--2col {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -137,7 +144,11 @@ function findSplitIndex(text: string, target: number): number {
 
 function paragraphsToHtml(text: string): string {
   if (!text) return '';
-  return text.split(/\n\n+/).filter(Boolean).map(p => `<p>${esc(p)}</p>`).join('');
+  // Rend le markdown (Airtable rich text). Le texte arrive ici après split
+  // sur '.' donc il peut être tronqué au milieu d'un span gras / italique :
+  // marked tolère les paires non-fermées en les laissant tel quel, ce qui
+  // est acceptable pour le template Manuel (texte délibérément coupé).
+  return renderMarkdown(text);
 }
 
 /**

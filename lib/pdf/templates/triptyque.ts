@@ -1,9 +1,10 @@
 import type { Projet } from '@/types/projet';
 import {
-  TemplateBundle, PhotoRef, esc,
+  TemplateBundle, PhotoRef,
   headerHtml, footerHtml, titleBlockHtml, metaGridHtml,
   photoImg, allPhotos,
 } from './shared';
+import { renderMarkdown } from '@/lib/utils/markdown';
 
 /**
  * Triptyque : layout adaptatif selon le ratio de la 1ʳᵉ photo.
@@ -126,6 +127,14 @@ const CSS = `
   column-rule: 1px solid var(--ai-gris);
   font-family: var(--sans);
 }
+/* Les paragraphes générés par marked dans .tri-text reçoivent les styles
+   de base via .t-texte-md, on ajoute ici l'alignement justifié et la
+   protection des breaks de colonne propres aux 2 colonnes. */
+.tri-text p, .tri-text li, .tri-text blockquote {
+  break-inside: avoid;
+  text-align: justify;
+  hyphens: auto;
+}
 .tri-text-p {
   break-inside: avoid;
   margin-bottom: 2.5mm;
@@ -184,9 +193,8 @@ export function renderTriptyque(projet: Projet): TemplateBundle {
     </div>`;
   }
 
-  // Bloc texte 2 colonnes
+  // Bloc texte 2 colonnes — rendu markdown (Airtable rich text)
   const description = (projet.description ?? '').trim();
-  const paragraphs = description.split(/\n\n+/).filter(Boolean);
 
   // Hauteur réelle des colonnes de texte = espace disponible après header,
   // titre, bandeau, footer et la zone photos du haut. La zone photos varie
@@ -204,9 +212,9 @@ export function renderTriptyque(projet: Projet): TemplateBundle {
   const extraPhotoCandidate = isPaysage ? p2 : p3;
   const extraPhoto = extraPhotoMaxHeight > 0 ? extraPhotoCandidate : undefined;
 
-  const textHtml = paragraphs.length > 0 || extraPhoto
-    ? `<div class="tri-text">
-        ${paragraphs.map(p => `<p class="tri-text-p">${esc(p)}</p>`).join('')}
+  const textHtml = description || extraPhoto
+    ? `<div class="tri-text t-texte-md">
+        ${renderMarkdown(description)}
         ${extraPhoto ? `<div class="tri-extra-photo photo-frame" style="--extra-photo-max:${extraPhotoMaxHeight}mm">${photoImg(extraPhoto, projet.nom)}</div>` : ''}
       </div>`
     : '';
