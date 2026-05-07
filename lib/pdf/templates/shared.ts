@@ -1,4 +1,5 @@
 import type { Projet } from '@/types/projet';
+import { renderMarkdown } from '@/lib/utils/markdown';
 
 export function esc(v: unknown): string {
   return String(v ?? '')
@@ -78,14 +79,16 @@ html, body { background: white; }
   padding-bottom: 3mm;
   font-family: var(--sans);
 }
+/* Bandeau d'en-tête : small caps (= les majuscules s'affichent à la
+   x-height) au lieu d'un text-transform:uppercase, et pas de gras. */
 .t-header-meta {
-  font-size: 8pt; font-weight: 600;
-  letter-spacing: 0.08em; text-transform: uppercase;
+  font-size: 9pt; font-weight: 400;
+  letter-spacing: 0.06em; font-variant: small-caps;
   color: var(--ai-noir70);
 }
 .t-header-statut {
-  font-size: 8pt; font-weight: 700;
-  letter-spacing: 0.08em; text-transform: uppercase;
+  font-size: 9pt; font-weight: 500;
+  letter-spacing: 0.06em; font-variant: small-caps;
   color: var(--ai-rouge);
 }
 
@@ -132,14 +135,15 @@ html, body { background: white; }
 .t-meta-item:first-child { padding-left: 0; }
 .t-meta-item:last-child { padding-right: 0; border-right: none; }
 .t-meta-label {
-  font-family: var(--sans); font-size: 7pt; font-weight: 700;
-  letter-spacing: 0.1em; text-transform: uppercase;
+  font-family: var(--sans); font-size: 8.5pt; font-weight: 400;
+  letter-spacing: 0.06em; font-variant: small-caps;
   color: var(--ai-rouge);
   margin-bottom: 1mm; display: block;
 }
 .t-meta-value {
-  font-family: var(--serif); font-size: 10.5pt; font-weight: 500;
-  line-height: 1.2; color: var(--ai-noir);
+  font-family: var(--serif); font-size: 11pt; font-weight: 400;
+  font-variant: small-caps; letter-spacing: 0.01em;
+  line-height: 1.25; color: var(--ai-noir);
 }
 .t-meta-sub {
   font-family: var(--sans); font-size: 8pt; font-weight: 400;
@@ -152,14 +156,42 @@ html, body { background: white; }
   line-height: 1.5; color: var(--ai-noir);
   margin-bottom: 2.5mm;
 }
+/* Bloc markdown rendu (description rich text Airtable) */
+.t-texte-md { font-family: var(--sans); font-size: 9.5pt; line-height: 1.5; color: var(--ai-noir); }
+.t-texte-md p { margin: 0 0 2.5mm; }
+.t-texte-md p:last-child { margin-bottom: 0; }
+.t-texte-md strong { font-weight: 700; }
+.t-texte-md em { font-style: italic; }
+.t-texte-md a { color: var(--ai-rouge); text-decoration: underline; }
+.t-texte-md ul, .t-texte-md ol { margin: 0 0 2.5mm 5mm; padding: 0; }
+.t-texte-md li { margin-bottom: 0.8mm; }
+.t-texte-md h1, .t-texte-md h2, .t-texte-md h3 {
+  font-family: var(--serif); font-weight: 600; margin: 3mm 0 1.5mm;
+}
+.t-texte-md h1 { font-size: 13pt; }
+.t-texte-md h2 { font-size: 12pt; }
+.t-texte-md h3 { font-size: 11pt; }
+.t-texte-md blockquote {
+  border-left: 2px solid var(--ai-rouge);
+  padding-left: 3mm; margin: 0 0 2.5mm; font-style: italic; color: var(--ai-noir70);
+}
+.t-texte-md code {
+  font-family: monospace; font-size: 9pt;
+  background: var(--ai-gris-tres-clair); padding: 0.5mm 1mm;
+}
+.t-texte-md--inline p { display: inline; margin: 0; }
 .t-texte-cols-2 { column-count: 2; column-gap: 6mm; column-rule: 1px solid var(--ai-gris); }
-.t-texte-cols-2 .t-texte-p { break-inside: avoid; }
+.t-texte-cols-2 p, .t-texte-cols-2 .t-texte-p { break-inside: avoid; }
 `;
 
 export function headerHtml(projet: Projet): string {
+  // Année maintenant placée dans le bandeau de statut, à la suite de
+  // l'état du chantier ("Livré · 2025") pour libérer une colonne dans
+  // le bandeau métadonnées (qui accueille désormais le Programme).
+  const annee = projet.anneeLivraison ? ` · ${esc(String(projet.anneeLivraison))}` : '';
   return `<header class="t-header">
     <div class="t-header-meta">Assemblage ingénierie · Référence Projet</div>
-    <div class="t-header-statut">● ${esc(projet.statut)}</div>
+    <div class="t-header-statut">● ${esc(projet.statut)}${annee}</div>
   </header>`;
 }
 
@@ -180,13 +212,18 @@ export function titleBlockHtml(projet: Projet, h1Size = '32pt'): string {
 export function metaGridHtml(projet: Projet): string {
   const items: { label: string; value: string; sub?: string }[] = [];
 
-  if (projet.moa) items.push({ label: "Maître d'ouvrage", value: projet.moa });
-  if (projet.architecte) items.push({ label: 'Architecte', value: projet.architecte });
-  if (projet.budgetHT) items.push({ label: 'Budget', value: projet.budgetHT });
-  if (projet.surface) items.push({ label: 'Surface', value: `${projet.surface.toLocaleString('fr-FR')} m²` });
-  if (projet.anneeLivraison) items.push({
-    label: 'Année',
-    value: String(projet.anneeLivraison),
+  // Ordre fixe : seuls les champs renseignés apparaissent.
+  if (projet.moa)        items.push({ label: "Maître d'ouvrage", value: projet.moa });
+  if (projet.architecte) items.push({ label: 'Architecte',       value: projet.architecte });
+  if (projet.budgetHT)   items.push({ label: 'Budget',           value: projet.budgetHT });
+  if (projet.surface)    items.push({ label: 'Surface',          value: `${projet.surface.toLocaleString('fr-FR')} m²` });
+  if (projet.entreprise) items.push({ label: 'Entreprise',       value: projet.entreprise });
+  if (projet.missionAi)  items.push({ label: 'Prestation AI',    value: projet.missionAi });
+  // Programme : principal en valeur principale, secondaire en sous-titre
+  if (projet.programmePrincipal || projet.programmeSecondaire) items.push({
+    label: 'Programme',
+    value: projet.programmePrincipal ?? projet.programmeSecondaire ?? '',
+    sub: projet.programmePrincipal ? projet.programmeSecondaire : undefined,
   });
 
   if (items.length === 0) return '';
@@ -203,10 +240,14 @@ export function metaGridHtml(projet: Projet): string {
 }
 
 /**
- * Rend la description.
+ * Rend la description (champ Airtable rich text → markdown GFM).
  * - columns: 1 ou 2 colonnes
  * - singleParagraph: si true, fusionne tous les sauts de ligne en un seul
  *   paragraphe (utilisé par Solo pour avoir un bloc plein largeur compact)
+ *
+ * On parse le markdown ; les paragraphes/listes/styles inline (gras, italique,
+ * liens) sont rendus en HTML. Le wrapper `.t-texte-md` applique notre style
+ * de paragraphe à tous les <p> générés par marked.
  */
 export function descriptionHtml(projet: Projet, columns: 1 | 2 = 1, singleParagraph = false): string {
   const text = (projet.description ?? '').trim();
@@ -214,15 +255,11 @@ export function descriptionHtml(projet: Projet, columns: 1 | 2 = 1, singleParagr
 
   if (singleParagraph) {
     const flat = text.replace(/\s*\n+\s*/g, ' ');
-    return `<p class="t-texte-p">${esc(flat)}</p>`;
+    return `<div class="t-texte-md t-texte-md--inline">${renderMarkdown(flat)}</div>`;
   }
 
-  const paragraphs = text.split(/\n\n+/).filter(Boolean);
-  if (paragraphs.length === 0) return '';
-  const cls = columns === 2 ? 't-texte-cols-2' : '';
-  return `<div class="${cls}">
-    ${paragraphs.map(p => `<p class="t-texte-p">${esc(p)}</p>`).join('')}
-  </div>`;
+  const cls = columns === 2 ? 't-texte-md t-texte-cols-2' : 't-texte-md';
+  return `<div class="${cls}">${renderMarkdown(text)}</div>`;
 }
 
 export function photoImg(photo: { url: string; filename?: string }, alt = ''): string {

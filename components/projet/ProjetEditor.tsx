@@ -7,6 +7,7 @@ import { TEMPLATE_OPTIONS } from '@/types/projet';
 import TemplatePreview from '@/components/TemplatePreview';
 import Link from 'next/link';
 import { authHeaders } from '@/lib/supabase/authHeaders';
+import RichTextEditor from './RichTextEditor';
 
 interface Props { projet: Projet; }
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
@@ -224,8 +225,13 @@ export default function ProjetEditor({ projet }: Props) {
           </div>
           <div>
             <label style={LABEL}>Description projet</label>
-            <textarea value={description} onChange={e => setDescription(e.target.value)} rows={10} style={TEXTAREA} />
-            <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', marginTop: '4px' }}>Séparer les paragraphes par une ligne vide.</p>
+            <RichTextEditor
+              value={description}
+              onChange={setDescription}
+              placeholder="Description du projet…"
+              minRows={10}
+            />
+            <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', marginTop: '4px' }}>Texte enrichi (Markdown) — synchronisé avec le champ Airtable.</p>
           </div>
         </div>
 

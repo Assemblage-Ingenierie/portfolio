@@ -1,17 +1,59 @@
 import type { Projet, TemplateChoice } from '@/types/projet';
 import { normalizeStatut } from '@/lib/utils/normalize';
 import { parseChiffresCles, parseTagsSiteWeb, formatBudget } from '@/lib/utils/parsers';
-import { formulaValue, linkedValue, selectValue } from './client';
+import { formulaValue, selectValue } from './client';
 import { autoSelectTemplate, isTemplateChoice } from '@/lib/pdf/selectTemplate';
 import { deserializeConfig } from '@/lib/pdf/manualConfig';
 
+// Field IDs Airtable des nouveaux champs Programme principal / Programme
+// secondaire (multi-select). Lus via une requête auxiliaire en
+// `returnFieldsByFieldId: true` parce que leur nom de colonne Airtable
+// n'est pas garanti stable côté code.
+export const FIELD_PROGRAMME_PRINCIPAL = 'fldKNKtsZNpvmf695';
+export const FIELD_PROGRAMME_SECONDAIRE = 'fldaTqKMNrIpeGBma';
+
+/**
+ * Valeurs auxiliaires injectées dans le mapper.
+ * Toutes optionnelles : la requête principale reste fonctionnelle si l'aux échoue.
+ * - programmePrincipal/Secondaire : lus par field ID depuis la table portfolio
+ * - crmNames : Map<recordId → nom> récupérée depuis la base "CRM AI"
+ *   pour résoudre Architecte / Mandataire / Entreprise
+ */
+export interface AuxValues {
+  programmePrincipal?: string;
+  programmeSecondaire?: string;
+  crmNames?: Map<string, string>;
+}
+
+/**
+ * Résout un champ linked records (retourné en JSON = array de record IDs)
+ * vers les noms CRM correspondants.
+ * Si un ID n'est pas trouvé dans la map, il est omis (pas d'ID brut affiché).
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function recordToProjet(record: any): Projet {
+function resolveCrm(field: any, crmNames?: Map<string, string>): string | undefined {
+  if (!field) return undefined;
+  const ids: string[] = Array.isArray(field)
+    ? field.filter((x) => typeof x === 'string')
+    : typeof field === 'string' ? [field] : [];
+  if (ids.length === 0) return undefined;
+
+  if (crmNames) {
+    const resolved = ids.map((id) => crmNames.get(id)).filter(Boolean) as string[];
+    if (resolved.length > 0) return resolved.join(', ');
+    // Tous les IDs sont inconnus de la map CRM (base non configurée ou PAT sans accès)
+    // → on retourne undefined plutôt que d'afficher les IDs bruts
+    return undefined;
+  }
+  // Pas de map CRM du tout : comportement legacy (affiche le 1er ID si présent)
+  return ids[0] ?? undefined;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function recordToProjet(record: any, aux?: AuxValues): Projet {
   const f = record.fields;
 
   // Airtable expose les dimensions via attachment.thumbnails.full / large.
-  // On ne modifie pas la photo elle-même — on lit juste ses dimensions natives
-  // pour permettre à un template de choisir un layout adapté (paysage/portrait).
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function dimsFrom(a: any): { width?: number; height?: number } {
     const t = a?.thumbnails?.full ?? a?.thumbnails?.large;
@@ -72,11 +114,16 @@ export function recordToProjet(record: any): Projet {
     pitch: formulaValue(f['Pitch']),
     description,
 
-    moa: f['Maître d\'ouvrage'] ?? undefined,
-    architecte: linkedValue(f['Architecte']),
-    mandataire: f['Mandataire'] ?? undefined,
+    // MOA aussi linked record (sync CRM) → résolution via crmNames
+    moa: resolveCrm(f["Maître d'ouvrage"], aux?.crmNames) ?? (typeof f["Maître d'ouvrage"] === 'string' ? f["Maître d'ouvrage"] : undefined),
+    // Architecte / Mandataire / Entreprise : champs linked records pointant
+    // vers la base CRM AI. En cellFormat=json ils reviennent en array de
+    // record IDs (recXXX…). On résout les noms via la map crmNames
+    // construite dans queries.ts → fetchCrmNames().
+    architecte: resolveCrm(f['Architecte'], aux?.crmNames),
+    mandataire: resolveCrm(f['Mandataire'], aux?.crmNames),
     betAssocies: f['BET associés'] ?? undefined,
-    entreprise: f['Entreprise'] ?? undefined,
+    entreprise: resolveCrm(f['Entreprise'], aux?.crmNames),
     bailleur: f['Bailleur'] ?? undefined,
     referentAi: f['Référent AI'] ?? undefined,
 
@@ -85,6 +132,8 @@ export function recordToProjet(record: any): Projet {
     anneeLivraison: f['Année livraison'] ?? undefined,
     missionAi: f['Mission AI'] ?? undefined,
     programme: f['Programme'] ?? undefined,
+    programmePrincipal: aux?.programmePrincipal,
+    programmeSecondaire: aux?.programmeSecondaire,
     pole: f['Pôle'] ?? undefined,
     departement: f['Département'] ?? undefined,
     rehabNeuf: selectValue(f['Rehab / Neuf']),

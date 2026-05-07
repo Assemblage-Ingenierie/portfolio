@@ -1,5 +1,6 @@
 import type { Projet } from '@/types/projet';
 import { esc, lightboxHtml, ROUGE, VIOLET, GRIS, NOIR70, SERIF, SANS } from './builders';
+import { renderMarkdown } from '@/lib/utils/markdown';
 
 /**
  * Variante V2 — layout magazine inspiré de la mise en page « Brunoy ».
@@ -13,13 +14,16 @@ import { esc, lightboxHtml, ROUGE, VIOLET, GRIS, NOIR70, SERIF, SANS } from './b
 function buildWpEditorialV2(projet: Projet, coverUrl: string | undefined, photoUrls: string[]): string {
   const pitch = esc(projet.pitch ?? '');
   const description = projet.description ?? '';
-  const paragraphs = description.split(/\n\n+/).filter(Boolean);
   const chiffresCles = projet.chiffresCles ?? [];
   const allPhotos = [coverUrl, ...photoUrls].filter((u): u is string => !!u);
 
   const etat = projet.statut && projet.anneeLivraison
     ? `${projet.statut} en ${projet.anneeLivraison}`
     : projet.statut || (projet.anneeLivraison ? String(projet.anneeLivraison) : undefined);
+
+  const programme = projet.programmePrincipal && projet.programmeSecondaire
+    ? `${projet.programmePrincipal} (${projet.programmeSecondaire})`
+    : projet.programmePrincipal ?? projet.programmeSecondaire;
 
   const champsCles: { label: string; value?: string; highlight?: boolean }[] = [
     { label: 'Lieu',              value: projet.lieu },
@@ -30,6 +34,7 @@ function buildWpEditorialV2(projet: Projet, coverUrl: string | undefined, photoU
     { label: 'BET associés',      value: projet.betAssocies },
     { label: 'Entreprise',        value: projet.entreprise },
     { label: 'Bailleur',          value: projet.bailleur },
+    { label: 'Programme',         value: programme },
     { label: 'Surface',           value: projet.surface ? `${projet.surface.toLocaleString('fr-FR')} m²` : undefined },
     { label: 'Budget',            value: projet.budgetHT },
     { label: 'État',              value: etat },
@@ -43,7 +48,7 @@ function buildWpEditorialV2(projet: Projet, coverUrl: string | undefined, photoU
   // sont insérées dans le même conteneur de colonnes pour s'écouler
   // naturellement après le texte (style magazine).
   const colonnesContent = `
-    ${paragraphs.map(p => `<p style="font-family:${SANS};font-size:15px;line-height:1.7;color:#1a1a1a;margin:0 0 16px;break-inside:avoid;">${esc(p)}</p>`).join('')}
+    <div class="ai-md" style="font-family:${SANS};font-size:15px;line-height:1.7;color:#1a1a1a;">${renderMarkdown(description)}</div>
     ${galeriePhotos.map(({ url, idx }) => `
       <figure data-ai-idx="${idx}" style="margin:16px 0;break-inside:avoid;cursor:pointer;background:${GRIS};">
         <img src="${esc(url)}" alt="${esc(projet.nom)} — photo ${idx}" loading="lazy" style="width:100%;height:auto;display:block;pointer-events:none;" />
@@ -64,8 +69,8 @@ function buildWpEditorialV2(projet: Projet, coverUrl: string | undefined, photoU
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px 28px;">
       ${champsCles.map(f => `
         <div style="${f.highlight ? `color:${ROUGE};` : ''}">
-          <div style="font-family:${SANS};font-size:10px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:${f.highlight ? ROUGE : NOIR70};margin-bottom:4px;">${esc(f.label)}</div>
-          <div style="font-family:${SERIF};font-size:15px;font-weight:500;line-height:1.3;">${esc(f.value!)}</div>
+          <div style="font-family:${SANS};font-size:12px;font-weight:400;letter-spacing:0.06em;font-variant:small-caps;color:${f.highlight ? ROUGE : NOIR70};margin-bottom:4px;">${esc(f.label)}</div>
+          <div style="font-family:${SERIF};font-size:15px;font-weight:400;font-variant:small-caps;line-height:1.3;">${esc(f.value!)}</div>
         </div>`).join('')}
     </div>
   </div>` : ''}
