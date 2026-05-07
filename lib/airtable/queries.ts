@@ -1,15 +1,20 @@
 import type { Projet } from '@/types/projet';
 import { cacheTag } from 'next/cache';
 import { base, TABLE } from './client';
-import { recordToProjet, type ProgrammeAux, FIELD_PROGRAMME_PRINCIPAL, FIELD_PROGRAMME_SECONDAIRE } from './mappers';
+import { recordToProjet, type AuxValues, FIELD_PROGRAMME_PRINCIPAL, FIELD_PROGRAMME_SECONDAIRE } from './mappers';
 
 export const PROJETS_TAG = 'projets';
 
-// cellFormat='string' demande à Airtable de renvoyer chaque cellule formatée
-// comme dans l'UI : c'est ce qui permet aux linked records (Architecte,
-// Mandataire, Entreprise — désormais synchronisés depuis la base CRM) de
-// revenir sous forme de texte affiché et non d'identifiants `recXXX`.
-// Note : Airtable rejette cellFormat=string sans timeZone+userLocale.
+// cellFormat='string' = Airtable renvoie chaque cellule formatée comme dans
+// l'UI. Indispensable pour récupérer les valeurs affichées des linked records
+// synchronisés depuis la base CRM (Architecte / Mandataire / Entreprise) et
+// des multi-selects programme principal / secondaire — sinon on récupère
+// soit des record IDs (`recXXX`), soit des arrays d'IDs.
+//
+// ⚠ NE PAS utiliser cellFormat='string' sur la requête principale : les
+// attachments (Photo Couverture, Photos projet) deviennent eux aussi des
+// chaînes au lieu d'arrays d'objets `{url, thumbnails…}`, ce qui casse
+// l'affichage des images. On l'utilise donc uniquement sur la requête aux.
 const STRING_FORMAT = {
   cellFormat: 'string' as const,
   timeZone: 'Europe/Paris',
@@ -30,46 +35,84 @@ function firstValue(v: any): string | undefined {
   return undefined;
 }
 
-/**
- * Récupère programme principal / secondaire par field IDs.
- * Cette requête est isolée et tolérante aux erreurs : si les field IDs ne
- * résolvent pas (renommage côté Airtable, base différente…), on renvoie une
- * map vide plutôt que de faire échouer tout le chargement de la fiche.
- */
-async function fetchProgrammes(filterFormula?: string): Promise<Map<string, ProgrammeAux>> {
-  const map = new Map<string, ProgrammeAux>();
-  try {
-    const records = await base(TABLE)
-      .select({
-        ...STRING_FORMAT,
-        fields: [FIELD_PROGRAMME_PRINCIPAL, FIELD_PROGRAMME_SECONDAIRE],
-        returnFieldsByFieldId: true,
-        ...(filterFormula ? { filterByFormula: filterFormula } : {}),
-      })
-      .all();
-    records.forEach((r) => {
-      map.set(r.id, {
-        principal: firstValue(r.fields[FIELD_PROGRAMME_PRINCIPAL]),
-        secondaire: firstValue(r.fields[FIELD_PROGRAMME_SECONDAIRE]),
-      });
-    });
-  } catch (err) {
-    console.error('[airtable] fetchProgrammes failed, continuing without programme aux:', err);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function asString(v: any): string | undefined {
+  if (v === undefined || v === null || v === '') return undefined;
+  if (typeof v === 'string') return v.trim() || undefined;
+  if (Array.isArray(v)) {
+    const joined = v.filter((x) => typeof x === 'string' && x.trim()).join(', ');
+    return joined || undefined;
   }
-  return map;
+  return undefined;
 }
 
-// Sélection principale, avec fallback : si cellFormat='string' échoue
-// (PAT sans le scope, base ne supportant pas l'option, etc.), on retente
-// sans pour ne pas casser la home / les fiches.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function selectProjets(opts: any): Promise<readonly any[]> {
-  try {
-    return await base(TABLE).select({ ...STRING_FORMAT, ...opts }).all();
-  } catch (err) {
-    console.error('[airtable] string-format query failed, retrying with default cellFormat:', err);
-    return await base(TABLE).select(opts).all();
+/**
+ * Requête auxiliaire en cellFormat='string' :
+ * - Architecte / Mandataire / Entreprise : valeur affichée (linked CRM)
+ * - Programme principal / secondaire : première option du multi-select,
+ *   lus par field ID via `returnFieldsByFieldId: true` (les noms de
+ *   colonnes Airtable ne sont pas garantis stables côté code)
+ *
+ * On fait deux sous-requêtes parallèles parce que `returnFieldsByFieldId`
+ * est un flag global (les keys de réponse sont soit toutes par nom,
+ * soit toutes par ID) et qu'on ne connaît pas les IDs des champs CRM.
+ *
+ * Tolérante aux erreurs : retourne une map vide si l'une des deux échoue.
+ */
+async function fetchAux(filterFormula?: string): Promise<Map<string, AuxValues>> {
+  const map = new Map<string, AuxValues>();
+  const baseOpts = filterFormula ? { filterByFormula: filterFormula } : {};
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function ensure(id: string): AuxValues {
+    let entry = map.get(id);
+    if (!entry) {
+      entry = {};
+      map.set(id, entry);
+    }
+    return entry;
   }
+
+  const [byName, byId] = await Promise.allSettled([
+    base(TABLE)
+      .select({
+        ...STRING_FORMAT,
+        ...baseOpts,
+        fields: ['Architecte', 'Mandataire', 'Entreprise'],
+      })
+      .all(),
+    base(TABLE)
+      .select({
+        ...STRING_FORMAT,
+        ...baseOpts,
+        fields: [FIELD_PROGRAMME_PRINCIPAL, FIELD_PROGRAMME_SECONDAIRE],
+        returnFieldsByFieldId: true,
+      })
+      .all(),
+  ]);
+
+  if (byName.status === 'fulfilled') {
+    byName.value.forEach((r) => {
+      const e = ensure(r.id);
+      e.architecte = asString(r.fields['Architecte']);
+      e.mandataire = asString(r.fields['Mandataire']);
+      e.entreprise = asString(r.fields['Entreprise']);
+    });
+  } else {
+    console.error('[airtable] fetchAux byName failed:', byName.reason);
+  }
+
+  if (byId.status === 'fulfilled') {
+    byId.value.forEach((r) => {
+      const e = ensure(r.id);
+      e.programmePrincipal = firstValue(r.fields[FIELD_PROGRAMME_PRINCIPAL]);
+      e.programmeSecondaire = firstValue(r.fields[FIELD_PROGRAMME_SECONDAIRE]);
+    });
+  } else {
+    console.error('[airtable] fetchAux byId failed:', byId.reason);
+  }
+
+  return map;
 }
 
 export async function getProjets(): Promise<Projet[]> {
@@ -78,17 +121,19 @@ export async function getProjets(): Promise<Projet[]> {
   if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) return [];
   try {
     const filter = '{Visible portfolio} = TRUE()';
-    const [records, programmes] = await Promise.all([
-      selectProjets({
-        filterByFormula: filter,
-        sort: [
-          { field: 'Année livraison', direction: 'desc' },
-          { field: 'Affaire', direction: 'asc' },
-        ],
-      }),
-      fetchProgrammes(filter),
+    const [records, aux] = await Promise.all([
+      base(TABLE)
+        .select({
+          filterByFormula: filter,
+          sort: [
+            { field: 'Année livraison', direction: 'desc' },
+            { field: 'Affaire', direction: 'asc' },
+          ],
+        })
+        .all(),
+      fetchAux(filter),
     ]);
-    return records.map((r) => recordToProjet(r, programmes.get(r.id)));
+    return records.map((r) => recordToProjet(r, aux.get(r.id)));
   } catch (err) {
     console.error('[airtable] getProjets failed:', err);
     return [];
@@ -102,12 +147,12 @@ export async function getProjet(slug: string): Promise<Projet | null> {
   if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) return null;
   try {
     const filter = `{Slug} = "${slug}"`;
-    const [records, programmes] = await Promise.all([
-      selectProjets({ filterByFormula: filter, maxRecords: 1 }),
-      fetchProgrammes(filter),
+    const [records, aux] = await Promise.all([
+      base(TABLE).select({ filterByFormula: filter, maxRecords: 1 }).all(),
+      fetchAux(filter),
     ]);
     if (records.length === 0) return null;
-    return recordToProjet(records[0], programmes.get(records[0].id));
+    return recordToProjet(records[0], aux.get(records[0].id));
   } catch (err) {
     console.error(`[airtable] getProjet(${slug}) failed:`, err);
     return null;
