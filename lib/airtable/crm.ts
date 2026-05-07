@@ -24,9 +24,13 @@ export async function fetchCrmNames(recordIds: string[]): Promise<Map<string, st
   if (recordIds.length === 0) return map;
 
   const table = crmBase();
-  if (!table) return map;
+  if (!table) {
+    console.warn('[crm] CRM base not configured (AIRTABLE_CRM_BASE_ID / AIRTABLE_CRM_TABLE_NAME missing)');
+    return map;
+  }
 
   const uniqueIds = [...new Set(recordIds)];
+  console.log(`[crm] querying ${process.env.AIRTABLE_CRM_BASE_ID}/${process.env.AIRTABLE_CRM_TABLE_NAME} for ${uniqueIds.length} ids`);
   // Airtable supporte OR(RECORD_ID()='rec...', ...) pour filtrer par IDs
   const formula = uniqueIds.length === 1
     ? `RECORD_ID()='${uniqueIds[0]}'`
@@ -39,8 +43,10 @@ export async function fetchCrmNames(recordIds: string[]): Promise<Map<string, st
       returnFieldsByFieldId: true,
     }).all();
 
+    console.log(`[crm] received ${records.length} records back`);
     records.forEach((r) => {
       const nom = r.fields[FIELD_NOM_ID];
+      console.log(`[crm] record ${r.id} → ${typeof nom === 'string' ? nom : '(empty/non-string)'}`);
       if (typeof nom === 'string' && nom.trim()) {
         map.set(r.id, nom.trim());
       }

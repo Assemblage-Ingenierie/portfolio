@@ -133,7 +133,15 @@ export async function getProjet(slug: string): Promise<Projet | null> {
       ...extractIds(r.fields['Mandataire']),
       ...extractIds(r.fields['Entreprise']),
     ];
+    // Debug : on log même en succès pour pouvoir tracer pourquoi un champ
+    // n'est pas résolu (le console.error de fetchCrmNames ne se déclenche
+    // que sur exception, pas sur résultat vide)
+    console.log(`[crm-debug] ${slug} architecte field raw:`, JSON.stringify(r.fields['Architecte']));
+    console.log(`[crm-debug] ${slug} mandataire field raw:`, JSON.stringify(r.fields['Mandataire']));
+    console.log(`[crm-debug] ${slug} entreprise field raw:`, JSON.stringify(r.fields['Entreprise']));
+    console.log(`[crm-debug] ${slug} ids collected:`, crmIds);
     const crmNames = await fetchCrmNames(crmIds);
+    console.log(`[crm-debug] ${slug} resolved (${crmNames.size}/${crmIds.length}):`, [...crmNames.entries()]);
 
     const p = prog.get(r.id);
     const aux: AuxValues = {
