@@ -184,13 +184,14 @@ export function titleBlockHtml(projet: Projet, h1Size = '32pt'): string {
 export function metaGridHtml(projet: Projet): string {
   const items: { label: string; value: string; sub?: string }[] = [];
 
-  if (projet.moa) items.push({ label: "Maître d'ouvrage", value: projet.moa });
-  if (projet.architecte) items.push({ label: 'Architecte', value: projet.architecte });
-  if (projet.budgetHT) items.push({ label: 'Budget', value: projet.budgetHT });
-  if (projet.surface) items.push({ label: 'Surface', value: `${projet.surface.toLocaleString('fr-FR')} m²` });
-  // Année déplacée dans le bandeau de statut (cf. headerHtml) — la colonne
-  // libérée accueille le Programme : programme principal en valeur, programme
-  // secondaire en sous-titre.
+  // Ordre fixe : seuls les champs renseignés apparaissent.
+  if (projet.moa)        items.push({ label: "Maître d'ouvrage", value: projet.moa });
+  if (projet.architecte) items.push({ label: 'Architecte',       value: projet.architecte });
+  if (projet.budgetHT)   items.push({ label: 'Budget',           value: projet.budgetHT });
+  if (projet.surface)    items.push({ label: 'Surface',          value: `${projet.surface.toLocaleString('fr-FR')} m²` });
+  if (projet.entreprise) items.push({ label: 'Entreprise',       value: projet.entreprise });
+  if (projet.missionAi)  items.push({ label: 'Prestation AI',    value: projet.missionAi });
+  // Programme : principal en valeur principale, secondaire en sous-titre
   if (projet.programmePrincipal || projet.programmeSecondaire) items.push({
     label: 'Programme',
     value: projet.programmePrincipal ?? projet.programmeSecondaire ?? '',
