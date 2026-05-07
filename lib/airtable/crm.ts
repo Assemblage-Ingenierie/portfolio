@@ -1,10 +1,23 @@
 import Airtable from 'airtable';
 
-// Field ID stable du champ "Nom" dans la table CRM AI
+// Field ID stable du champ "Nom" dans la table synchronisée (préservé
+// depuis la base source CRM AI lors de la sync).
 const FIELD_NOM_ID = 'fldFkUQonHXldxbZ1';
 
+/**
+ * Les linked records ne traversent jamais les bases dans Airtable :
+ * quand la base portfolio synchronise une table CRM, Airtable crée une
+ * **table synchronisée locale** dans la base portfolio (avec ses propres
+ * record IDs, distincts de ceux de la base source). Le champ Architecte
+ * pointe vers cette table synchronisée locale.
+ *
+ * On interroge donc AIRTABLE_BASE_ID (portfolio) sur la table dont le nom
+ * est dans AIRTABLE_CRM_TABLE_NAME — pas la base CRM AI elle-même.
+ * AIRTABLE_CRM_BASE_ID reste utilisable en fallback si quelqu'un veut
+ * vraiment une lookup cross-base manuelle.
+ */
 function crmBase() {
-  const baseId = process.env.AIRTABLE_CRM_BASE_ID;
+  const baseId = process.env.AIRTABLE_BASE_ID || process.env.AIRTABLE_CRM_BASE_ID;
   const table = process.env.AIRTABLE_CRM_TABLE_NAME;
   if (!baseId || !table || !process.env.AIRTABLE_API_KEY) return null;
   return new Airtable({ apiKey: process.env.AIRTABLE_API_KEY })
@@ -30,7 +43,8 @@ export async function fetchCrmNames(recordIds: string[]): Promise<Map<string, st
   }
 
   const uniqueIds = [...new Set(recordIds)];
-  console.log(`[crm] querying ${process.env.AIRTABLE_CRM_BASE_ID}/${process.env.AIRTABLE_CRM_TABLE_NAME} for ${uniqueIds.length} ids`);
+  const usedBase = process.env.AIRTABLE_BASE_ID || process.env.AIRTABLE_CRM_BASE_ID;
+  console.log(`[crm] querying ${usedBase}/${process.env.AIRTABLE_CRM_TABLE_NAME} for ${uniqueIds.length} ids`);
   // Airtable supporte OR(RECORD_ID()='rec...', ...) pour filtrer par IDs
   const formula = uniqueIds.length === 1
     ? `RECORD_ID()='${uniqueIds[0]}'`
