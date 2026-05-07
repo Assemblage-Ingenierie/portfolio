@@ -1,4 +1,5 @@
 import type { Projet } from '@/types/projet';
+import { renderMarkdown } from '@/lib/utils/markdown';
 
 export function esc(value: string | number | undefined | null): string {
   if (value === undefined || value === null) return '';
@@ -20,8 +21,8 @@ function infoItem(label: string, value?: string | number, sub?: string): string 
   if (!value && value !== 0) return '';
   return `
     <div style="margin-bottom:10px;">
-      <span style="display:block;font-family:${SANS};font-size:9px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:${NOIR70};margin-bottom:2px;">${label}</span>
-      <div style="font-family:${SERIF};font-size:13px;font-weight:600;line-height:1.2;color:#000;">${esc(value)}</div>
+      <span style="display:block;font-family:${SANS};font-size:11px;font-weight:400;letter-spacing:0.06em;font-variant:small-caps;color:${NOIR70};margin-bottom:2px;">${label}</span>
+      <div style="font-family:${SERIF};font-size:13px;font-weight:400;line-height:1.2;color:#000;">${esc(value)}</div>
       ${sub ? `<div style="font-family:${SANS};font-size:10px;color:${NOIR70};margin-top:2px;">${esc(sub)}</div>` : ''}
     </div>`;
 }
@@ -29,7 +30,6 @@ function infoItem(label: string, value?: string | number, sub?: string): string 
 function buildWpMagazine(projet: Projet, coverUrl: string | undefined, photoUrls: string[]): string {
   const pitch = esc(projet.pitch ?? '');
   const description = projet.description ?? '';
-  const paragraphs = description.split(/\n\n+/).filter(Boolean);
   const badge = [projet.programme, projet.pole].filter(Boolean).map(esc).join(' · ');
   const chiffresCles = projet.chiffresCles ?? [];
 
@@ -99,8 +99,8 @@ function buildWpMagazine(projet: Projet, coverUrl: string | undefined, photoUrls
     <!-- Principal -->
     <div style="padding-left:24px;">
       <h2 style="font-family:${SERIF};font-size:22px;font-weight:500;line-height:1.1;color:#000;letter-spacing:-0.01em;margin:0 0 16px;">${esc(projet.nom)}</h2>
-      <div style="columns:2;column-gap:16px;column-rule:1px solid ${GRIS};">
-        ${paragraphs.map((p, i) => `<p style="font-family:${SANS};font-size:11px;line-height:1.5;color:#000;margin-bottom:8px;${i === 0 ? 'break-inside:avoid;' : ''}">${esc(p)}</p>`).join('')}
+      <div class="ai-md" style="columns:2;column-gap:16px;column-rule:1px solid ${GRIS};font-family:${SANS};font-size:11px;line-height:1.5;color:#000;">
+        ${renderMarkdown(description)}
       </div>
       ${galerie}
     </div>
@@ -182,7 +182,6 @@ export function lightboxHtml(allPhotos: string[], alt: string): string {
 function buildWpEditorial(projet: Projet, coverUrl: string | undefined, photoUrls: string[]): string {
   const pitch = esc(projet.pitch ?? '');
   const description = projet.description ?? '';
-  const paragraphs = description.split(/\n\n+/).filter(Boolean);
   const chiffresCles = projet.chiffresCles ?? [];
   const allPhotos = [coverUrl, ...photoUrls].filter((u): u is string => !!u);
 
@@ -235,14 +234,14 @@ function buildWpEditorial(projet: Projet, coverUrl: string | undefined, photoUrl
     <ul style="list-style:none;margin:0;padding:0;font-family:${SANS};font-size:16px;line-height:1.6;color:#000;">
       ${champsCles.map(f => `
         <li style="padding:6px 0;${f.highlight ? `color:${ROUGE};` : ''}">
-          <strong style="font-weight:600;">${esc(f.label)} :</strong> ${esc(f.value!)}
+          <span style="font-weight:400;font-variant:small-caps;letter-spacing:0.04em;">${esc(f.label)} :</span> ${esc(f.value!)}
         </li>`).join('')}
     </ul>
   </div>
 
-  <!-- Description pleine largeur, 1 colonne -->
-  <div style="border-top:1px dotted ${ROUGE};padding-top:32px;margin-bottom:48px;">
-    ${paragraphs.map(p => `<p style="font-family:${SANS};font-size:16px;line-height:1.7;color:#1a1a1a;margin:0 0 20px;">${esc(p)}</p>`).join('')}
+  <!-- Description pleine largeur, 1 colonne — markdown rendu -->
+  <div class="ai-md" style="border-top:1px dotted ${ROUGE};padding-top:32px;margin-bottom:48px;font-family:${SANS};font-size:16px;line-height:1.7;color:#1a1a1a;">
+    ${renderMarkdown(description)}
   </div>
 
   ${chiffresCles.length > 0 ? `
