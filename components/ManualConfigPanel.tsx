@@ -2,6 +2,7 @@
 
 import type { Projet } from '@/types/projet';
 import type { ManualConfig, PhotoConfig, PhotoFormat, KeywordsConfig, PrestationAssemblageConfig } from '@/lib/pdf/manualConfig';
+import { MAX_MAIN_PORTRAIT_PHOTOS } from '@/lib/pdf/manualConfig';
 import type { BandeauStyle } from '@/lib/pdf/bandeauConfig';
 import { allPhotos } from '@/lib/pdf/templates/shared';
 import { StyleRow } from '@/components/projet/BandeauConfigPanel';
@@ -122,6 +123,33 @@ export default function ManualConfigPanel({ projet, config, onChange, side = 'al
     }
   };
 
+  // Mutateurs photos portrait additionnelles (3ᵉ, 4ᵉ, 5ᵉ).
+  // `mainPhotosExtra[]` est aligné sur l'index visuel : Photo 3 = extras[0].
+  const portraitExtras: PhotoConfig[] = config.mainPhotosExtra ?? [];
+  // Nombre total de photos en mode portrait : main + main2 + extras.
+  const portraitCount = 1 + (config.mainPhoto2 ? 1 : 0) + portraitExtras.length;
+  const setPortraitCount = (n: number) => {
+    const target = Math.max(2, Math.min(MAX_MAIN_PORTRAIT_PHOTOS, n));
+    // 1ʳᵉ photo = mainPhoto (toujours présente), 2ᵉ = mainPhoto2, 3+ = extras.
+    if (target === 2) {
+      onChange({ ...config, mainPhoto2: config.mainPhoto2 ?? { index: Math.min(1, photos.length - 1), sizePercent: 100 }, mainPhotosExtra: [] });
+      return;
+    }
+    const targetExtras = target - 2;
+    const next: PhotoConfig[] = [...portraitExtras];
+    while (next.length < targetExtras) {
+      next.push({ index: Math.min(next.length + 2, photos.length - 1), sizePercent: 100 });
+    }
+    if (next.length > targetExtras) next.length = targetExtras;
+    onChange({ ...config, mainPhotosExtra: next });
+  };
+  const setPortraitExtraAt = (i: number, patch: Partial<PhotoConfig>) => {
+    const next = [...portraitExtras];
+    if (!next[i]) return;
+    next[i] = { ...next[i], ...patch };
+    onChange({ ...config, mainPhotosExtra: next });
+  };
+
   // Texte (sliders en % de caractères du texte total)
   const setColumns = (n: 1 | 2) => onChange({ ...config, textColumns: n });
   const setCol1Pct = (v: number) => onChange({ ...config, textCol1Percent: v });
@@ -236,6 +264,22 @@ export default function ManualConfigPanel({ projet, config, onChange, side = 'al
         />
         {config.mainPhotoFormat === 'portrait' && (
           <>
+            {/* Compteur : 2..MAX photos en grille N colonnes */}
+            <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap', marginTop: 4 }}>
+              <span style={{ fontSize: '9pt', color: 'var(--ai-noir70)' }}>Nombre :</span>
+              <button
+                onClick={() => setPortraitCount(portraitCount - 1)}
+                disabled={portraitCount <= 2}
+                style={{ ...radioBtn(false), padding: '2px 8px', cursor: portraitCount <= 2 ? 'not-allowed' : 'pointer', opacity: portraitCount <= 2 ? 0.4 : 1 }}
+              >−</button>
+              <span style={{ minWidth: 16, textAlign: 'center', fontWeight: 700, color: 'var(--ai-rouge)' }}>{portraitCount}</span>
+              <button
+                onClick={() => setPortraitCount(portraitCount + 1)}
+                disabled={portraitCount >= MAX_MAIN_PORTRAIT_PHOTOS}
+                style={{ ...radioBtn(false), padding: '2px 8px', cursor: portraitCount >= MAX_MAIN_PORTRAIT_PHOTOS ? 'not-allowed' : 'pointer', opacity: portraitCount >= MAX_MAIN_PORTRAIT_PHOTOS ? 0.4 : 1 }}
+              >+</button>
+            </div>
+
             <div style={ROW}>
               <span style={{ minWidth: 60, color: 'var(--ai-noir70)' }}>Photo 2</span>
               <select value={config.mainPhoto2?.index ?? 1} onChange={e => setMain2({ index: Number(e.target.value) })} style={select}>
@@ -255,6 +299,31 @@ export default function ManualConfigPanel({ projet, config, onChange, side = 'al
               onChange={v => setMain2({ offsetVerticalPercent: v })}
               min={0} max={100} step={5}
             />
+
+            {/* Photos portrait 3+ (mainPhotosExtra). Index visuel = i + 3. */}
+            {portraitExtras.map((e, i) => (
+              <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div style={ROW}>
+                  <span style={{ minWidth: 60, color: 'var(--ai-noir70)' }}>Photo {i + 3}</span>
+                  <select value={e.index} onChange={ev => setPortraitExtraAt(i, { index: Number(ev.target.value) })} style={select}>
+                    {photoOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  </select>
+                </div>
+                <Slider label={`Taille ${i + 3}`} value={e.sizePercent} onChange={v => setPortraitExtraAt(i, { sizePercent: v })} />
+                <Slider
+                  label={`Horizontal ${i + 3}`}
+                  value={e.offsetPercent ?? 50}
+                  onChange={v => setPortraitExtraAt(i, { offsetPercent: v })}
+                  min={0} max={100} step={5}
+                />
+                <Slider
+                  label={`Vertical ${i + 3}`}
+                  value={e.offsetVerticalPercent ?? 50}
+                  onChange={v => setPortraitExtraAt(i, { offsetVerticalPercent: v })}
+                  min={0} max={100} step={5}
+                />
+              </div>
+            ))}
           </>
         )}
       </div>

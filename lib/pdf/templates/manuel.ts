@@ -56,19 +56,16 @@ const CSS = `
 
 .man-photos--portrait {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  /* grid-template-columns set inline en fonction du nombre de photos */
   gap: 3mm;
   width: 100%;
 }
 .man-photos--portrait .photo-frame { width: 100%; height: auto; }
-.man-photos--portrait .photo-frame:nth-child(1) .photo-img {
+.man-photos--portrait .photo-img {
   width: 100%; height: auto;
-  max-width: 100%; max-height: var(--main-photo1-max, 100mm);
-  object-fit: contain;
-}
-.man-photos--portrait .photo-frame:nth-child(2) .photo-img {
-  width: 100%; height: auto;
-  max-width: 100%; max-height: var(--main-photo2-max, 100mm);
+  max-width: 100%;
+  /* `--cell-max` est défini par cellule (inline) ; fallback 100mm. */
+  max-height: var(--cell-max, 100mm);
   object-fit: contain;
 }
 
@@ -247,41 +244,55 @@ export function renderManuel(projet: Projet, configIn?: ManualConfig): TemplateB
   const photos = allPhotos(projet);
 
   // ── Photos principales ──
+  // Conventions sliders 0..100, 50 = neutre. V_RANGE_MM couvre toute la
+  // hauteur utile (la page A4 fait 297mm ; ±250mm = bord à bord).
+  const V_RANGE_MM = 250;
   const main1 = photos[cfg.mainPhoto?.index ?? 0];
-  const main2Cfg = cfg.mainPhoto2 ?? { index: 1, sizePercent: 100 };
-  const main2 = cfg.mainPhotoFormat === 'portrait' ? photos[main2Cfg.index] : undefined;
-
   const main1Pct = clampPercent(cfg.mainPhoto?.sizePercent ?? 100);
-  const main2Pct = clampPercent(main2Cfg.sizePercent);
   const main1MaxMm =
     (cfg.mainPhotoFormat === 'paysage' ? PAYSAGE_MAX_MM : PORTRAIT_MAX_MM) * main1Pct / 100;
-  const main2MaxMm = PORTRAIT_MAX_MM * main2Pct / 100;
-
-  // Décalages photos (mêmes conventions sliders 0..100, 50 = neutre).
-  //   X : -50% .. +50% de la largeur du cadre (relatif au cadre)
-  //   Y : -V_RANGE_MM .. +V_RANGE_MM (millimètres absolus sur la page A4)
-  // V_RANGE_MM est choisi pour permettre de couvrir toute la hauteur utile
-  // de la page indépendamment de la taille de la photo (la page A4 fait
-  // 297mm ; ±250mm = bord à bord avec un peu de marge).
-  const V_RANGE_MM = 250;
   const main1XPct = clampPercent(cfg.mainPhoto?.offsetPercent ?? 50) - 50;
   const main1YMm = ((clampPercent(cfg.mainPhoto?.offsetVerticalPercent ?? 50) - 50) / 50) * V_RANGE_MM;
-  const main2XPct = clampPercent(main2Cfg.offsetPercent ?? 50) - 50;
-  const main2YMm = ((clampPercent(main2Cfg.offsetVerticalPercent ?? 50) - 50) / 50) * V_RANGE_MM;
+  const main1FrameStyle = `--photo-x-offset:${main1XPct}%; --photo-y-offset:${main1YMm}mm; --cell-max:${main1MaxMm}mm`;
 
-  const main1FrameStyle = `--photo-x-offset:${main1XPct}%; --photo-y-offset:${main1YMm}mm`;
-  const main2FrameStyle = `--photo-x-offset:${main2XPct}%; --photo-y-offset:${main2YMm}mm`;
+  // Photos portrait additionnelles (au-delà de la première) : on combine
+  // mainPhoto2 (legacy) puis mainPhotosExtra[]. Permet 1..MAX photos en
+  // mode portrait avec compteur côté UI.
+  const portraitExtras: PhotoConfig[] = cfg.mainPhotoFormat === 'portrait'
+    ? [
+        ...(cfg.mainPhoto2 ? [cfg.mainPhoto2] : []),
+        ...(cfg.mainPhotosExtra ?? []),
+      ]
+    : [];
+
+  function frameForCfg(pc: PhotoConfig, fallbackName: string): string | null {
+    const ph = photos[pc.index];
+    if (!ph) return null;
+    const pct = clampPercent(pc.sizePercent ?? 100);
+    const maxMm = PORTRAIT_MAX_MM * pct / 100;
+    const xPct = clampPercent(pc.offsetPercent ?? 50) - 50;
+    const yMm = ((clampPercent(pc.offsetVerticalPercent ?? 50) - 50) / 50) * V_RANGE_MM;
+    const style = `--photo-x-offset:${xPct}%; --photo-y-offset:${yMm}mm; --cell-max:${maxMm}mm`;
+    return `<div class="photo-frame" style="${style}">${photoImg(ph, fallbackName)}</div>`;
+  }
 
   let photosHtml = '';
   if (cfg.mainPhotoFormat === 'paysage' && main1) {
     photosHtml = `<div class="man-photos man-photos--paysage" style="--main-photo-max:${main1MaxMm}mm">
       <div class="photo-frame" style="${main1FrameStyle}">${photoImg(main1, projet.nom)}</div>
     </div>`;
-  } else if (cfg.mainPhotoFormat === 'portrait' && (main1 || main2)) {
-    photosHtml = `<div class="man-photos man-photos--portrait" style="--main-photo1-max:${main1MaxMm}mm; --main-photo2-max:${main2MaxMm}mm">
-      ${main1 ? `<div class="photo-frame" style="${main1FrameStyle}">${photoImg(main1, projet.nom)}</div>` : '<div></div>'}
-      ${main2 ? `<div class="photo-frame" style="${main2FrameStyle}">${photoImg(main2, projet.nom)}</div>` : '<div></div>'}
-    </div>`;
+  } else if (cfg.mainPhotoFormat === 'portrait') {
+    const frames: string[] = [];
+    if (main1) frames.push(`<div class="photo-frame" style="${main1FrameStyle}">${photoImg(main1, projet.nom)}</div>`);
+    else if (portraitExtras.length > 0) frames.push('<div></div>');
+    for (const pc of portraitExtras) {
+      const html = frameForCfg(pc, projet.nom);
+      if (html) frames.push(html);
+    }
+    if (frames.length > 0) {
+      const cols = frames.length;
+      photosHtml = `<div class="man-photos man-photos--portrait" style="grid-template-columns:repeat(${cols},1fr)">${frames.join('')}</div>`;
+    }
   }
 
   // ── Texte ──
