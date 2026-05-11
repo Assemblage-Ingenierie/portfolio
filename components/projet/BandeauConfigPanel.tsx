@@ -8,7 +8,9 @@ interface Props {
   onChange: (next: BandeauConfig) => void;
 }
 
-const SECTIONS: { key: Exclude<keyof BandeauConfig, 'lines'>; label: string; help: string }[] = [
+type StyleSectionKey = Exclude<keyof BandeauConfig, 'lines' | 'titleMetaGap'>;
+
+const SECTIONS: { key: StyleSectionKey; label: string; help: string }[] = [
   { key: 'titre',       label: 'Titre de la fiche',           help: 'Le nom du projet (titre principal h1).' },
   { key: 'status',      label: 'Statut (en haut à droite)',   help: '"● Livré · 2025"' },
   { key: 'labels',      label: 'Libellés du bandeau',         help: '"Architecte", "Budget", "Surface"…' },
@@ -100,7 +102,7 @@ function StyleRow({ style, onChange }: { style: BandeauStyle; onChange: (s: Band
 export { StyleRow };
 
 export default function BandeauConfigPanel({ value, onChange }: Props) {
-  function updateSection(key: Exclude<keyof BandeauConfig, 'lines'>, style: BandeauStyle) {
+  function updateSection(key: StyleSectionKey, style: BandeauStyle) {
     // Si toutes les propriétés sont vides, on retire la section pour garder
     // la config minimale et utiliser les défauts CSS du template.
     const isEmpty =
