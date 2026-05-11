@@ -98,10 +98,21 @@ export function measureOverflow(doc: Document | null | undefined): OverflowMeasu
     // séparément avec son rendered rect — sinon le frame reporte un
     // débordement horizontal alors que la photo affichée est plus petite.
     if (el.classList.contains('photo-frame')) return;
-    let r: DOMRect = el.getBoundingClientRect();
+    let r: DOMRect;
     if (el.tagName === 'IMG') {
-      const rendered = getRenderedImgRect(el as HTMLImageElement, win);
-      if (rendered) r = rendered;
+      const img = el as HTMLImageElement;
+      // Si l'image n'est pas encore décodée (naturalWidth=0), son bounding
+      // rect = la box CSS (`width: 100%`), ce qui surestime largement la
+      // largeur réellement rendue. On la skip entièrement plutôt que de
+      // produire un faux positif — la mesure sera refaite au prochain
+      // raf après le load.
+      if (!img.naturalWidth || !img.naturalHeight) return;
+      const rendered = getRenderedImgRect(img, win);
+      // getRenderedImgRect retourne null si object-fit n'est pas 'contain'
+      // — dans ce cas on garde le bounding rect comme avant.
+      r = rendered ?? img.getBoundingClientRect();
+    } else {
+      r = el.getBoundingClientRect();
     }
     if (r.height === 0 || r.width === 0) return;
     const bottomDelta = r.bottom - pageRect.bottom;
@@ -114,11 +125,15 @@ export function measureOverflow(doc: Document | null | undefined): OverflowMeasu
     if (leftDelta > leftOverflow) leftOverflow = leftDelta;
   });
 
-  // Tolérance 1px sur chaque mesure
-  const bottomPx = Math.max(0, Math.round(Math.max(flowOverflowV, bottomOverflow) - 1));
-  const topPx = Math.max(0, Math.round(topOverflow - 1));
-  const rightPx = Math.max(0, Math.round(Math.max(flowOverflowH, rightOverflow) - 1));
-  const leftPx = Math.max(0, Math.round(leftOverflow - 1));
+  // Tolérance : 1px en vertical, 3px en horizontal (le letterboxing
+  // object-fit:contain a un arrondi sub-pixel plus marqué que les flux
+  // verticaux — sans tolérance on déclenche à tort des warnings de 1-2mm).
+  const V_TOL = 1;
+  const H_TOL = 3;
+  const bottomPx = Math.max(0, Math.round(Math.max(flowOverflowV, bottomOverflow) - V_TOL));
+  const topPx = Math.max(0, Math.round(topOverflow - V_TOL));
+  const rightPx = Math.max(0, Math.round(Math.max(flowOverflowH, rightOverflow) - H_TOL));
+  const leftPx = Math.max(0, Math.round(leftOverflow - H_TOL));
 
   const overflowPx = Math.max(bottomPx, topPx, rightPx, leftPx);
   const overflowMm = Math.round((overflowPx / pagePx) * 297);
