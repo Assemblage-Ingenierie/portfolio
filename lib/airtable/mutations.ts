@@ -1,6 +1,12 @@
 import { base, TABLE } from './client';
 import type { ManualConfig } from '@/lib/pdf/manualConfig';
-import { serializeConfig } from '@/lib/pdf/manualConfig';
+import type { BandeauConfig } from '@/lib/pdf/bandeauConfig';
+import {
+  PROJECT_CONFIG_FIELD,
+  deserializeProjectConfig,
+  serializeProjectConfig,
+  type ProjectConfig,
+} from '@/lib/pdf/projectConfig';
 
 export interface ProjetEditableFields {
   nom?: string;
@@ -25,6 +31,7 @@ export interface ProjetEditableFields {
   certifications?: string[];
   motsCles?: string[];
   savedManualConfig?: ManualConfig;
+  bandeauConfig?: BandeauConfig;
 }
 
 export async function updateProjetFields(slug: string, fields: ProjetEditableFields): Promise<{ slug: string }> {
@@ -58,8 +65,18 @@ export async function updateProjetFields(slug: string, fields: ProjetEditableFie
   if (fields.template !== undefined)       update['Template']           = fields.template;
   if (fields.certifications !== undefined) update['Certification']      = fields.certifications.join('\n');
   if (fields.motsCles !== undefined)       update['Mots-clés']          = fields.motsCles.join(', ');
-  if (fields.savedManualConfig !== undefined)
-    update['Config template manuel'] = serializeConfig(fields.savedManualConfig);
+  // Config unifiée (bandeau + manuel) dans le même champ Airtable. On lit
+  // l'existant pour merger correctement quand l'API ne reçoit qu'une des
+  // deux sous-configs (ex. update bandeau seul ne doit pas effacer manuel).
+  if (fields.savedManualConfig !== undefined || fields.bandeauConfig !== undefined) {
+    const existing = deserializeProjectConfig(records[0].fields[PROJECT_CONFIG_FIELD]) ?? {};
+    const merged: ProjectConfig = {
+      ...existing,
+      ...(fields.bandeauConfig !== undefined ? { bandeau: fields.bandeauConfig } : {}),
+      ...(fields.savedManualConfig !== undefined ? { manuel: fields.savedManualConfig } : {}),
+    };
+    update[PROJECT_CONFIG_FIELD] = serializeProjectConfig(merged);
+  }
 
   await base(TABLE).update(records[0].id, update, { typecast: true });
 

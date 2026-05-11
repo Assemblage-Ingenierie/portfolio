@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import type { Projet, TemplateChoice } from '@/types/projet';
 import { TEMPLATE_OPTIONS } from '@/types/projet';
-import { authHeaders } from '@/lib/supabase/authHeaders';
+import { authedFetch } from '@/lib/supabase/authHeaders';
 import { encodeConfig, ManualConfig } from '@/lib/pdf/manualConfig';
 
 interface Props {
@@ -25,9 +25,9 @@ export default function ProjetToolbar({ projet, template, manualConfig, onTempla
     setPublishing(true);
     setResult(null);
     try {
-      const res = await fetch(`/api/projet/${projet.slug}/publish`, {
+      const res = await authedFetch(`/api/projet/${projet.slug}/publish`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ variant }),
       });
       const data = await res.json();
@@ -44,15 +44,16 @@ export default function ProjetToolbar({ projet, template, manualConfig, onTempla
     if (!manualConfig) return;
     setSaveState('saving');
     try {
-      const res = await fetch(`/api/projet/${projet.slug}/fields`, {
+      const res = await authedFetch(`/api/projet/${projet.slug}/fields`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ savedManualConfig: manualConfig }),
       });
       if (!res.ok) throw new Error('Erreur serveur');
       setSaveState('saved');
       setTimeout(() => setSaveState('idle'), 3000);
-    } catch {
+    } catch (err) {
+      console.error('[saveLayout]', err);
       setSaveState('error');
       setTimeout(() => setSaveState('idle'), 4000);
     }

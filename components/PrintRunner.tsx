@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { measureOverflow, type OverflowMeasure } from '@/lib/utils/measureOverflow';
 
 /**
  * Pagination native du navigateur via les règles CSS @page A4.
@@ -20,6 +21,7 @@ import { useEffect, useState } from 'react';
  */
 export default function PrintRunner() {
   const [adjusted, setAdjusted] = useState(false);
+  const [overflow, setOverflow] = useState<OverflowMeasure | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -33,6 +35,9 @@ export default function PrintRunner() {
       if (cancelled) return;
 
       hideOverflowingExtraPhotos();
+      // B — filet de sécurité : on mesure le débordement résiduel après
+      // les ajustements automatiques et on bloque l'export si besoin.
+      setOverflow(measureOverflow(document));
       setAdjusted(true);
     }
 
@@ -40,26 +45,72 @@ export default function PrintRunner() {
     return () => { cancelled = true; };
   }, []);
 
+  const overflowing = overflow !== null && overflow.overflowMm > 0;
+
+  function handlePrint() {
+    if (overflowing) {
+      const edgesText = overflow!.edges && overflow!.edges.length > 0
+        ? ` (bord${overflow!.edges.length > 1 ? 's' : ''} ${overflow!.edges.join(', ')})`
+        : '';
+      const ok = window.confirm(
+        `Attention : le contenu dépasse la page A4 de ${overflow!.overflowMm} mm${edgesText}.\n\n` +
+        `La portion masquée sera coupée à l'export PDF.\n\n` +
+        `Continuer quand même ?`
+      );
+      if (!ok) return;
+    }
+    window.print();
+  }
+
   return (
-    <div className="print-toolbar" style={{ position: 'fixed', top: 16, right: 16, display: 'flex', gap: 8, zIndex: 9999, fontFamily: 'sans-serif', alignItems: 'center' }}>
-      {!adjusted && (
-        <span style={{ padding: '6px 10px', background: '#30323E', color: 'white', fontSize: 12, borderRadius: 2, fontWeight: 600 }}>
-          Mise en page…
-        </span>
+    <>
+      {overflowing && (
+        <div
+          className="print-toolbar"
+          role="alert"
+          style={{
+            position: 'fixed', top: 16, left: 16, right: 220, zIndex: 9998,
+            padding: '12px 16px',
+            background: '#E30513', color: 'white',
+            fontFamily: 'sans-serif', fontSize: 13, fontWeight: 600,
+            borderRadius: 2,
+            boxShadow: '0 4px 14px rgba(227,5,19,0.35)',
+            display: 'flex', gap: 12, alignItems: 'center',
+          }}
+        >
+          <span style={{ fontSize: 16, lineHeight: 1 }}>⚠</span>
+          <span>
+            Contenu hors page A4 : <strong>{overflow!.overflowMm}&nbsp;mm</strong>
+            {overflow!.edges && overflow!.edges.length > 0 ? <> (bord{overflow!.edges.length > 1 ? 's' : ''} {overflow!.edges.join(', ')})</> : null}
+            {' '}seront coupés à l&apos;impression. Revenir à l&apos;éditeur pour ajuster.
+          </span>
+        </div>
       )}
-      <button
-        onClick={() => window.print()}
-        style={{ padding: '8px 14px', background: '#E30513', color: 'white', border: 'none', borderRadius: 2, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
-      >
-        Imprimer / Enregistrer en PDF
-      </button>
-      <button
-        onClick={() => window.close()}
-        style={{ padding: '8px 14px', background: 'white', color: '#30323E', border: '1px solid #DFE4E8', borderRadius: 2, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
-      >
-        Fermer
-      </button>
-    </div>
+      <div className="print-toolbar" style={{ position: 'fixed', top: 16, right: 16, display: 'flex', gap: 8, zIndex: 9999, fontFamily: 'sans-serif', alignItems: 'center' }}>
+        {!adjusted && (
+          <span style={{ padding: '6px 10px', background: '#30323E', color: 'white', fontSize: 12, borderRadius: 2, fontWeight: 600 }}>
+            Mise en page…
+          </span>
+        )}
+        <button
+          onClick={handlePrint}
+          style={{
+            padding: '8px 14px',
+            background: overflowing ? '#A8000A' : '#E30513',
+            color: 'white', border: 'none', borderRadius: 2,
+            fontSize: 13, fontWeight: 600, cursor: 'pointer',
+          }}
+        >
+          Imprimer / Enregistrer en PDF
+        </button>
+        <button
+          onClick={() => window.close()}
+          style={{ padding: '8px 14px', background: 'white', color: '#30323E', border: '1px solid #DFE4E8', borderRadius: 2, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+        >
+          Fermer
+        </button>
+      </div>
+    </>
   );
 }
 

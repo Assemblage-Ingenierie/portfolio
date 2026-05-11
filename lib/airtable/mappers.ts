@@ -3,7 +3,7 @@ import { normalizeStatut } from '@/lib/utils/normalize';
 import { parseChiffresCles, parseTagsSiteWeb, formatBudget } from '@/lib/utils/parsers';
 import { formulaValue, selectValue } from './client';
 import { autoSelectTemplate, isTemplateChoice } from '@/lib/pdf/selectTemplate';
-import { deserializeConfig } from '@/lib/pdf/manualConfig';
+import { deserializeProjectConfig, PROJECT_CONFIG_FIELD } from '@/lib/pdf/projectConfig';
 
 // Field IDs Airtable des nouveaux champs Programme principal / Programme
 // secondaire (multi-select). Lus via une requête auxiliaire en
@@ -11,6 +11,9 @@ import { deserializeConfig } from '@/lib/pdf/manualConfig';
 // n'est pas garanti stable côté code.
 export const FIELD_PROGRAMME_PRINCIPAL = 'fldKNKtsZNpvmf695';
 export const FIELD_PROGRAMME_SECONDAIRE = 'fldaTqKMNrIpeGBma';
+// Pôle (single-select : STR / ENV / DEV / Autre) — lu par field ID pour
+// éviter toute dérive si la colonne "Pôle" est renommée côté Airtable.
+export const FIELD_POLE = 'fldJyT3Lu0ZEH7EYE';
 
 /**
  * Valeurs auxiliaires injectées dans le mapper.
@@ -22,6 +25,7 @@ export const FIELD_PROGRAMME_SECONDAIRE = 'fldaTqKMNrIpeGBma';
 export interface AuxValues {
   programmePrincipal?: string;
   programmeSecondaire?: string;
+  pole?: string;
   crmNames?: Map<string, string>;
 }
 
@@ -81,9 +85,13 @@ export function recordToProjet(record: any, aux?: AuxValues): Projet {
     ? rawCertification.split(/[\n,]+/).map((s: string) => s.trim()).filter(Boolean)
     : [];
 
+  // Champ "Mots-clés" : la virgule est le SEUL séparateur de ligne. Tout
+  // ce qui est entre deux virgules reste sur la même ligne (les espaces
+  // sont préservés pour permettre des mots-clés composés du type
+  // "patrimoine industriel électrique").
   const rawMotsCles = f['Mots-clés'] ?? '';
   const motsCles = typeof rawMotsCles === 'string' && rawMotsCles
-    ? rawMotsCles.split(/[,;]+/).map((s: string) => s.trim()).filter(Boolean)
+    ? rawMotsCles.split(',').map((s: string) => s.trim()).filter(Boolean)
     : [];
 
   const tagsSiteWeb = parseTagsSiteWeb(f['Tags site web']);
@@ -134,7 +142,9 @@ export function recordToProjet(record: any, aux?: AuxValues): Projet {
     programme: f['Programme'] ?? undefined,
     programmePrincipal: aux?.programmePrincipal,
     programmeSecondaire: aux?.programmeSecondaire,
-    pole: f['Pôle'] ?? undefined,
+    // Pôle : prioritairement lu via aux par field ID (cf. FIELD_POLE), fallback
+    // sur le nom de colonne 'Pôle' pour rester rétro-compatible.
+    pole: aux?.pole ?? f['Pôle'] ?? undefined,
     departement: f['Département'] ?? undefined,
     rehabNeuf: selectValue(f['Rehab / Neuf']),
 
@@ -153,6 +163,14 @@ export function recordToProjet(record: any, aux?: AuxValues): Projet {
     budgetRaw,
     urlWordpress: f['URL'] ?? undefined,
     chiffresCles: parseChiffresCles(formulaValue(f['Chiffres clefs'])),
-    savedManualConfig: deserializeConfig(f['Config template manuel']) ?? undefined,
+    // Configuration unifiée : un seul champ Airtable contient à la fois la
+    // config du bandeau (générale) et celle du template Manuel (conditionnelle).
+    ...(() => {
+      const cfg = deserializeProjectConfig(f[PROJECT_CONFIG_FIELD]);
+      return {
+        savedManualConfig: cfg?.manuel ?? undefined,
+        bandeauConfig: cfg?.bandeau ?? undefined,
+      };
+    })(),
   };
 }

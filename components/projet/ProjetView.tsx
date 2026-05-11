@@ -4,7 +4,7 @@ import { useState } from 'react';
 import type { Projet, TemplateChoice } from '@/types/projet';
 import TemplatePreview from '@/components/TemplatePreview';
 import ManualConfigPanel from '@/components/ManualConfigPanel';
-import { authHeaders } from '@/lib/supabase/authHeaders';
+import { authedFetch } from '@/lib/supabase/authHeaders';
 import { DEFAULT_MANUAL_CONFIG, ManualConfig } from '@/lib/pdf/manualConfig';
 import ProjetToolbar from './ProjetToolbar';
 
@@ -24,15 +24,20 @@ export default function ProjetView({ projet, isPrint }: Props) {
     // 'Manuel' n'est pas persisté en Airtable (pas dans les options du champ Template).
     if (newTemplate === 'Manuel') return;
     try {
-      await fetch(`/api/projet/${projet.slug}/fields`, {
+      await authedFetch(`/api/projet/${projet.slug}/fields`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ template: newTemplate }),
       });
     } catch (e) {
       console.error(e);
     }
   }
+
+  // En template Manuel (hors print), on bascule sur un layout 3 colonnes :
+  // panneau gauche (Photos additionnelles + Mots-clés) | aperçu | panneau
+  // droit (Photo principale + Texte description).
+  const isManualLayout = !isPrint && template === 'Manuel';
 
   return (
     <>
@@ -44,13 +49,37 @@ export default function ProjetView({ projet, isPrint }: Props) {
           onTemplateChange={handleTemplateChange}
         />
       )}
-      {!isPrint && template === 'Manuel' && (
-        <ManualConfigPanel projet={projet} config={manualConfig} onChange={setManualConfig} />
+      {isManualLayout ? (
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, padding: '16px', background: '#ECECEC', minHeight: 'calc(100vh - 48px)' }}>
+          <aside style={{ width: 280, flex: '0 0 280px' }}>
+            <ManualConfigPanel
+              projet={projet}
+              config={manualConfig}
+              onChange={setManualConfig}
+              side="left"
+            />
+          </aside>
+          <main style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+            <TemplatePreview
+              projet={{ ...projet, template }}
+              manualConfig={manualConfig}
+            />
+          </main>
+          <aside style={{ width: 280, flex: '0 0 280px' }}>
+            <ManualConfigPanel
+              projet={projet}
+              config={manualConfig}
+              onChange={setManualConfig}
+              side="right"
+            />
+          </aside>
+        </div>
+      ) : (
+        <TemplatePreview
+          projet={{ ...projet, template }}
+          manualConfig={undefined}
+        />
       )}
-      <TemplatePreview
-        projet={{ ...projet, template }}
-        manualConfig={template === 'Manuel' ? manualConfig : undefined}
-      />
     </>
   );
 }

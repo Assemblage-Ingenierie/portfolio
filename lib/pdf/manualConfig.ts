@@ -17,6 +17,37 @@ export interface PhotoConfig {
   /** Décalage horizontal 0..100 (0 = gauche, 50 = centre, 100 = droite).
    *  Utilisé uniquement pour les photos additionnelles. Default = 50. */
   offsetPercent?: number;
+  /** Décalage vertical 0..100 (0 = haut, 50 = ligne neutre, 100 = bas).
+   *  Permet de superposer la photo au texte si conflit de place — le rendu
+   *  positionne la photo au-dessus de la zone texte (z-index supérieur).
+   *  Default = 50 (= comportement historique : photo en flux sous le texte). */
+  offsetVerticalPercent?: number;
+  /** Si `false`, la photo est masquée de la fiche mais sa config est
+   *  conservée. Permet de désactiver une photo additionnelle sans perdre
+   *  ses sliders. Default = `true` (activée).
+   *  Uniquement pris en compte pour les photos additionnelles. */
+  enabled?: boolean;
+}
+
+/**
+ * Liste flottante de mots-clés affichée en superposition sur la fiche.
+ * Source : `Projet.motsCles` (= champ Airtable "Mots-clés"). La config ici
+ * contrôle uniquement l'affichage et la position dans le template Manuel.
+ */
+export interface KeywordsConfig {
+  /** Affiche la liste sur la fiche. Default = false. */
+  show: boolean;
+  /** Décalage horizontal 0..100 (50 = neutre, mappé sur ±H_RANGE_MM côté render). */
+  offsetPercent?: number;
+  /** Décalage vertical 0..100 (50 = neutre, mappé sur ±V_RANGE_MM côté render). */
+  offsetVerticalPercent?: number;
+  /** Espacement entre items en mm (default ≈ 1mm). */
+  lineSpacing?: number;
+  /** Si `true` → mots-clés en flow inline (plusieurs par ligne, wrap auto).
+   *  Si `false`/undefined → 1 par ligne (liste verticale classique). */
+  inline?: boolean;
+  /** Surcharges typographiques (police, taille, B/I/U, couleur, surlignage). */
+  style?: import('./bandeauConfig').BandeauStyle;
 }
 
 export interface ManualConfig {
@@ -24,6 +55,8 @@ export interface ManualConfig {
   mainPhoto: PhotoConfig;
   /** Uniquement utilisé en format portrait (2 photos côte à côte). */
   mainPhoto2?: PhotoConfig;
+  /** Liste flottante de mots-clés (optionnelle, superposition). */
+  keywords?: KeywordsConfig;
   textColumns: 1 | 2;
   /** % du texte total à afficher en col 1 (0..100). Le point de coupure exact
    *  est calé sur le "." le plus proche de cette position. */

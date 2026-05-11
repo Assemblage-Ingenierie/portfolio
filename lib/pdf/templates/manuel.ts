@@ -1,5 +1,6 @@
 import type { Projet } from '@/types/projet';
 import { renderMarkdown } from '@/lib/utils/markdown';
+import { styleToCss } from '@/lib/pdf/bandeauConfig';
 import {
   TemplateBundle,
   headerHtml, footerHtml, titleBlockHtml, metaGridHtml,
@@ -30,6 +31,21 @@ const CSS = `
 }
 
 /* ── Photos haut de page ─────────────────────────────── */
+/* Cadre photo principale : décalages X/Y identiques aux photos additionnelles.
+   - X en % (relatif à la largeur du cadre)
+   - Y en mm absolus (relatif à la page A4 — indépendant de la taille
+     de la photo, pour que le slider couvre toute la hauteur utile)
+   z-index élevé pour passer au premier plan si chevauchement avec le texte. */
+.man-photos { position: relative; z-index: 5; }
+.man-photos .photo-frame {
+  position: relative;
+  z-index: 10;
+  transform: translate(
+    var(--photo-x-offset, 0%),
+    var(--photo-y-offset, 0mm)
+  );
+}
+
 .man-photos--paysage { width: 100%; }
 .man-photos--paysage .photo-frame { width: 100%; height: auto; }
 .man-photos--paysage .photo-img {
@@ -96,18 +112,64 @@ const CSS = `
   display: grid;
   gap: 3mm;
   width: 100%;
+  /* Permet aux photos de remonter au-dessus du texte si offsetVerticalPercent < 50 */
+  position: relative;
+  z-index: 5;
 }
 .man-extra-grid .photo-frame {
   width: 100%;
   height: auto;
-  /* Décalage horizontal — slider 0..100 dans l'UI mappé à -50%..+50% de la largeur de cellule */
-  transform: translateX(var(--photo-x-offset, 0%));
+  /* Décalages slider 0..100 → -50%..+50% horizontal (largeur du cadre)
+     et -250mm..+250mm vertical (distance absolue sur la page A4 utile,
+     calculée côté render pour couvrir toute la hauteur quelle que soit
+     la taille de la photo). */
+  transform: translate(
+    var(--photo-x-offset, 0%),
+    var(--photo-y-offset, 0mm)
+  );
+  /* Photo toujours au-dessus du texte de description en cas de chevauchement.
+     L'utilisateur voit l'overlap et ajuste les sliders en conséquence. */
+  position: relative;
+  z-index: 10;
 }
 .man-extra-grid .photo-img {
   width: 100%; height: auto;
   max-width: 100%;
   max-height: var(--extra-cell-max, 60mm);
   object-fit: contain;
+}
+
+/* ── Liste flottante de mots-clés ──────────────────────
+   Position absolue ancrée à droite, haut de la zone utile (sous le bandeau).
+   Sliders X/Y déplacent depuis cet ancrage. z-index très élevé : passe
+   au-dessus de tout autre contenu (photos, texte, bandeau). */
+.man-keywords {
+  position: absolute;
+  top: 80mm;
+  right: 12mm;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  z-index: 100;
+  transform: translate(
+    var(--photo-x-offset, 0%),
+    var(--photo-y-offset, 0mm)
+  );
+}
+.man-keywords > li {
+  display: block;
+  margin: 0;
+  list-style: none;
+}
+/* Chaque "tag" : inline-block pour que le surlignage (background) reste
+   collé au texte, ne s'étende pas sur toute la largeur du <li>. */
+.man-kw-item {
+  display: inline-block;
+  font-family: var(--sans);
+  font-size: 9pt;
+  line-height: 1.4;
+  color: var(--ai-noir);
+  padding: 0.5mm 2mm;
 }
 `;
 
@@ -191,15 +253,30 @@ export function renderManuel(projet: Projet, configIn?: ManualConfig): TemplateB
     (cfg.mainPhotoFormat === 'paysage' ? PAYSAGE_MAX_MM : PORTRAIT_MAX_MM) * main1Pct / 100;
   const main2MaxMm = PORTRAIT_MAX_MM * main2Pct / 100;
 
+  // Décalages photos (mêmes conventions sliders 0..100, 50 = neutre).
+  //   X : -50% .. +50% de la largeur du cadre (relatif au cadre)
+  //   Y : -V_RANGE_MM .. +V_RANGE_MM (millimètres absolus sur la page A4)
+  // V_RANGE_MM est choisi pour permettre de couvrir toute la hauteur utile
+  // de la page indépendamment de la taille de la photo (la page A4 fait
+  // 297mm ; ±250mm = bord à bord avec un peu de marge).
+  const V_RANGE_MM = 250;
+  const main1XPct = clampPercent(cfg.mainPhoto?.offsetPercent ?? 50) - 50;
+  const main1YMm = ((clampPercent(cfg.mainPhoto?.offsetVerticalPercent ?? 50) - 50) / 50) * V_RANGE_MM;
+  const main2XPct = clampPercent(main2Cfg.offsetPercent ?? 50) - 50;
+  const main2YMm = ((clampPercent(main2Cfg.offsetVerticalPercent ?? 50) - 50) / 50) * V_RANGE_MM;
+
+  const main1FrameStyle = `--photo-x-offset:${main1XPct}%; --photo-y-offset:${main1YMm}mm`;
+  const main2FrameStyle = `--photo-x-offset:${main2XPct}%; --photo-y-offset:${main2YMm}mm`;
+
   let photosHtml = '';
   if (cfg.mainPhotoFormat === 'paysage' && main1) {
     photosHtml = `<div class="man-photos man-photos--paysage" style="--main-photo-max:${main1MaxMm}mm">
-      <div class="photo-frame">${photoImg(main1, projet.nom)}</div>
+      <div class="photo-frame" style="${main1FrameStyle}">${photoImg(main1, projet.nom)}</div>
     </div>`;
   } else if (cfg.mainPhotoFormat === 'portrait' && (main1 || main2)) {
     photosHtml = `<div class="man-photos man-photos--portrait" style="--main-photo1-max:${main1MaxMm}mm; --main-photo2-max:${main2MaxMm}mm">
-      ${main1 ? `<div class="photo-frame">${photoImg(main1, projet.nom)}</div>` : '<div></div>'}
-      ${main2 ? `<div class="photo-frame">${photoImg(main2, projet.nom)}</div>` : '<div></div>'}
+      ${main1 ? `<div class="photo-frame" style="${main1FrameStyle}">${photoImg(main1, projet.nom)}</div>` : '<div></div>'}
+      ${main2 ? `<div class="photo-frame" style="${main2FrameStyle}">${photoImg(main2, projet.nom)}</div>` : '<div></div>'}
     </div>`;
   }
 
@@ -226,8 +303,11 @@ export function renderManuel(projet: Projet, configIn?: ManualConfig): TemplateB
   }
 
   // ── Photos additionnelles : grille N colonnes (identique en 1-col et 2-col) ──
+  // On filtre les entrées invalides (photo absente) ET celles désactivées
+  // explicitement par l'utilisateur via la checkbox (enabled === false).
   const extraPhotos = (cfg.extraPhotos ?? []).filter(
-    (e): e is PhotoConfig => Boolean(e) && photos[e.index] !== undefined
+    (e): e is PhotoConfig =>
+      Boolean(e) && photos[e.index] !== undefined && e.enabled !== false
   );
 
   let extraHtml = '';
@@ -236,12 +316,40 @@ export function renderManuel(projet: Projet, configIn?: ManualConfig): TemplateB
       const ph = photos[e.index]!;
       const pct = clampPercent(e.sizePercent);
       const maxMm = EXTRA_GRID_MAX_MM * pct / 100;
-      // offsetPercent (0..100) → translateX (-50%..+50% de la largeur de cellule)
-      const offsetPct = clampPercent(e.offsetPercent ?? 50);
-      const translatePct = offsetPct - 50;
-      return `<div class="photo-frame" style="--extra-cell-max:${maxMm}mm; --photo-x-offset:${translatePct}%">${photoImg(ph, projet.nom)}</div>`;
+      // offsetPercent horizontal (0..100) → translateX -50%..+50% de la cellule
+      const xPct = clampPercent(e.offsetPercent ?? 50) - 50;
+      // offsetVerticalPercent (0..100) → translateY en mm absolus (page A4).
+      // 0   = photo remontée de V_RANGE_MM (haut de la page utile)
+      // 50  = position neutre (sous le texte, comportement historique)
+      // 100 = photo descendue de V_RANGE_MM (bas de la page utile)
+      const yMm = ((clampPercent(e.offsetVerticalPercent ?? 50) - 50) / 50) * V_RANGE_MM;
+      return `<div class="photo-frame" style="--extra-cell-max:${maxMm}mm; --photo-x-offset:${xPct}%; --photo-y-offset:${yMm}mm">${photoImg(ph, projet.nom)}</div>`;
     }).join('');
     extraHtml = `<div class="man-extra-grid" style="grid-template-columns:repeat(${extraPhotos.length},1fr);">${cells}</div>`;
+  }
+
+  // ── Liste flottante de mots-clés (superposition, z-index max) ──
+  // Ancrée en haut/droite de la page utile ; les sliders X/Y la déplacent
+  // de là. Passe au-dessus de tout (photos, texte, bandeau) — l'utilisateur
+  // ajuste manuellement les sliders en cas de chevauchement gênant.
+  //
+  // Décalages X et Y en mm absolus (indépendants de la taille de la liste).
+  // H_RANGE = ±200mm permet de balayer toute la largeur de la page A4
+  // (largeur utile ≈ 186mm depuis l'ancre top:80mm right:12mm).
+  let keywordsHtml = '';
+  const kw = cfg.keywords;
+  if (kw?.show && projet.motsCles && projet.motsCles.length > 0) {
+    const H_RANGE_MM = 200;
+    const kwXMm = ((clampPercent(kw.offsetPercent ?? 50) - 50) / 50) * H_RANGE_MM;
+    const kwYMm = ((clampPercent(kw.offsetVerticalPercent ?? 50) - 50) / 50) * V_RANGE_MM;
+    const lineSpacingMm = Math.max(0, Math.min(20, kw.lineSpacing ?? 1));
+    const kwStyle = styleToCss(kw.style);
+    // Chaque entrée de projet.motsCles vient déjà d'un split sur ','
+    // côté mapper Airtable. Chaque entrée = une ligne, espaces conservés.
+    const items = projet.motsCles
+      .map((m) => `<li style="margin-bottom:${lineSpacingMm}mm"><span class="man-kw-item"${kwStyle ? ` style="${kwStyle}"` : ''}>${m}</span></li>`)
+      .join('');
+    keywordsHtml = `<ul class="man-keywords" style="--photo-x-offset:${kwXMm}mm; --photo-y-offset:${kwYMm}mm">${items}</ul>`;
   }
 
   const body = `<article class="page man-page">
@@ -251,6 +359,7 @@ export function renderManuel(projet: Projet, configIn?: ManualConfig): TemplateB
     ${photosHtml}
     ${textHtml}
     ${extraHtml}
+    ${keywordsHtml}
     ${footerHtml(projet)}
   </article>`;
 

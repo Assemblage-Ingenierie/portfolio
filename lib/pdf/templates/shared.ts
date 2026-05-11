@@ -1,5 +1,6 @@
 import type { Projet } from '@/types/projet';
 import { renderMarkdown } from '@/lib/utils/markdown';
+import { styleToCss, linesToCss } from '@/lib/pdf/bandeauConfig';
 
 export function esc(v: unknown): string {
   return String(v ?? '')
@@ -79,8 +80,26 @@ html, body { background: white; }
   padding-bottom: 3mm;
   font-family: var(--sans);
 }
-/* Bandeau d'en-tête : small caps (= les majuscules s'affichent à la
-   x-height) au lieu d'un text-transform:uppercase, et pas de gras. */
+/* Bandeau d'en-tête : 3 vignettes pôle (STR / ENV / DEV) à gauche,
+   statut + année à droite. La vignette correspondant au pôle du projet
+   est colorée, les autres restent en blanc (silhouette). */
+.t-header-vignettes {
+  display: flex;
+  align-items: center;
+  gap: 1.5mm;
+}
+.t-header-vignette {
+  height: 10mm;
+  width: auto;
+  display: block;
+}
+/* Vignettes inactives : on garde le fichier blanc (silhouette) mais on
+   passe en niveaux de gris + opacity réduite pour qu'elles apparaissent
+   grisées (et plus visibles qu'en pur blanc sur fond blanc). */
+.t-header-vignette--inactive {
+  filter: grayscale(100%) brightness(0.85);
+  opacity: 0.70;
+}
 .t-header-meta {
   font-size: 9pt; font-weight: 400;
   letter-spacing: 0.06em; font-variant: small-caps;
@@ -92,16 +111,9 @@ html, body { background: white; }
   color: var(--ai-rouge);
 }
 
-.t-footer {
-  display: flex; justify-content: space-between; align-items: center;
-  border-top: 1px solid var(--ai-gris); padding-top: 2.5mm;
-  font-family: var(--sans); font-size: 7pt; color: var(--ai-noir70);
-}
-.t-footer-sigle {
-  font-family: var(--serif); font-size: 14pt; font-weight: 700;
-  color: var(--ai-rouge); line-height: 1;
-}
-.t-footer-legal { text-align: center; flex: 1; padding: 0 6mm; }
+/* Footer retiré du template — fonction footerHtml() renvoie '' désormais.
+   On garde les classes vides au cas où on réintroduirait un footer plus tard. */
+.t-footer { display: none; }
 
 /* Titre + identité */
 .t-surtitre {
@@ -136,13 +148,12 @@ html, body { background: white; }
 .t-meta-item:last-child { padding-right: 0; border-right: none; }
 .t-meta-label {
   font-family: var(--sans); font-size: 8.5pt; font-weight: 400;
-  letter-spacing: 0.06em; font-variant: small-caps;
+  letter-spacing: 0.06em;
   color: var(--ai-rouge);
   margin-bottom: 1mm; display: block;
 }
 .t-meta-value {
   font-family: var(--serif); font-size: 11pt; font-weight: 400;
-  font-variant: small-caps; letter-spacing: 0.01em;
   line-height: 1.25; color: var(--ai-noir);
 }
 .t-meta-sub {
@@ -184,27 +195,54 @@ html, body { background: white; }
 .t-texte-cols-2 p, .t-texte-cols-2 .t-texte-p { break-inside: avoid; }
 `;
 
+// Vignettes pôle hébergées sur Supabase Storage (bucket public "Branding").
+// Trois pôles, toujours affichés dans l'ordre STR · ENV · DEV. Celui qui
+// correspond au pôle du projet est rendu en couleur, les deux autres en
+// silhouette blanche. Attention à la casse : "Env_blanc.png" est en
+// minuscule alors que les deux autres sont en majuscule.
+const VIGNETTE_BASE =
+  'https://hhkofvbptnrtwbazftlm.supabase.co/storage/v1/object/public/Branding/vignettes';
+const VIGNETTES: ReadonlyArray<{ code: string; colored: string; blanc: string }> = [
+  { code: 'STR', colored: `${VIGNETTE_BASE}/Str.png`, blanc: `${VIGNETTE_BASE}/Str_Blanc.png` },
+  { code: 'ENV', colored: `${VIGNETTE_BASE}/Env.png`, blanc: `${VIGNETTE_BASE}/Env_blanc.png` },
+  { code: 'DEV', colored: `${VIGNETTE_BASE}/Dev.png`, blanc: `${VIGNETTE_BASE}/Dev_Blanc.png` },
+];
+
 export function headerHtml(projet: Projet): string {
-  // Année maintenant placée dans le bandeau de statut, à la suite de
-  // l'état du chantier ("Livré · 2025") pour libérer une colonne dans
-  // le bandeau métadonnées (qui accueille désormais le Programme).
+  // Année placée dans le bandeau de statut, à la suite de l'état du chantier.
   const annee = projet.anneeLivraison ? ` · ${esc(String(projet.anneeLivraison))}` : '';
+  const poleActif = (projet.pole ?? '').toUpperCase();
+  const vignettes = VIGNETTES.map((v) => {
+    const active = v.code === poleActif;
+    const url = active ? v.colored : v.blanc;
+    const cls = active ? 't-header-vignette' : 't-header-vignette t-header-vignette--inactive';
+    return `<img class="${cls}" src="${url}" alt="${v.code}" />`;
+  }).join('');
+  const statusStyle = styleToCss(projet.bandeauConfig?.status);
   return `<header class="t-header">
-    <div class="t-header-meta">Assemblage ingénierie · Référence Projet</div>
-    <div class="t-header-statut">● ${esc(projet.statut)}${annee}</div>
+    <div class="t-header-vignettes">${vignettes}</div>
+    <div class="t-header-statut"${statusStyle ? ` style="${statusStyle}"` : ''}>● ${esc(projet.statut)}${annee}</div>
   </header>`;
 }
 
+/**
+ * Footer désactivé : retourne une chaîne vide. La fonction est conservée
+ * (signature inchangée) pour ne pas avoir à modifier chaque template — un
+ * footer plus tard pourra être réintroduit ici si besoin.
+ */
 export function footerHtml(_projet: Projet): string {
-  return `<footer class="t-footer">
-    <span class="t-footer-sigle">.A</span>
-  </footer>`;
+  return '';
 }
 
 export function titleBlockHtml(projet: Projet, h1Size = '32pt'): string {
+  // Surcharge typographique du titre (BandeauConfig.titre). Si l'utilisateur
+  // définit fontSize, on l'applique en remplacement du défaut du template.
+  const titreOverride = styleToCss(projet.bandeauConfig?.titre);
+  const baseStyle = `font-size:${h1Size}; line-height:1.05`;
+  const h1Style = titreOverride ? `${baseStyle}; ${titreOverride}` : baseStyle;
   return `<div class="t-title-block">
     ${projet.lieu ? `<div class="t-surtitre">${esc(projet.lieu)}</div>` : ''}
-    <h1 class="t-h1" style="font-size:${h1Size}; line-height:1.05;">${esc(projet.nom)}</h1>
+    <h1 class="t-h1" style="${h1Style}">${esc(projet.nom)}</h1>
     ${projet.pitch ? `<p class="t-pitch">${esc(projet.pitch)}</p>` : ''}
   </div>`;
 }
@@ -228,11 +266,22 @@ export function metaGridHtml(projet: Projet): string {
 
   if (items.length === 0) return '';
 
-  return `<div class="t-meta-grid" style="grid-template-columns:repeat(${items.length},1fr);">
+  // Surcharges typographiques par projet — appliquées uniformément à tous
+  // les labels / values du bandeau.
+  const labelStyle = styleToCss(projet.bandeauConfig?.labels);
+  const valueStyle = styleToCss(projet.bandeauConfig?.values);
+  const labelAttr = labelStyle ? ` style="${labelStyle}"` : '';
+  const valueAttr = valueStyle ? ` style="${valueStyle}"` : '';
+
+  // Lignes horizontales du bandeau (toggle visible/masqué, couleur, épaisseur)
+  const linesCss = linesToCss(projet.bandeauConfig?.lines);
+  const gridStyle = `grid-template-columns:repeat(${items.length},1fr)${linesCss ? `;${linesCss}` : ''}`;
+
+  return `<div class="t-meta-grid" style="${gridStyle}">
     ${items.map(i => `
       <div class="t-meta-item">
-        <span class="t-meta-label">${esc(i.label)}</span>
-        <div class="t-meta-value">${esc(i.value)}</div>
+        <span class="t-meta-label"${labelAttr}>${esc(i.label)}</span>
+        <div class="t-meta-value"${valueAttr}>${esc(i.value)}</div>
         ${i.sub ? `<div class="t-meta-sub">${esc(i.sub)}</div>` : ''}
       </div>
     `).join('')}

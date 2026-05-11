@@ -164,7 +164,7 @@ export default function PortfolioGrid({ projets }: Props) {
       {/* Header */}
       <header style={{ marginBottom: '20px', borderBottom: '2px solid var(--ai-rouge)', paddingBottom: '16px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 16 }}>
-          <h1 style={{ fontFamily: 'var(--serif)', fontSize: '28pt', fontWeight: 500, color: 'var(--ai-violet)' }}>
+          <h1 style={{ fontFamily: 'var(--sans)', fontSize: '28pt', fontWeight: 500, color: 'var(--ai-violet)' }}>
             Portfolio
           </h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -184,9 +184,6 @@ export default function PortfolioGrid({ projets }: Props) {
             >
               Constituer le portfolio →
             </Link>
-            <span style={{ fontFamily: 'var(--sans)', fontSize: '9pt', color: 'var(--ai-noir70)', fontWeight: 600 }}>
-              Assemblage ingénierie · <strong style={{ color: 'var(--ai-rouge)' }}>.A</strong>
-            </span>
           </div>
         </div>
         <p style={{ fontSize: '9pt', color: 'var(--ai-noir70)', marginTop: '4px' }}>

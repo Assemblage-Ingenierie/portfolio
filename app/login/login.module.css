@@ -21,27 +21,20 @@
 
 .logo {
   display: flex;
-  align-items: baseline;
-  gap: .4rem;
+  align-items: center;
+  margin-bottom: .3rem;
 }
 
-.logoText {
-  font-family: var(--sans);
-  font-size: .85rem;
-  color: var(--ai-violet);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: .04em;
-}
-
-.logoDot {
-  font-size: .85rem;
-  color: var(--ai-rouge);
-  font-weight: 700;
+/* Logo Assemblage hébergé sur Supabase Storage. Hauteur fixée, largeur auto
+   pour préserver le ratio. */
+.logoImg {
+  height: 32px;
+  width: auto;
+  display: block;
 }
 
 .title {
-  font-family: var(--serif);
+  font-family: var(--sans);
   font-size: 1.75rem;
   font-weight: 400;
   color: var(--ai-violet);
