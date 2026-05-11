@@ -127,9 +127,6 @@ export default function ManualConfigPanel({ projet, config, onChange, side = 'al
   const setCol1Pct = (v: number) => onChange({ ...config, textCol1Percent: v });
   const setCol2Pct = (v: number) => onChange({ ...config, textCol2Percent: v });
 
-  // Décalage vertical du bandeau (en-tête + titre + meta-grid).
-  const setBandeauOffset = (v: number) => onChange({ ...config, bandeauVerticalOffset: v });
-
   // Photos additionnelles
   const extras = config.extraPhotos ?? [];
   const toggleExtras = () => {
@@ -209,18 +206,6 @@ export default function ManualConfigPanel({ projet, config, onChange, side = 'al
 
   return (
     <div style={containerStyle}>
-      {/* BANDEAU — position verticale (Manuel et Dev) */}
-      {showMain && (
-      <div style={{ ...SECTION, ...sectionOverride }}>
-        <div style={STITLE}>Bandeau (en-tête + titre + meta)</div>
-        <Slider
-          label="Vertical"
-          value={config.bandeauVerticalOffset ?? 50}
-          onChange={setBandeauOffset}
-          min={0} max={100} step={5}
-        />
-      </div>
-      )}
       {/* PHOTO PRINCIPALE */}
       {showMain && (
       <div style={{ ...SECTION, ...sectionOverride }}>

@@ -139,6 +139,49 @@ export default function BandeauConfigPanel({ value, onChange }: Props) {
         </div>
       ))}
       <LinesRow value={value.lines ?? {}} onChange={(l) => onChange({ ...value, lines: l })} />
+      <TitleMetaGapRow
+        value={value.titleMetaGap}
+        onChange={(v) => {
+          const next = { ...value };
+          if (v === undefined || v === 50) delete next.titleMetaGap;
+          else next.titleMetaGap = v;
+          onChange(next);
+        }}
+      />
+    </div>
+  );
+}
+
+function TitleMetaGapRow({ value, onChange }: { value: number | undefined; onChange: (v: number | undefined) => void }) {
+  const v = value ?? 50;
+  return (
+    <div style={{ marginBottom: '14px', paddingBottom: '14px' }}>
+      <label style={LABEL_S}>Espacement titre ↔ bandeau</label>
+      <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', margin: '0 0 6px' }}>
+        Rapproche ou éloigne le bandeau métadonnées du titre. 50 = défaut, &lt; 50 = rapproché, &gt; 50 = éloigné. Appliqué sur les 4 templates.
+      </p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+        <input
+          type="range"
+          min={0} max={100} step={5}
+          value={v}
+          onChange={(e) => onChange(Number(e.target.value))}
+          style={{ flex: '1 1 160px', accentColor: '#E30513' }}
+        />
+        <input
+          type="number"
+          min={0} max={100} step={1}
+          value={v}
+          onChange={(e) => {
+            const n = Number(e.target.value);
+            if (Number.isFinite(n)) onChange(Math.max(0, Math.min(100, n)));
+          }}
+          style={{ ...INPUT_S, width: '70px', flex: '0 0 70px', textAlign: 'right' }}
+        />
+        <button type="button" onClick={() => onChange(undefined)} style={{ ...TOGGLE, fontSize: '8pt' }} title="Réinitialiser à la valeur par défaut">
+          Reset
+        </button>
+      </div>
     </div>
   );
 }

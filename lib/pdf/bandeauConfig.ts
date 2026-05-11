@@ -54,6 +54,27 @@ export interface BandeauConfig {
   prestationAssemblage?: BandeauStyle;
   /** Lignes horizontales qui encadrent le bandeau métadonnées. */
   lines?: BandeauLinesStyle;
+  /** Espacement vertical entre le bloc titre (.t-title-block) et le bandeau
+   *  métadonnées (.t-meta-grid), exprimé en 0..100. 50 = neutre (défaut du
+   *  template). En dessous → on rapproche les deux (margin-top négatif).
+   *  Au-dessus → on les éloigne. Mappé sur ±TITLE_META_GAP_RANGE_MM côté
+   *  render (cf. `titleMetaGapCss` dans `lib/pdf/templates/shared.ts`).
+   *  Disponible sur les 4 templates PDF. */
+  titleMetaGap?: number;
+}
+
+/** Demi-amplitude (en mm) du slider `titleMetaGap`. À 0% → -RANGE, à 100% → +RANGE. */
+export const TITLE_META_GAP_RANGE_MM = 12;
+
+/** Convertit un `titleMetaGap` (0..100, 50 = neutre) en CSS `margin-top`
+ *  applicable sur `.t-meta-grid`. Retourne '' si non défini ou égal à 50. */
+export function titleMetaGapCss(config?: BandeauConfig): string {
+  const v = config?.titleMetaGap;
+  if (v === undefined || !Number.isFinite(v)) return '';
+  const clamped = Math.max(0, Math.min(100, v));
+  const offsetMm = ((clamped - 50) / 50) * TITLE_META_GAP_RANGE_MM;
+  if (offsetMm === 0) return '';
+  return `margin-top:${offsetMm.toFixed(2)}mm`;
 }
 
 /** Convertit un BandeauLinesStyle en surcharges CSS pour `.t-meta-grid`. */
