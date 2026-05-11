@@ -220,7 +220,7 @@ export default function ProjetEditor({ projet }: Props) {
         </div>
 
         <div style={SECTION}>
-          <div style={STITLE}>Mise en page du bandeau</div>
+          <div style={STITLE}>Mise en page typographique</div>
           <BandeauConfigPanel value={bandeauConfig} onChange={setBandeauConfig} />
         </div>
 

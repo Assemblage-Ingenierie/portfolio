@@ -25,8 +25,13 @@ export interface BandeauStyle {
 }
 
 export interface BandeauConfig {
+  /** Titre principal (h1) de la fiche. */
+  titre?: BandeauStyle;
+  /** Statut + année (coin droit du header). */
   status?: BandeauStyle;
+  /** Libellés du bandeau métadonnées (ARCHITECTE, BUDGET…). */
   labels?: BandeauStyle;
+  /** Valeurs du bandeau métadonnées. */
   values?: BandeauStyle;
 }
 
