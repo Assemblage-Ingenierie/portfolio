@@ -414,7 +414,10 @@ export function renderDev(projet: Projet, configIn?: ManualConfig): TemplateBund
     const H_RANGE_MM = 200;
     const prXMm = ((clampPercent(presta?.offsetPercent ?? 50) - 50) / 50) * H_RANGE_MM;
     const prYMm = ((clampPercent(presta?.offsetVerticalPercent ?? 50) - 50) / 50) * V_RANGE_MM;
-    const prStyle = styleToCss(presta?.style);
+    // Style typo : BandeauConfig.prestationAssemblage (défaut design system)
+    // surchargé par ManualConfig.prestationAssemblage.style (override fiche).
+    const mergedPrestaStyle = { ...projet.bandeauConfig?.prestationAssemblage, ...presta?.style };
+    const prStyle = styleToCss(mergedPrestaStyle);
     const cls = `dev-presta${presta?.columns === 2 ? ' dev-presta--2col' : ''}`;
     prestaHtml = `<section class="${cls}" style="--photo-x-offset:${prXMm}mm; --photo-y-offset:${prYMm}mm${prStyle ? `;${prStyle}` : ''}">
       <div class="dev-presta-title">Prestation Assemblage</div>

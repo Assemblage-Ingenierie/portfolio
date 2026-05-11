@@ -37,6 +37,7 @@ export default function ProjetEditor({ projet }: Props) {
   const [adresse, setAdresse] = useState(projet.adresse ?? '');
   const [pitch, setPitch] = useState(projet.pitch ?? '');
   const [description, setDescription] = useState(projet.description);
+  const [prestationAssemblage, setPrestationAssemblage] = useState(projet.prestationAssemblage ?? '');
   const [moa, setMoa] = useState(projet.moa ?? '');
   const [mandataire, setMandataire] = useState(projet.mandataire ?? '');
   const [betAssocies, setBetAssocies] = useState(projet.betAssocies ?? '');
@@ -98,6 +99,7 @@ export default function ProjetEditor({ projet }: Props) {
           nom: nom || undefined,
           adresse: adresse || undefined,
           description: description || undefined,
+          prestationAssemblage: prestationAssemblage || undefined,
           moa: moa || undefined,
           mandataire: mandataire || undefined,
           betAssocies: betAssocies || undefined,
@@ -171,6 +173,7 @@ export default function ProjetEditor({ projet }: Props) {
       adresse: adresse || undefined,
       pitch: pitch || undefined,
       description,
+      prestationAssemblage: prestationAssemblage || undefined,
       moa: moa || undefined,
       mandataire: mandataire || undefined,
       betAssocies: betAssocies || undefined,
@@ -243,6 +246,21 @@ export default function ProjetEditor({ projet }: Props) {
             />
             <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', marginTop: '4px' }}>Texte enrichi (Markdown) — synchronisé avec le champ Airtable.</p>
           </div>
+          {template === 'Dev' && (
+            <div style={{ marginTop: '20px' }}>
+              <label style={LABEL}>Prestation Assemblage</label>
+              <RichTextEditor
+                value={prestationAssemblage}
+                onChange={setPrestationAssemblage}
+                placeholder="Description de la prestation Assemblage…"
+                minRows={6}
+              />
+              <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', marginTop: '4px' }}>
+                Texte enrichi (Markdown) — synchronisé avec le champ Airtable « Prestation Assemblage ».
+                Police et taille modifiables via la section dédiée dans <em>Mise en page typographique</em> ci-dessus.
+              </p>
+            </div>
+          )}
         </div>
 
         <div style={SECTION}>
