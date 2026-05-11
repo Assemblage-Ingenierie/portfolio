@@ -11,6 +11,9 @@ import { deserializeConfig } from '@/lib/pdf/manualConfig';
 // n'est pas garanti stable côté code.
 export const FIELD_PROGRAMME_PRINCIPAL = 'fldKNKtsZNpvmf695';
 export const FIELD_PROGRAMME_SECONDAIRE = 'fldaTqKMNrIpeGBma';
+// Pôle (single-select : STR / ENV / DEV / Autre) — lu par field ID pour
+// éviter toute dérive si la colonne "Pôle" est renommée côté Airtable.
+export const FIELD_POLE = 'fldJyT3Lu0ZEH7EYE';
 
 /**
  * Valeurs auxiliaires injectées dans le mapper.
@@ -22,6 +25,7 @@ export const FIELD_PROGRAMME_SECONDAIRE = 'fldaTqKMNrIpeGBma';
 export interface AuxValues {
   programmePrincipal?: string;
   programmeSecondaire?: string;
+  pole?: string;
   crmNames?: Map<string, string>;
 }
 
@@ -134,7 +138,9 @@ export function recordToProjet(record: any, aux?: AuxValues): Projet {
     programme: f['Programme'] ?? undefined,
     programmePrincipal: aux?.programmePrincipal,
     programmeSecondaire: aux?.programmeSecondaire,
-    pole: f['Pôle'] ?? undefined,
+    // Pôle : prioritairement lu via aux par field ID (cf. FIELD_POLE), fallback
+    // sur le nom de colonne 'Pôle' pour rester rétro-compatible.
+    pole: aux?.pole ?? f['Pôle'] ?? undefined,
     departement: f['Département'] ?? undefined,
     rehabNeuf: selectValue(f['Rehab / Neuf']),
 

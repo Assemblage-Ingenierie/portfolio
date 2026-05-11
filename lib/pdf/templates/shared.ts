@@ -79,8 +79,19 @@ html, body { background: white; }
   padding-bottom: 3mm;
   font-family: var(--sans);
 }
-/* Bandeau d'en-tête : small caps (= les majuscules s'affichent à la
-   x-height) au lieu d'un text-transform:uppercase, et pas de gras. */
+/* Bandeau d'en-tête : 3 vignettes pôle (STR / ENV / DEV) à gauche,
+   statut + année à droite. La vignette correspondant au pôle du projet
+   est colorée, les autres restent en blanc (silhouette). */
+.t-header-vignettes {
+  display: flex;
+  align-items: center;
+  gap: 1.5mm;
+}
+.t-header-vignette {
+  height: 10mm;
+  width: auto;
+  display: block;
+}
 .t-header-meta {
   font-size: 9pt; font-weight: 400;
   letter-spacing: 0.06em; font-variant: small-caps;
@@ -184,13 +195,29 @@ html, body { background: white; }
 .t-texte-cols-2 p, .t-texte-cols-2 .t-texte-p { break-inside: avoid; }
 `;
 
+// Vignettes pôle hébergées sur Supabase Storage (bucket public "Branding").
+// Trois pôles, toujours affichés dans l'ordre STR · ENV · DEV. Celui qui
+// correspond au pôle du projet est rendu en couleur, les deux autres en
+// silhouette blanche. Attention à la casse : "Env_blanc.png" est en
+// minuscule alors que les deux autres sont en majuscule.
+const VIGNETTE_BASE =
+  'https://hhkofvbptnrtwbazftlm.supabase.co/storage/v1/object/public/Branding/vignettes';
+const VIGNETTES: ReadonlyArray<{ code: string; colored: string; blanc: string }> = [
+  { code: 'STR', colored: `${VIGNETTE_BASE}/Str.png`, blanc: `${VIGNETTE_BASE}/Str_Blanc.png` },
+  { code: 'ENV', colored: `${VIGNETTE_BASE}/Env.png`, blanc: `${VIGNETTE_BASE}/Env_blanc.png` },
+  { code: 'DEV', colored: `${VIGNETTE_BASE}/Dev.png`, blanc: `${VIGNETTE_BASE}/Dev_Blanc.png` },
+];
+
 export function headerHtml(projet: Projet): string {
-  // Année maintenant placée dans le bandeau de statut, à la suite de
-  // l'état du chantier ("Livré · 2025") pour libérer une colonne dans
-  // le bandeau métadonnées (qui accueille désormais le Programme).
+  // Année placée dans le bandeau de statut, à la suite de l'état du chantier.
   const annee = projet.anneeLivraison ? ` · ${esc(String(projet.anneeLivraison))}` : '';
+  const poleActif = (projet.pole ?? '').toUpperCase();
+  const vignettes = VIGNETTES.map((v) => {
+    const url = v.code === poleActif ? v.colored : v.blanc;
+    return `<img class="t-header-vignette" src="${url}" alt="${v.code}" />`;
+  }).join('');
   return `<header class="t-header">
-    <div class="t-header-meta">Assemblage ingénierie · Référence Projet</div>
+    <div class="t-header-vignettes">${vignettes}</div>
     <div class="t-header-statut">● ${esc(projet.statut)}${annee}</div>
   </header>`;
 }

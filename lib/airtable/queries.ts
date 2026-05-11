@@ -1,7 +1,7 @@
 import type { Projet } from '@/types/projet';
 import { cacheTag } from 'next/cache';
 import { base, TABLE } from './client';
-import { recordToProjet, type AuxValues, FIELD_PROGRAMME_PRINCIPAL, FIELD_PROGRAMME_SECONDAIRE } from './mappers';
+import { recordToProjet, type AuxValues, FIELD_PROGRAMME_PRINCIPAL, FIELD_PROGRAMME_SECONDAIRE, FIELD_POLE } from './mappers';
 import { fetchCrmNames } from './crm';
 
 export const PROJETS_TAG = 'projets';
@@ -39,29 +39,35 @@ function extractIds(v: any): string[] {
 }
 
 /**
- * Requête auxiliaire pour les champs programme principal / secondaire (multi-select,
- * lus par field ID via returnFieldsByFieldId=true).
- * Tolérante aux erreurs.
+ * Requête auxiliaire pour les champs lus par field ID :
+ * - Programme principal / secondaire (multi-selects)
+ * - Pôle (single-select STR/ENV/DEV/Autre — utilisé pour le choix de vignette)
+ *
+ * Tolérante aux erreurs (renvoie une map vide plutôt que de propager).
  */
-async function fetchProgrammes(filterFormula?: string): Promise<Map<string, { principal?: string; secondaire?: string }>> {
-  const map = new Map<string, { principal?: string; secondaire?: string }>();
+async function fetchAuxByFieldId(
+  filterFormula?: string,
+): Promise<Map<string, { principal?: string; secondaire?: string; pole?: string }>> {
+  const map = new Map<string, { principal?: string; secondaire?: string; pole?: string }>();
   try {
     const records = await base(TABLE)
       .select({
         ...STRING_FORMAT,
-        fields: [FIELD_PROGRAMME_PRINCIPAL, FIELD_PROGRAMME_SECONDAIRE],
+        fields: [FIELD_PROGRAMME_PRINCIPAL, FIELD_PROGRAMME_SECONDAIRE, FIELD_POLE],
         returnFieldsByFieldId: true,
         ...(filterFormula ? { filterByFormula: filterFormula } : {}),
       })
       .all();
     records.forEach((r) => {
+      const poleRaw = r.fields[FIELD_POLE];
       map.set(r.id, {
         principal: firstValue(r.fields[FIELD_PROGRAMME_PRINCIPAL]),
         secondaire: firstValue(r.fields[FIELD_PROGRAMME_SECONDAIRE]),
+        pole: typeof poleRaw === 'string' && poleRaw.trim() ? poleRaw.trim() : undefined,
       });
     });
   } catch (err) {
-    console.error('[airtable] fetchProgrammes failed:', err);
+    console.error('[airtable] fetchAuxByFieldId failed:', err);
   }
   return map;
 }
@@ -84,7 +90,7 @@ export async function getProjets(): Promise<Projet[]> {
           ],
         })
         .all(),
-      fetchProgrammes(filter),
+      fetchAuxByFieldId(filter),
     ]);
 
     // 2. Collecte des record IDs CRM depuis MOA / Architecte / Mandataire / Entreprise
@@ -104,6 +110,7 @@ export async function getProjets(): Promise<Projet[]> {
       const aux: AuxValues = {
         programmePrincipal: prog?.principal,
         programmeSecondaire: prog?.secondaire,
+        pole: prog?.pole,
         crmNames,
       };
       return recordToProjet(r, aux);
@@ -124,7 +131,7 @@ export async function getProjet(slug: string): Promise<Projet | null> {
 
     const [records, prog] = await Promise.all([
       base(TABLE).select({ filterByFormula: filter, maxRecords: 1 }).all(),
-      fetchProgrammes(filter),
+      fetchAuxByFieldId(filter),
     ]);
     if (records.length === 0) return null;
 
@@ -150,6 +157,7 @@ export async function getProjet(slug: string): Promise<Projet | null> {
     const aux: AuxValues = {
       programmePrincipal: p?.principal,
       programmeSecondaire: p?.secondaire,
+      pole: p?.pole,
       crmNames,
     };
     return recordToProjet(r, aux);
