@@ -96,12 +96,22 @@ const CSS = `
   display: grid;
   gap: 3mm;
   width: 100%;
+  /* Permet aux photos de remonter au-dessus du texte si offsetVerticalPercent < 50 */
+  position: relative;
+  z-index: 5;
 }
 .man-extra-grid .photo-frame {
   width: 100%;
   height: auto;
-  /* Décalage horizontal — slider 0..100 dans l'UI mappé à -50%..+50% de la largeur de cellule */
-  transform: translateX(var(--photo-x-offset, 0%));
+  /* Décalages slider 0..100 → -50%..+50% (horizontal) et 0%..+100% inversé pour vertical */
+  transform: translate(
+    var(--photo-x-offset, 0%),
+    var(--photo-y-offset, 0%)
+  );
+  /* Photo toujours au-dessus du texte de description en cas de chevauchement.
+     L'utilisateur voit l'overlap et ajuste les sliders en conséquence. */
+  position: relative;
+  z-index: 10;
 }
 .man-extra-grid .photo-img {
   width: 100%; height: auto;
@@ -236,10 +246,14 @@ export function renderManuel(projet: Projet, configIn?: ManualConfig): TemplateB
       const ph = photos[e.index]!;
       const pct = clampPercent(e.sizePercent);
       const maxMm = EXTRA_GRID_MAX_MM * pct / 100;
-      // offsetPercent (0..100) → translateX (-50%..+50% de la largeur de cellule)
-      const offsetPct = clampPercent(e.offsetPercent ?? 50);
-      const translatePct = offsetPct - 50;
-      return `<div class="photo-frame" style="--extra-cell-max:${maxMm}mm; --photo-x-offset:${translatePct}%">${photoImg(ph, projet.nom)}</div>`;
+      // offsetPercent horizontal (0..100) → translateX -50%..+50% de la cellule
+      const xPct = clampPercent(e.offsetPercent ?? 50) - 50;
+      // offsetVerticalPercent (0..100) → translateY -100%..+100%
+      // 0   = photo remontée d'une hauteur (= entièrement dans le bloc texte au-dessus)
+      // 50  = position neutre (sous le texte, comportement historique)
+      // 100 = photo descendue d'une hauteur
+      const yPct = (clampPercent(e.offsetVerticalPercent ?? 50) - 50) * 2;
+      return `<div class="photo-frame" style="--extra-cell-max:${maxMm}mm; --photo-x-offset:${xPct}%; --photo-y-offset:${yPct}%">${photoImg(ph, projet.nom)}</div>`;
     }).join('');
     extraHtml = `<div class="man-extra-grid" style="grid-template-columns:repeat(${extraPhotos.length},1fr);">${cells}</div>`;
   }

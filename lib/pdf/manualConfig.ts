@@ -17,6 +17,11 @@ export interface PhotoConfig {
   /** Décalage horizontal 0..100 (0 = gauche, 50 = centre, 100 = droite).
    *  Utilisé uniquement pour les photos additionnelles. Default = 50. */
   offsetPercent?: number;
+  /** Décalage vertical 0..100 (0 = haut, 50 = ligne neutre, 100 = bas).
+   *  Permet de superposer la photo au texte si conflit de place — le rendu
+   *  positionne la photo au-dessus de la zone texte (z-index supérieur).
+   *  Default = 50 (= comportement historique : photo en flux sous le texte). */
+  offsetVerticalPercent?: number;
 }
 
 export interface ManualConfig {
