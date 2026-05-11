@@ -6,10 +6,18 @@ import type { BandeauStyle } from '@/lib/pdf/bandeauConfig';
 import { allPhotos } from '@/lib/pdf/templates/shared';
 import { StyleRow } from '@/components/projet/BandeauConfigPanel';
 
+type PanelSide = 'left' | 'right' | 'all';
+
 interface Props {
   projet: Projet;
   config: ManualConfig;
   onChange: (next: ManualConfig) => void;
+  /**
+   * - `'all'` (default) : layout horizontal historique (au-dessus de l'aperçu).
+   * - `'left'`  : colonne verticale = Photos additionnelles + Mots-clés.
+   * - `'right'` : colonne verticale = Photo principale + Texte description.
+   */
+  side?: PanelSide;
 }
 
 const SECTION: React.CSSProperties = {
@@ -80,7 +88,7 @@ function Slider({ label, value, onChange, min = 25, max = 100, step = 5, unit = 
 
 const MAX_EXTRA_PHOTOS = 5;
 
-export default function ManualConfigPanel({ projet, config, onChange }: Props) {
+export default function ManualConfigPanel({ projet, config, onChange, side = 'all' }: Props) {
   const photos = allPhotos(projet);
   const photoOptions = photos.map((p, i) => ({
     value: i,
@@ -144,17 +152,45 @@ export default function ManualConfigPanel({ projet, config, onChange }: Props) {
     border: '1px solid #DFE4E8', borderRadius: 2, background: 'white',
   };
 
+  // Visibilité des sections par côté
+  const showMain = side === 'all' || side === 'right';
+  const showText = side === 'all' || side === 'right';
+  const showExtra = side === 'all' || side === 'left';
+  const showKeywords = side === 'all' || side === 'left';
+
+  const isVertical = side !== 'all';
+  // En layout vertical (sidebar), les sections sont empilées : pas de bordure
+  // droite (qui sert d'espacement horizontal), on utilise borderBottom.
+  const containerStyle: React.CSSProperties = isVertical
+    ? {
+        background: 'white',
+        border: '1px solid #DFE4E8',
+        display: 'flex',
+        flexDirection: 'column',
+        fontFamily: 'var(--sans)',
+        width: '100%',
+      }
+    : {
+        background: 'white',
+        borderTop: '1px solid #DFE4E8',
+        borderBottom: '1px solid #DFE4E8',
+        display: 'flex',
+        flexWrap: 'wrap',
+        fontFamily: 'var(--sans)',
+      };
+  // En mode sidebar, override la bordure : verticale entre sections
+  const sectionOverride: React.CSSProperties = isVertical
+    ? { borderRight: 'none', borderBottom: '1px solid #DFE4E8', minWidth: 0 }
+    : {};
+  const lastSectionOverride: React.CSSProperties = isVertical
+    ? { borderRight: 'none', borderBottom: 'none', flex: 'unset', minWidth: 0 }
+    : {};
+
   return (
-    <div style={{
-      background: 'white',
-      borderTop: '1px solid #DFE4E8',
-      borderBottom: '1px solid #DFE4E8',
-      display: 'flex',
-      flexWrap: 'wrap',
-      fontFamily: 'var(--sans)',
-    }}>
+    <div style={containerStyle}>
       {/* PHOTO PRINCIPALE */}
-      <div style={SECTION}>
+      {showMain && (
+      <div style={{ ...SECTION, ...sectionOverride }}>
         <div style={STITLE}>Photo principale</div>
         <div style={{ display: 'flex', gap: 4 }}>
           {(['paysage', 'portrait'] as PhotoFormat[]).map(f => (
@@ -204,9 +240,11 @@ export default function ManualConfigPanel({ projet, config, onChange }: Props) {
           </>
         )}
       </div>
+      )}
 
       {/* TEXTE */}
-      <div style={SECTION}>
+      {showText && (
+      <div style={{ ...SECTION, ...sectionOverride }}>
         <div style={STITLE}>Texte description</div>
         <div style={{ display: 'flex', gap: 4 }}>
           {([1, 2] as const).map(n => (
@@ -230,9 +268,11 @@ export default function ManualConfigPanel({ projet, config, onChange }: Props) {
           />
         )}
       </div>
+      )}
 
       {/* PHOTOS ADDITIONNELLES */}
-      <div style={SECTION}>
+      {showExtra && (
+      <div style={{ ...SECTION, ...sectionOverride }}>
         <div style={STITLE}>Photo{extras.length > 1 ? 's' : ''} additionnelle{extras.length > 1 ? 's' : ''}</div>
         <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
           <button onClick={toggleExtras} style={radioBtn(extras.length > 0)}>
@@ -286,13 +326,17 @@ export default function ManualConfigPanel({ projet, config, onChange }: Props) {
           </div>
         ))}
       </div>
+      )}
 
-      {/* MOTS-CLÉS — liste flottante optionnelle (à droite des photos additionnelles) */}
-      <KeywordsSection
-        projet={projet}
-        config={config.keywords}
-        onChange={(kw) => onChange({ ...config, keywords: kw })}
-      />
+      {/* MOTS-CLÉS — liste flottante optionnelle */}
+      {showKeywords && (
+        <KeywordsSection
+          projet={projet}
+          config={config.keywords}
+          onChange={(kw) => onChange({ ...config, keywords: kw })}
+          containerStyleOverride={lastSectionOverride}
+        />
+      )}
     </div>
   );
 }
@@ -301,15 +345,16 @@ interface KeywordsSectionProps {
   projet: Projet;
   config: KeywordsConfig | undefined;
   onChange: (next: KeywordsConfig) => void;
+  containerStyleOverride?: React.CSSProperties;
 }
 
-function KeywordsSection({ projet, config, onChange }: KeywordsSectionProps) {
+function KeywordsSection({ projet, config, onChange, containerStyleOverride }: KeywordsSectionProps) {
   const kw = config ?? { show: false };
   const hasMotsCles = projet.motsCles && projet.motsCles.length > 0;
   const update = (patch: Partial<KeywordsConfig>) => onChange({ ...kw, ...patch });
 
   return (
-    <div style={LAST_SECTION}>
+    <div style={{ ...LAST_SECTION, ...containerStyleOverride }}>
       <div style={STITLE}>Mots-clés</div>
       <div style={ROW}>
         <button

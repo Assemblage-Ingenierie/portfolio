@@ -34,6 +34,11 @@ export default function ProjetView({ projet, isPrint }: Props) {
     }
   }
 
+  // En template Manuel (hors print), on bascule sur un layout 3 colonnes :
+  // panneau gauche (Photos additionnelles + Mots-clés) | aperçu | panneau
+  // droit (Photo principale + Texte description).
+  const isManualLayout = !isPrint && template === 'Manuel';
+
   return (
     <>
       {!isPrint && (
@@ -44,13 +49,37 @@ export default function ProjetView({ projet, isPrint }: Props) {
           onTemplateChange={handleTemplateChange}
         />
       )}
-      {!isPrint && template === 'Manuel' && (
-        <ManualConfigPanel projet={projet} config={manualConfig} onChange={setManualConfig} />
+      {isManualLayout ? (
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, padding: '16px', background: '#ECECEC', minHeight: 'calc(100vh - 48px)' }}>
+          <aside style={{ width: 280, flex: '0 0 280px' }}>
+            <ManualConfigPanel
+              projet={projet}
+              config={manualConfig}
+              onChange={setManualConfig}
+              side="left"
+            />
+          </aside>
+          <main style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+            <TemplatePreview
+              projet={{ ...projet, template }}
+              manualConfig={manualConfig}
+            />
+          </main>
+          <aside style={{ width: 280, flex: '0 0 280px' }}>
+            <ManualConfigPanel
+              projet={projet}
+              config={manualConfig}
+              onChange={setManualConfig}
+              side="right"
+            />
+          </aside>
+        </div>
+      ) : (
+        <TemplatePreview
+          projet={{ ...projet, template }}
+          manualConfig={undefined}
+        />
       )}
-      <TemplatePreview
-        projet={{ ...projet, template }}
-        manualConfig={template === 'Manuel' ? manualConfig : undefined}
-      />
     </>
   );
 }
