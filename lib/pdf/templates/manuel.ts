@@ -161,15 +161,6 @@ const CSS = `
   margin: 0;
   list-style: none;
 }
-/* Mode inline : items en flow horizontal avec wrap automatique. La largeur
-   max permet à la liste de rester contenue dans la page (sinon elle
-   dépasserait du cadre A4 à droite). */
-.man-keywords--inline {
-  display: flex;
-  flex-wrap: wrap;
-  max-width: 80mm;
-}
-.man-keywords--inline > li { display: inline-block; }
 /* Chaque "tag" : inline-block pour que le surlignage (background) reste
    collé au texte, ne s'étende pas sur toute la largeur du <li>. */
 .man-kw-item {
@@ -350,12 +341,12 @@ export function renderManuel(projet: Projet, configIn?: ManualConfig): TemplateB
     const kwYMm = ((clampPercent(kw.offsetVerticalPercent ?? 50) - 50) / 50) * V_RANGE_MM;
     const lineSpacingMm = Math.max(0, Math.min(20, kw.lineSpacing ?? 1));
     const kwStyle = styleToCss(kw.style);
-    const inlineMode = kw.inline === true;
+    // Chaque entrée de projet.motsCles vient déjà d'un split sur ','
+    // côté mapper Airtable. Chaque entrée = une ligne, espaces conservés.
     const items = projet.motsCles
-      .map((m) => `<li style="margin-bottom:${lineSpacingMm}mm${inlineMode ? ';margin-right:' + lineSpacingMm + 'mm' : ''}"><span class="man-kw-item"${kwStyle ? ` style="${kwStyle}"` : ''}>${m}</span></li>`)
+      .map((m) => `<li style="margin-bottom:${lineSpacingMm}mm"><span class="man-kw-item"${kwStyle ? ` style="${kwStyle}"` : ''}>${m}</span></li>`)
       .join('');
-    const listClass = inlineMode ? 'man-keywords man-keywords--inline' : 'man-keywords';
-    keywordsHtml = `<ul class="${listClass}" style="--photo-x-offset:${kwXMm}mm; --photo-y-offset:${kwYMm}mm">${items}</ul>`;
+    keywordsHtml = `<ul class="man-keywords" style="--photo-x-offset:${kwXMm}mm; --photo-y-offset:${kwYMm}mm">${items}</ul>`;
   }
 
   const body = `<article class="page man-page">

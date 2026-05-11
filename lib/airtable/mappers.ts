@@ -85,9 +85,13 @@ export function recordToProjet(record: any, aux?: AuxValues): Projet {
     ? rawCertification.split(/[\n,]+/).map((s: string) => s.trim()).filter(Boolean)
     : [];
 
+  // Champ "Mots-clés" : la virgule est le SEUL séparateur de ligne. Tout
+  // ce qui est entre deux virgules reste sur la même ligne (les espaces
+  // sont préservés pour permettre des mots-clés composés du type
+  // "patrimoine industriel électrique").
   const rawMotsCles = f['Mots-clés'] ?? '';
   const motsCles = typeof rawMotsCles === 'string' && rawMotsCles
-    ? rawMotsCles.split(/[,;]+/).map((s: string) => s.trim()).filter(Boolean)
+    ? rawMotsCles.split(',').map((s: string) => s.trim()).filter(Boolean)
     : [];
 
   const tagsSiteWeb = parseTagsSiteWeb(f['Tags site web']);

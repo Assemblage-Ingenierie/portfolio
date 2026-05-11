@@ -25,9 +25,18 @@ const INPUT_S: React.CSSProperties = {
   background: 'white', outline: 'none',
 };
 const ROW: React.CSSProperties = {
-  display: 'grid',
-  gridTemplateColumns: '110px 90px auto auto auto',
-  gap: '8px', alignItems: 'center', marginBottom: '6px',
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: '8px',
+  alignItems: 'center',
+  marginBottom: '6px',
+};
+const COLOR_INPUT: React.CSSProperties = {
+  width: '40px', height: '32px',
+  padding: '2px',
+  border: '1px solid #DFE4E8', borderRadius: '2px',
+  background: 'white', cursor: 'pointer',
+  flex: '0 0 40px',
 };
 const TOGGLE: React.CSSProperties = {
   padding: '4px 10px', border: '1px solid #DFE4E8', borderRadius: '2px',
@@ -47,7 +56,7 @@ function StyleRow({ style, onChange }: { style: BandeauStyle; onChange: (s: Band
         <select
           value={style.fontFamily ?? ''}
           onChange={(e) => set('fontFamily', (e.target.value || undefined) as FontFamilyChoice | undefined)}
-          style={INPUT_S}
+          style={{ ...INPUT_S, width: 'auto', flex: '1 1 110px', minWidth: '110px' }}
         >
           <option value="">Police défaut</option>
           <option value="sans">Sans (Open Sans)</option>
@@ -61,27 +70,31 @@ function StyleRow({ style, onChange }: { style: BandeauStyle; onChange: (s: Band
           value={style.fontSize ?? ''}
           onChange={(e) => set('fontSize', e.target.value === '' ? undefined : Number(e.target.value))}
           placeholder="Taille (pt)"
-          style={INPUT_S}
+          style={{ ...INPUT_S, width: '90px', flex: '0 0 90px' }}
         />
-        <div style={{ display: 'flex', gap: '4px' }}>
+        <div style={{ display: 'flex', gap: '4px', flex: '0 0 auto' }}>
           <button type="button" onClick={() => set('bold', !style.bold)} style={style.bold ? TOGGLE_ON : TOGGLE} title="Gras"><b>B</b></button>
           <button type="button" onClick={() => set('italic', !style.italic)} style={style.italic ? TOGGLE_ON : TOGGLE} title="Italique"><i>I</i></button>
           <button type="button" onClick={() => set('underline', !style.underline)} style={style.underline ? TOGGLE_ON : TOGGLE} title="Souligné"><u>U</u></button>
         </div>
-        <input
-          type="color"
-          value={style.color ?? '#000000'}
-          onChange={(e) => set('color', e.target.value)}
-          style={{ ...INPUT_S, padding: '2px', height: '32px', cursor: 'pointer' }}
-          title="Couleur du texte"
-        />
-        <input
-          type="color"
-          value={style.background ?? '#ffffff'}
-          onChange={(e) => set('background', e.target.value)}
-          style={{ ...INPUT_S, padding: '2px', height: '32px', cursor: 'pointer' }}
-          title="Surlignage (fond)"
-        />
+        <label title="Couleur du texte" style={{ display: 'flex', flex: '0 0 auto', alignItems: 'center', gap: '4px', fontSize: '8pt', color: 'var(--ai-noir70)' }}>
+          <input
+            type="color"
+            value={style.color ?? '#000000'}
+            onChange={(e) => set('color', e.target.value)}
+            style={COLOR_INPUT}
+          />
+          texte
+        </label>
+        <label title="Surlignage (fond)" style={{ display: 'flex', flex: '0 0 auto', alignItems: 'center', gap: '4px', fontSize: '8pt', color: 'var(--ai-noir70)' }}>
+          <input
+            type="color"
+            value={style.background ?? '#ffffff'}
+            onChange={(e) => set('background', e.target.value)}
+            style={COLOR_INPUT}
+          />
+          fond
+        </label>
       </div>
     </div>
   );
