@@ -6,12 +6,14 @@ export function nbPhotos(projet: Pick<Projet, 'photoCouverture' | 'photosProjet'
 
 /**
  * Template par défaut quand aucune valeur n'est sauvegardée en Airtable.
- * Triptyque est le choix par défaut depuis la suppression de Mosaïque/Galerie.
+ * Manuel depuis 2026-05 — toutes les fiches sont créées avec les sliders
+ * Manuel et un set de défauts bandeau (titre 14pt, status/labels/values/
+ * description 10pt, lignes masquées) sauvegardé dans `Config template manuel`.
  */
 export function autoSelectTemplate(
   _projet: Pick<Projet, 'photoCouverture' | 'photosProjet' | 'description'>
 ): TemplateChoice {
-  return 'Triptyque';
+  return 'Manuel';
 }
 
 const TEMPLATE_VALUES: TemplateChoice[] = ['Solo', 'Diptyque', 'Triptyque', 'Manuel', 'Dev'];
