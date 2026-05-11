@@ -136,13 +136,26 @@ export function measureOverflow(doc: Document | null | undefined): OverflowMeasu
   const leftPx = Math.max(0, Math.round(leftOverflow - H_TOL));
 
   const overflowPx = Math.max(bottomPx, topPx, rightPx, leftPx);
-  const overflowMm = Math.round((overflowPx / pagePx) * 297);
+  // Conversion px → mm via la hauteur du cadre A4 (297mm). Math.floor pour
+  // ne pas amplifier un sous-pixel en 1mm.
+  const rawMm = Math.floor((overflowPx / pagePx) * 297);
 
+  // Seuil de signalement : en dessous de MIN_REPORTABLE_MM, on considere le
+  // depassement comme cosmetique (sous-pixel d'`object-fit: contain`, scaling
+  // d'iframe, scrollbar du navigateur, etc.) et on rapporte 0. Le visuel
+  // reste correct car le contenu reste dans la marge de tolerance.
+  const MIN_REPORTABLE_MM = 3;
+  const overflowMm = rawMm >= MIN_REPORTABLE_MM ? rawMm : 0;
+
+  // Si on clamp a 0, on n'expose aucun bord debordant (sinon l'UI affiche
+  // "0mm (bord droite)" — incoherent).
   const edges: Array<'haut' | 'bas' | 'gauche' | 'droite'> = [];
-  if (topPx > 0) edges.push('haut');
-  if (bottomPx > 0) edges.push('bas');
-  if (leftPx > 0) edges.push('gauche');
-  if (rightPx > 0) edges.push('droite');
+  if (overflowMm > 0) {
+    if (topPx > 0) edges.push('haut');
+    if (bottomPx > 0) edges.push('bas');
+    if (leftPx > 0) edges.push('gauche');
+    if (rightPx > 0) edges.push('droite');
+  }
 
   return { overflowPx, overflowMm, pagePx, bottomPx, topPx, leftPx, rightPx, edges };
 }
