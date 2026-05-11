@@ -45,6 +45,9 @@ interface SliderProps {
 }
 
 function Slider({ label, value, onChange, min = 25, max = 100, step = 5, unit = '%' }: SliderProps) {
+  // Saisie numérique fine : à côté du slider (qui reste sur step=5), un input
+  // number qui accepte n'importe quelle valeur entière dans [min, max] avec
+  // step=1 pour permettre un réglage précis sans utiliser le slider.
   return (
     <div style={ROW}>
       <span style={{ minWidth: 60, color: 'var(--ai-noir70)' }}>{label}</span>
@@ -54,7 +57,23 @@ function Slider({ label, value, onChange, min = 25, max = 100, step = 5, unit = 
         onChange={e => onChange(Number(e.target.value))}
         style={{ flex: 1, accentColor: '#E30513' }}
       />
-      <span style={{ minWidth: 48, textAlign: 'right', fontWeight: 700, color: 'var(--ai-rouge)' }}>{value}{unit}</span>
+      <input
+        type="number"
+        min={min} max={max} step={1}
+        value={value}
+        onChange={e => {
+          const v = Number(e.target.value);
+          if (Number.isFinite(v)) onChange(Math.max(min, Math.min(max, v)));
+        }}
+        style={{
+          width: 50, padding: '2px 4px', textAlign: 'right',
+          fontFamily: 'var(--sans)', fontSize: '9pt', fontWeight: 700,
+          color: 'var(--ai-rouge)',
+          border: '1px solid #DFE4E8', borderRadius: 2, background: 'white',
+        }}
+        title={`Valeur précise (${min}–${max})`}
+      />
+      <span style={{ minWidth: 14, color: 'var(--ai-noir70)' }}>{unit}</span>
     </div>
   );
 }
