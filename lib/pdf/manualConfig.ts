@@ -32,10 +32,15 @@ export interface PhotoConfig {
 export interface KeywordsConfig {
   /** Affiche la liste sur la fiche. Default = false. */
   show: boolean;
-  /** Décalage horizontal 0..100 (50 = neutre, ancre = droite de la page). */
+  /** Décalage horizontal 0..100 (50 = neutre, mappé sur ±H_RANGE_MM côté render). */
   offsetPercent?: number;
-  /** Décalage vertical 0..100 (50 = neutre, mappé sur ±V_RANGE_MM). */
+  /** Décalage vertical 0..100 (50 = neutre, mappé sur ±V_RANGE_MM côté render). */
   offsetVerticalPercent?: number;
+  /** Espacement entre items en mm (default ≈ 1mm). */
+  lineSpacing?: number;
+  /** Si `true` → mots-clés en flow inline (plusieurs par ligne, wrap auto).
+   *  Si `false`/undefined → 1 par ligne (liste verticale classique). */
+  inline?: boolean;
   /** Surcharges typographiques (police, taille, B/I/U, couleur, surlignage). */
   style?: import('./bandeauConfig').BandeauStyle;
 }

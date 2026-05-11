@@ -158,9 +158,18 @@ const CSS = `
 }
 .man-keywords > li {
   display: block;
-  margin: 0 0 1mm 0;
+  margin: 0;
   list-style: none;
 }
+/* Mode inline : items en flow horizontal avec wrap automatique. La largeur
+   max permet à la liste de rester contenue dans la page (sinon elle
+   dépasserait du cadre A4 à droite). */
+.man-keywords--inline {
+  display: flex;
+  flex-wrap: wrap;
+  max-width: 80mm;
+}
+.man-keywords--inline > li { display: inline-block; }
 /* Chaque "tag" : inline-block pour que le surlignage (background) reste
    collé au texte, ne s'étende pas sur toute la largeur du <li>. */
 .man-kw-item {
@@ -329,16 +338,24 @@ export function renderManuel(projet: Projet, configIn?: ManualConfig): TemplateB
   // Ancrée en haut/droite de la page utile ; les sliders X/Y la déplacent
   // de là. Passe au-dessus de tout (photos, texte, bandeau) — l'utilisateur
   // ajuste manuellement les sliders en cas de chevauchement gênant.
+  //
+  // Décalages X et Y en mm absolus (indépendants de la taille de la liste).
+  // H_RANGE = ±200mm permet de balayer toute la largeur de la page A4
+  // (largeur utile ≈ 186mm depuis l'ancre top:80mm right:12mm).
   let keywordsHtml = '';
   const kw = cfg.keywords;
   if (kw?.show && projet.motsCles && projet.motsCles.length > 0) {
-    const kwXPct = clampPercent(kw.offsetPercent ?? 50) - 50;
+    const H_RANGE_MM = 200;
+    const kwXMm = ((clampPercent(kw.offsetPercent ?? 50) - 50) / 50) * H_RANGE_MM;
     const kwYMm = ((clampPercent(kw.offsetVerticalPercent ?? 50) - 50) / 50) * V_RANGE_MM;
+    const lineSpacingMm = Math.max(0, Math.min(20, kw.lineSpacing ?? 1));
     const kwStyle = styleToCss(kw.style);
+    const inlineMode = kw.inline === true;
     const items = projet.motsCles
-      .map((m) => `<li><span class="man-kw-item"${kwStyle ? ` style="${kwStyle}"` : ''}>${m}</span></li>`)
+      .map((m) => `<li style="margin-bottom:${lineSpacingMm}mm${inlineMode ? ';margin-right:' + lineSpacingMm + 'mm' : ''}"><span class="man-kw-item"${kwStyle ? ` style="${kwStyle}"` : ''}>${m}</span></li>`)
       .join('');
-    keywordsHtml = `<ul class="man-keywords" style="--photo-x-offset:${kwXPct}%; --photo-y-offset:${kwYMm}mm">${items}</ul>`;
+    const listClass = inlineMode ? 'man-keywords man-keywords--inline' : 'man-keywords';
+    keywordsHtml = `<ul class="${listClass}" style="--photo-x-offset:${kwXMm}mm; --photo-y-offset:${kwYMm}mm">${items}</ul>`;
   }
 
   const body = `<article class="page man-page">

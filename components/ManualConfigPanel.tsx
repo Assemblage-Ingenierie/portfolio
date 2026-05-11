@@ -389,9 +389,27 @@ function KeywordsSection({ projet, config, onChange, containerStyleOverride }: K
             onChange={(v) => update({ offsetVerticalPercent: v })}
             min={0} max={100} step={5}
           />
+          <Slider
+            label="Espacement"
+            value={kw.lineSpacing ?? 1}
+            onChange={(v) => update({ lineSpacing: v })}
+            min={0} max={20} step={1}
+            unit="mm"
+          />
+          <div style={ROW}>
+            <span style={{ minWidth: 60, color: 'var(--ai-noir70)' }}>Disposition</span>
+            <button
+              onClick={() => update({ inline: false })}
+              style={radioBtn(!kw.inline)}
+            >1 par ligne</button>
+            <button
+              onClick={() => update({ inline: true })}
+              style={radioBtn(!!kw.inline)}
+            >Plusieurs par ligne</button>
+          </div>
           <div style={{ marginTop: 6 }}>
             <label style={{ display: 'block', fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 6 }}>
-              Mise en page
+              Mise en page (police, taille, B/I/U, couleur texte, surlignage)
             </label>
             <StyleRow
               style={(kw.style ?? {}) as BandeauStyle}
