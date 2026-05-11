@@ -400,7 +400,11 @@ interface PrestationSectionProps {
 }
 
 function PrestationSection({ projet, config, onChange, containerStyleOverride }: PrestationSectionProps) {
-  const pa = config ?? { show: false };
+  // Default = activé sur le template Dev (cette section n'est rendue que
+  // pour Dev). Affichage actif tant que `show !== false` — undefined compte
+  // comme `true`, cohérent avec le rendu côté dev.ts.
+  const isActive = config?.show !== false;
+  const pa: PrestationAssemblageConfig = config ?? { show: true };
   const hasValue = Boolean((projet.prestationAssemblage ?? '').trim());
   const update = (patch: Partial<PrestationAssemblageConfig>) => onChange({ ...pa, ...patch });
 
@@ -409,11 +413,11 @@ function PrestationSection({ projet, config, onChange, containerStyleOverride }:
       <div style={STITLE}>Prestation Assemblage</div>
       <div style={ROW}>
         <button
-          onClick={() => update({ show: !pa.show })}
-          style={radioBtn(pa.show)}
+          onClick={() => update({ show: !isActive })}
+          style={radioBtn(isActive)}
           disabled={!hasValue}
         >
-          {pa.show ? 'Bloc activé' : 'Activer le bloc'}
+          {isActive ? 'Bloc activé' : 'Activer le bloc'}
         </button>
       </div>
       {!hasValue && (
@@ -421,7 +425,7 @@ function PrestationSection({ projet, config, onChange, containerStyleOverride }:
           Champ Airtable « Prestation Assemblage » vide pour ce projet.
         </p>
       )}
-      {pa.show && hasValue && (
+      {isActive && hasValue && (
         <>
           <div style={{ display: 'flex', gap: 4 }}>
             {([1, 2] as const).map(n => (

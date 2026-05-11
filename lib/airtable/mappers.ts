@@ -1,7 +1,7 @@
 import type { Projet, TemplateChoice } from '@/types/projet';
 import { normalizeStatut } from '@/lib/utils/normalize';
 import { parseChiffresCles, parseTagsSiteWeb, formatBudget } from '@/lib/utils/parsers';
-import { formulaValue, selectValue } from './client';
+import { formulaValue } from './client';
 import { autoSelectTemplate, isTemplateChoice } from '@/lib/pdf/selectTemplate';
 import { deserializeProjectConfig, PROJECT_CONFIG_FIELD } from '@/lib/pdf/projectConfig';
 
@@ -150,7 +150,14 @@ export function recordToProjet(record: any, aux?: AuxValues): Projet {
     // sur le nom de colonne 'Pôle' pour rester rétro-compatible.
     pole: aux?.pole ?? f['Pôle'] ?? undefined,
     departement: f['Département'] ?? undefined,
-    rehabNeuf: selectValue(f['Rehab / Neuf']),
+    // Multi-select : on garde toutes les valeurs (joinables) pour distinguer
+    // "Rehab", "Neuf", et "Rehab et Neuf" — la vignette d'en-tête en a besoin.
+    rehabNeuf: (() => {
+      const raw = f['Rehab / Neuf'];
+      if (Array.isArray(raw)) return raw.length > 0 ? raw.join(', ') : undefined;
+      if (typeof raw === 'string' && raw.trim()) return raw;
+      return undefined;
+    })(),
     prestationAssemblage: aux?.prestationAssemblage,
 
     statut: normalizeStatut(f['État avancement']),

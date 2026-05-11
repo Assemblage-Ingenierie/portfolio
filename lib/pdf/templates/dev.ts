@@ -406,12 +406,16 @@ export function renderDev(projet: Projet, configIn?: ManualConfig): TemplateBund
   let prestaHtml = '';
   const presta = cfg.prestationAssemblage;
   const prestaText = (projet.prestationAssemblage ?? '').trim();
-  if (presta?.show && prestaText.length > 0) {
+  // Default = activé sur Dev : `show` undefined → considéré comme `true`.
+  // Pour masquer, l'utilisateur doit explicitement passer `show: false` via
+  // le panneau de config (le toggle écrit show=false dans le payload).
+  const prestaShow = presta?.show !== false;
+  if (prestaShow && prestaText.length > 0) {
     const H_RANGE_MM = 200;
-    const prXMm = ((clampPercent(presta.offsetPercent ?? 50) - 50) / 50) * H_RANGE_MM;
-    const prYMm = ((clampPercent(presta.offsetVerticalPercent ?? 50) - 50) / 50) * V_RANGE_MM;
-    const prStyle = styleToCss(presta.style);
-    const cls = `dev-presta${presta.columns === 2 ? ' dev-presta--2col' : ''}`;
+    const prXMm = ((clampPercent(presta?.offsetPercent ?? 50) - 50) / 50) * H_RANGE_MM;
+    const prYMm = ((clampPercent(presta?.offsetVerticalPercent ?? 50) - 50) / 50) * V_RANGE_MM;
+    const prStyle = styleToCss(presta?.style);
+    const cls = `dev-presta${presta?.columns === 2 ? ' dev-presta--2col' : ''}`;
     prestaHtml = `<section class="${cls}" style="--photo-x-offset:${prXMm}mm; --photo-y-offset:${prYMm}mm${prStyle ? `;${prStyle}` : ''}">
       <div class="dev-presta-title">Prestation Assemblage</div>
       <div class="dev-presta-body">${renderMarkdown(prestaText)}</div>
