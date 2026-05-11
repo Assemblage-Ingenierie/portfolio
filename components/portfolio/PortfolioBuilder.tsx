@@ -61,7 +61,8 @@ export default function PortfolioBuilder({ projets }: Props) {
     return projets.filter(p => {
       if (q) {
         const fields = [p.nom, p.affaire, p.adresse, p.moa, p.architecte, p.pole, p.programme, p.description];
-        if (!fields.some(v => v?.toLowerCase().includes(q))) return false;
+        // Filtre par type — un champ Airtable non-string ferait crasher `.toLowerCase()`.
+        if (!fields.some(v => typeof v === 'string' && v.toLowerCase().includes(q))) return false;
       }
       if (rehabNeuf !== 'Tous') {
         if (!p.rehabNeuf) return false;
