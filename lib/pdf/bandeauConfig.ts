@@ -22,6 +22,8 @@ export interface BandeauStyle {
   underline?: boolean;
   /** Hex (#rrggbb) ou keyword CSS. */
   color?: string;
+  /** Surlignage : couleur de fond derrière le texte. */
+  background?: string;
 }
 
 /** Style des deux lignes horizontales encadrant le bandeau métadonnées. */
@@ -83,6 +85,7 @@ export function styleToCss(style?: BandeauStyle): string {
   if (style.italic) parts.push('font-style:italic');
   if (style.underline) parts.push('text-decoration:underline');
   if (style.color) parts.push(`color:${style.color}`);
+  if (style.background) parts.push(`background:${style.background}`);
   return parts.join(';');
 }
 

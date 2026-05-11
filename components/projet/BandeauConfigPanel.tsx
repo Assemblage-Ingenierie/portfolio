@@ -26,7 +26,7 @@ const INPUT_S: React.CSSProperties = {
 };
 const ROW: React.CSSProperties = {
   display: 'grid',
-  gridTemplateColumns: '110px 90px auto auto',
+  gridTemplateColumns: '110px 90px auto auto auto',
   gap: '8px', alignItems: 'center', marginBottom: '6px',
 };
 const TOGGLE: React.CSSProperties = {
@@ -73,12 +73,21 @@ function StyleRow({ style, onChange }: { style: BandeauStyle; onChange: (s: Band
           value={style.color ?? '#000000'}
           onChange={(e) => set('color', e.target.value)}
           style={{ ...INPUT_S, padding: '2px', height: '32px', cursor: 'pointer' }}
-          title="Couleur"
+          title="Couleur du texte"
+        />
+        <input
+          type="color"
+          value={style.background ?? '#ffffff'}
+          onChange={(e) => set('background', e.target.value)}
+          style={{ ...INPUT_S, padding: '2px', height: '32px', cursor: 'pointer' }}
+          title="Surlignage (fond)"
         />
       </div>
     </div>
   );
 }
+
+export { StyleRow };
 
 export default function BandeauConfigPanel({ value, onChange }: Props) {
   function updateSection(key: keyof BandeauConfig, style: BandeauStyle) {
@@ -88,7 +97,7 @@ export default function BandeauConfigPanel({ value, onChange }: Props) {
       !style.fontFamily &&
       style.fontSize === undefined &&
       !style.bold && !style.italic && !style.underline &&
-      !style.color;
+      !style.color && !style.background;
     const next = { ...value };
     if (isEmpty) {
       delete next[key];

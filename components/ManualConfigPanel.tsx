@@ -1,8 +1,10 @@
 'use client';
 
 import type { Projet } from '@/types/projet';
-import type { ManualConfig, PhotoConfig, PhotoFormat } from '@/lib/pdf/manualConfig';
+import type { ManualConfig, PhotoConfig, PhotoFormat, KeywordsConfig } from '@/lib/pdf/manualConfig';
+import type { BandeauStyle } from '@/lib/pdf/bandeauConfig';
 import { allPhotos } from '@/lib/pdf/templates/shared';
+import { StyleRow } from '@/components/projet/BandeauConfigPanel';
 
 interface Props {
   projet: Projet;
@@ -23,6 +25,14 @@ const STITLE: React.CSSProperties = {
 };
 const ROW: React.CSSProperties = { display: 'flex', gap: 6, alignItems: 'center', fontSize: '9pt' };
 const SUBROW: React.CSSProperties = { ...ROW, paddingLeft: 8, borderLeft: '2px solid #DFE4E8' };
+
+const radioBtn = (active: boolean): React.CSSProperties => ({
+  padding: '4px 10px', borderRadius: 2, cursor: 'pointer',
+  fontFamily: 'var(--sans)', fontSize: '8pt', fontWeight: 700,
+  background: active ? 'var(--ai-violet)' : 'white',
+  color: active ? 'white' : 'var(--ai-noir70)',
+  border: active ? 'none' : '1px solid #DFE4E8',
+});
 
 interface SliderProps {
   label: string;
@@ -110,13 +120,6 @@ export default function ManualConfigPanel({ projet, config, onChange }: Props) {
     onChange({ ...config, extraPhotos: next });
   };
 
-  const radioBtn = (active: boolean): React.CSSProperties => ({
-    padding: '4px 10px', borderRadius: 2, cursor: 'pointer',
-    fontFamily: 'var(--sans)', fontSize: '8pt', fontWeight: 700,
-    background: active ? 'var(--ai-violet)' : 'white',
-    color: active ? 'white' : 'var(--ai-noir70)',
-    border: active ? 'none' : '1px solid #DFE4E8',
-  });
   const select: React.CSSProperties = {
     flex: 1, padding: '4px 6px', fontSize: '9pt',
     border: '1px solid #DFE4E8', borderRadius: 2, background: 'white',
@@ -210,7 +213,7 @@ export default function ManualConfigPanel({ projet, config, onChange }: Props) {
       </div>
 
       {/* PHOTOS ADDITIONNELLES */}
-      <div style={LAST_SECTION}>
+      <div style={SECTION}>
         <div style={STITLE}>Photo{extras.length > 1 ? 's' : ''} additionnelle{extras.length > 1 ? 's' : ''}</div>
         <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
           <button onClick={toggleExtras} style={radioBtn(extras.length > 0)}>
@@ -264,6 +267,81 @@ export default function ManualConfigPanel({ projet, config, onChange }: Props) {
           </div>
         ))}
       </div>
+
+      {/* MOTS-CLÉS — liste flottante optionnelle (à droite des photos additionnelles) */}
+      <KeywordsSection
+        projet={projet}
+        config={config.keywords}
+        onChange={(kw) => onChange({ ...config, keywords: kw })}
+      />
+    </div>
+  );
+}
+
+interface KeywordsSectionProps {
+  projet: Projet;
+  config: KeywordsConfig | undefined;
+  onChange: (next: KeywordsConfig) => void;
+}
+
+function KeywordsSection({ projet, config, onChange }: KeywordsSectionProps) {
+  const kw = config ?? { show: false };
+  const hasMotsCles = projet.motsCles && projet.motsCles.length > 0;
+  const update = (patch: Partial<KeywordsConfig>) => onChange({ ...kw, ...patch });
+
+  return (
+    <div style={LAST_SECTION}>
+      <div style={STITLE}>Mots-clés</div>
+      <div style={ROW}>
+        <button
+          onClick={() => update({ show: !kw.show })}
+          style={radioBtn(kw.show)}
+          disabled={!hasMotsCles}
+        >
+          {kw.show ? 'Liste activée' : 'Activer la liste'}
+        </button>
+      </div>
+      {!hasMotsCles && (
+        <p style={{ fontSize: '8pt', color: 'var(--ai-noir70)', margin: 0 }}>
+          Aucun mot-clé renseigné côté Airtable pour ce projet.
+        </p>
+      )}
+      {hasMotsCles && (
+        <p style={{ fontSize: '8pt', color: 'var(--ai-noir70)', margin: '4px 0 0' }}>
+          {projet.motsCles.length} mot{projet.motsCles.length > 1 ? 's' : ''}-clé{projet.motsCles.length > 1 ? 's' : ''} : {projet.motsCles.join(', ')}
+        </p>
+      )}
+      {kw.show && hasMotsCles && (
+        <>
+          <Slider
+            label="Horizontal"
+            value={kw.offsetPercent ?? 50}
+            onChange={(v) => update({ offsetPercent: v })}
+            min={0} max={100} step={5}
+          />
+          <Slider
+            label="Vertical"
+            value={kw.offsetVerticalPercent ?? 50}
+            onChange={(v) => update({ offsetVerticalPercent: v })}
+            min={0} max={100} step={5}
+          />
+          <div style={{ marginTop: 6 }}>
+            <label style={{ display: 'block', fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 6 }}>
+              Mise en page
+            </label>
+            <StyleRow
+              style={(kw.style ?? {}) as BandeauStyle}
+              onChange={(st) => {
+                const isEmpty =
+                  !st.fontFamily && st.fontSize === undefined &&
+                  !st.bold && !st.italic && !st.underline &&
+                  !st.color && !st.background;
+                update({ style: isEmpty ? undefined : st });
+              }}
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 }

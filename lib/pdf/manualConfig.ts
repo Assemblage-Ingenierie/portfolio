@@ -24,11 +24,29 @@ export interface PhotoConfig {
   offsetVerticalPercent?: number;
 }
 
+/**
+ * Liste flottante de mots-clés affichée en superposition sur la fiche.
+ * Source : `Projet.motsCles` (= champ Airtable "Mots-clés"). La config ici
+ * contrôle uniquement l'affichage et la position dans le template Manuel.
+ */
+export interface KeywordsConfig {
+  /** Affiche la liste sur la fiche. Default = false. */
+  show: boolean;
+  /** Décalage horizontal 0..100 (50 = neutre, ancre = droite de la page). */
+  offsetPercent?: number;
+  /** Décalage vertical 0..100 (50 = neutre, mappé sur ±V_RANGE_MM). */
+  offsetVerticalPercent?: number;
+  /** Surcharges typographiques (police, taille, B/I/U, couleur, surlignage). */
+  style?: import('./bandeauConfig').BandeauStyle;
+}
+
 export interface ManualConfig {
   mainPhotoFormat: PhotoFormat;
   mainPhoto: PhotoConfig;
   /** Uniquement utilisé en format portrait (2 photos côte à côte). */
   mainPhoto2?: PhotoConfig;
+  /** Liste flottante de mots-clés (optionnelle, superposition). */
+  keywords?: KeywordsConfig;
   textColumns: 1 | 2;
   /** % du texte total à afficher en col 1 (0..100). Le point de coupure exact
    *  est calé sur le "." le plus proche de cette position. */

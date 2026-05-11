@@ -1,5 +1,6 @@
 import type { Projet } from '@/types/projet';
 import { renderMarkdown } from '@/lib/utils/markdown';
+import { styleToCss } from '@/lib/pdf/bandeauConfig';
 import {
   TemplateBundle,
   headerHtml, footerHtml, titleBlockHtml, metaGridHtml,
@@ -136,6 +137,39 @@ const CSS = `
   max-width: 100%;
   max-height: var(--extra-cell-max, 60mm);
   object-fit: contain;
+}
+
+/* ── Liste flottante de mots-clés ──────────────────────
+   Position absolue ancrée à droite, haut de la zone utile (sous le bandeau).
+   Sliders X/Y déplacent depuis cet ancrage. z-index très élevé : passe
+   au-dessus de tout autre contenu (photos, texte, bandeau). */
+.man-keywords {
+  position: absolute;
+  top: 80mm;
+  right: 12mm;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  z-index: 100;
+  transform: translate(
+    var(--photo-x-offset, 0%),
+    var(--photo-y-offset, 0mm)
+  );
+}
+.man-keywords > li {
+  display: block;
+  margin: 0 0 1mm 0;
+  list-style: none;
+}
+/* Chaque "tag" : inline-block pour que le surlignage (background) reste
+   collé au texte, ne s'étende pas sur toute la largeur du <li>. */
+.man-kw-item {
+  display: inline-block;
+  font-family: var(--sans);
+  font-size: 9pt;
+  line-height: 1.4;
+  color: var(--ai-noir);
+  padding: 0.5mm 2mm;
 }
 `;
 
@@ -291,6 +325,22 @@ export function renderManuel(projet: Projet, configIn?: ManualConfig): TemplateB
     extraHtml = `<div class="man-extra-grid" style="grid-template-columns:repeat(${extraPhotos.length},1fr);">${cells}</div>`;
   }
 
+  // ── Liste flottante de mots-clés (superposition, z-index max) ──
+  // Ancrée en haut/droite de la page utile ; les sliders X/Y la déplacent
+  // de là. Passe au-dessus de tout (photos, texte, bandeau) — l'utilisateur
+  // ajuste manuellement les sliders en cas de chevauchement gênant.
+  let keywordsHtml = '';
+  const kw = cfg.keywords;
+  if (kw?.show && projet.motsCles && projet.motsCles.length > 0) {
+    const kwXPct = clampPercent(kw.offsetPercent ?? 50) - 50;
+    const kwYMm = ((clampPercent(kw.offsetVerticalPercent ?? 50) - 50) / 50) * V_RANGE_MM;
+    const kwStyle = styleToCss(kw.style);
+    const items = projet.motsCles
+      .map((m) => `<li><span class="man-kw-item"${kwStyle ? ` style="${kwStyle}"` : ''}>${m}</span></li>`)
+      .join('');
+    keywordsHtml = `<ul class="man-keywords" style="--photo-x-offset:${kwXPct}%; --photo-y-offset:${kwYMm}mm">${items}</ul>`;
+  }
+
   const body = `<article class="page man-page">
     ${headerHtml(projet)}
     ${titleBlockHtml(projet, '26pt')}
@@ -298,6 +348,7 @@ export function renderManuel(projet: Projet, configIn?: ManualConfig): TemplateB
     ${photosHtml}
     ${textHtml}
     ${extraHtml}
+    ${keywordsHtml}
     ${footerHtml(projet)}
   </article>`;
 
