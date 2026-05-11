@@ -125,7 +125,10 @@ export default function PortfolioGrid({ projets }: Props) {
           ...p.certifications, ...p.motsCles, ...p.tagsSiteWeb,
           p.chiffresCles?.map(c => `${c.label} ${c.valeur}`).join(' '),
         ];
-        if (!textFields.some(v => v?.toLowerCase().includes(q))) return false;
+        // `v?.toLowerCase()` ne protège que contre null/undefined : si Airtable
+        // renvoie un nombre ou autre non-string dans un de ces champs, on
+        // plante avec "e?.toLowerCase is not a function". On filtre par type.
+        if (!textFields.some(v => typeof v === 'string' && v.toLowerCase().includes(q))) return false;
       }
       if (rehabNeuf !== 'Tous') {
         if (!p.rehabNeuf) return false;
