@@ -21,8 +21,8 @@ export default function ProjetView({ projet, isPrint }: Props) {
 
   async function handleTemplateChange(newTemplate: TemplateChoice) {
     setTemplate(newTemplate);
-    // 'Manuel' n'est pas persisté en Airtable (pas dans les options du champ Template).
-    if (newTemplate === 'Manuel') return;
+    // 'Manuel' / 'Dev' ne sont pas persistés en Airtable (pas dans les options du champ Template).
+    if (newTemplate === 'Manuel' || newTemplate === 'Dev') return;
     try {
       await authedFetch(`/api/projet/${projet.slug}/fields`, {
         method: 'PATCH',
@@ -37,7 +37,7 @@ export default function ProjetView({ projet, isPrint }: Props) {
   // En template Manuel (hors print), on bascule sur un layout 3 colonnes :
   // panneau gauche (Photos additionnelles + Mots-clés) | aperçu | panneau
   // droit (Photo principale + Texte description).
-  const isManualLayout = !isPrint && template === 'Manuel';
+  const isManualLayout = !isPrint && (template === 'Manuel' || template === 'Dev');
 
   return (
     <>
