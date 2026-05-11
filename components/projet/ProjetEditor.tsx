@@ -6,7 +6,7 @@ import type { Projet, TemplateChoice } from '@/types/projet';
 import { TEMPLATE_OPTIONS } from '@/types/projet';
 import TemplatePreview from '@/components/TemplatePreview';
 import Link from 'next/link';
-import { authHeaders } from '@/lib/supabase/authHeaders';
+import { authedFetch } from '@/lib/supabase/authHeaders';
 import RichTextEditor from './RichTextEditor';
 import BandeauConfigPanel from './BandeauConfigPanel';
 import type { BandeauConfig } from '@/lib/pdf/bandeauConfig';
@@ -91,9 +91,9 @@ export default function ProjetEditor({ projet }: Props) {
     setSaveStatus('saving');
     setSaveMsg('');
     try {
-      const res = await fetch(`/api/projet/${projet.slug}/fields`, {
+      const res = await authedFetch(`/api/projet/${projet.slug}/fields`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           nom: nom || undefined,
           adresse: adresse || undefined,
