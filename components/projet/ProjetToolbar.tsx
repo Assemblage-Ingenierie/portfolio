@@ -61,7 +61,7 @@ export default function ProjetToolbar({ projet, template, manualConfig, onTempla
 
   async function handleDownloadPdf() {
     const params = new URLSearchParams({ template });
-    if (template === 'Manuel' && manualConfig) {
+    if ((template === 'Manuel' || template === 'Dev') && manualConfig) {
       params.set('config', encodeConfig(manualConfig));
     }
     window.open(`/projet/${projet.slug}/print?${params.toString()}`, '_blank');
@@ -94,7 +94,7 @@ export default function ProjetToolbar({ projet, template, manualConfig, onTempla
       >
         Modifier
       </Link>
-      {template === 'Manuel' && (
+      {(template === 'Manuel' || template === 'Dev') && (
         <button
           onClick={handleSaveLayout}
           disabled={saveState === 'saving' || !manualConfig}

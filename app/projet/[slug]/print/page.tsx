@@ -34,8 +34,8 @@ export default async function PrintPage({
     ? { ...projet, template: templateOverride }
     : projet;
 
-  // Si template === 'Manuel' et qu'une config est fournie, on la décode.
-  const manualConfig = effectiveProjet.template === 'Manuel' && configRaw
+  // Si template === 'Manuel' ou 'Dev' et qu'une config est fournie, on la décode.
+  const manualConfig = (effectiveProjet.template === 'Manuel' || effectiveProjet.template === 'Dev') && configRaw
     ? decodeConfig(configRaw) ?? undefined
     : undefined;
 
