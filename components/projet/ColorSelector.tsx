@@ -24,12 +24,14 @@ export const COLOR_PRESETS: ReadonlyArray<ColorPreset> = [
 
 interface Props {
   value: string | undefined;
-  onChange: (color: string) => void;
+  onChange: (color: string | undefined) => void;
   /** Valeur affichée dans le picker quand `value` est undefined. */
   fallback?: string;
   disabled?: boolean;
   /** Titre du picker personnalisé (HTML title attr). */
   customTitle?: string;
+  /** Si true, ajoute un swatch "aucun remplissage" qui passe la valeur à undefined. */
+  allowNone?: boolean;
 }
 
 const SWATCH: React.CSSProperties = {
@@ -64,12 +66,29 @@ function isPreset(value: string | undefined): boolean {
   return COLOR_PRESETS.some((p) => p.value.toLowerCase() === v);
 }
 
-export default function ColorSelector({ value, onChange, fallback = '#000000', disabled, customTitle }: Props) {
+export default function ColorSelector({ value, onChange, fallback = '#000000', disabled, customTitle, allowNone }: Props) {
   const lower = value?.toLowerCase();
   const valueIsCustom = !!value && !isPreset(value);
+  const noneActive = allowNone && value === undefined;
 
   return (
     <div style={{ display: 'flex', gap: '2px', alignItems: 'center', flexWrap: 'wrap', opacity: disabled ? 0.4 : 1 }}>
+      {allowNone && (
+        <button
+          type="button"
+          onClick={() => !disabled && onChange(undefined)}
+          disabled={disabled}
+          title="Aucun remplissage"
+          aria-label="Aucun remplissage"
+          style={{
+            ...(noneActive ? SWATCH_ACTIVE : SWATCH),
+            // Carré blanc avec une diagonale rouge — convention universelle "transparent"
+            background:
+              'linear-gradient(to top right, transparent calc(50% - 1px), #E30513 calc(50% - 0.5px), #E30513 calc(50% + 0.5px), transparent calc(50% + 1px)), white',
+            cursor: disabled ? 'not-allowed' : 'pointer',
+          }}
+        />
+      )}
       {COLOR_PRESETS.map((p) => {
         const active = lower === p.value.toLowerCase();
         return (

@@ -82,7 +82,13 @@ function StyleRow({ style, onChange }: { style: BandeauStyle; onChange: (s: Band
           <span>Texte</span>
           <ColorSelector value={style.color} onChange={(c) => set('color', c)} customTitle="Couleur de texte personnalisée" />
           <span>Fond</span>
-          <ColorSelector value={style.background} onChange={(c) => set('background', c)} fallback="#ffffff" customTitle="Couleur de surlignage personnalisée" />
+          <ColorSelector
+            value={style.background}
+            onChange={(c) => set('background', c)}
+            fallback="#ffffff"
+            customTitle="Couleur de surlignage personnalisée"
+            allowNone
+          />
         </div>
       </div>
     </div>
