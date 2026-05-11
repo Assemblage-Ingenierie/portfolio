@@ -5,6 +5,7 @@ import {
   photoImg, allPhotos,
 } from './shared';
 import { renderMarkdown } from '@/lib/utils/markdown';
+import { styleToCss } from '@/lib/pdf/bandeauConfig';
 
 /**
  * Triptyque : layout adaptatif selon le ratio de la 1ʳᵉ photo.
@@ -212,8 +213,9 @@ export function renderTriptyque(projet: Projet): TemplateBundle {
   const extraPhotoCandidate = isPaysage ? p2 : p3;
   const extraPhoto = extraPhotoMaxHeight > 0 ? extraPhotoCandidate : undefined;
 
+  const descStyle = styleToCss(projet.bandeauConfig?.description);
   const textHtml = description || extraPhoto
-    ? `<div class="tri-text t-texte-md">
+    ? `<div class="tri-text t-texte-md"${descStyle ? ` style="${descStyle}"` : ''}>
         ${renderMarkdown(description)}
         ${extraPhoto ? `<div class="tri-extra-photo photo-frame" style="--extra-photo-max:${extraPhotoMaxHeight}mm">${photoImg(extraPhoto, projet.nom)}</div>` : ''}
       </div>`

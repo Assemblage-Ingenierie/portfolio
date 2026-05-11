@@ -8,11 +8,12 @@ interface Props {
   onChange: (next: BandeauConfig) => void;
 }
 
-const SECTIONS: { key: keyof BandeauConfig; label: string; help: string }[] = [
-  { key: 'titre',  label: 'Titre de la fiche',           help: 'Le nom du projet (titre principal h1).' },
-  { key: 'status', label: 'Statut (en haut à droite)',   help: '"● Livré · 2025"' },
-  { key: 'labels', label: 'Libellés du bandeau',         help: '"Architecte", "Budget", "Surface"…' },
-  { key: 'values', label: 'Valeurs du bandeau',          help: '"Encore Heureux", "8,2 M€ HT", "4 242 m²"…' },
+const SECTIONS: { key: Exclude<keyof BandeauConfig, 'lines'>; label: string; help: string }[] = [
+  { key: 'titre',       label: 'Titre de la fiche',           help: 'Le nom du projet (titre principal h1).' },
+  { key: 'status',      label: 'Statut (en haut à droite)',   help: '"● Livré · 2025"' },
+  { key: 'labels',      label: 'Libellés du bandeau',         help: '"Architecte", "Budget", "Surface"…' },
+  { key: 'values',      label: 'Valeurs du bandeau',          help: '"Encore Heureux", "8,2 M€ HT", "4 242 m²"…' },
+  { key: 'description', label: 'Description projet',          help: 'Le texte courant de la fiche (paragraphes Markdown). Appliqué sur tous les templates.' },
 ];
 
 const LABEL_S: React.CSSProperties = {
@@ -98,7 +99,7 @@ function StyleRow({ style, onChange }: { style: BandeauStyle; onChange: (s: Band
 export { StyleRow };
 
 export default function BandeauConfigPanel({ value, onChange }: Props) {
-  function updateSection(key: keyof BandeauConfig, style: BandeauStyle) {
+  function updateSection(key: Exclude<keyof BandeauConfig, 'lines'>, style: BandeauStyle) {
     // Si toutes les propriétés sont vides, on retire la section pour garder
     // la config minimale et utiliser les défauts CSS du template.
     const isEmpty =

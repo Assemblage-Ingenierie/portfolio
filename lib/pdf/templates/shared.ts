@@ -71,6 +71,16 @@ html, body { background: white; }
   object-fit: contain;
 }
 
+/* Wrapper bandeau (Manuel / Dev uniquement) : regroupe header + titre +
+   meta-grid pour leur appliquer un translateY commun via slider. Préserve
+   l'espacement interne 4mm identique au flex .man-page / .dev-page. */
+.t-bandeau-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4mm;
+  flex: 0 0 auto;
+}
+
 /* Header / Footer communs */
 .t-header {
   display: flex;
@@ -99,6 +109,15 @@ html, body { background: white; }
 .t-header-vignette--inactive {
   filter: grayscale(100%) brightness(0.85);
   opacity: 0.70;
+}
+/* Libellé Réhabilitation / Neuf à droite de la vignette correspondante */
+.t-header-rn-label {
+  font-family: var(--sans);
+  font-size: 10pt;
+  font-weight: 600;
+  color: var(--ai-noir);
+  letter-spacing: 0.02em;
+  margin-left: 1mm;
 }
 .t-header-meta {
   font-size: 9pt; font-weight: 400;
@@ -208,6 +227,16 @@ const VIGNETTES: ReadonlyArray<{ code: string; colored: string; blanc: string }>
   { code: 'DEV', colored: `${VIGNETTE_BASE}/Dev.png`, blanc: `${VIGNETTE_BASE}/Dev_Blanc.png` },
 ];
 
+// Vignette Rehab / Neuf — affichée à droite des 3 vignettes pôle, suivie du
+// libellé "Réhabilitation" ou "Neuf". `Rehab et Neuf` priorise la vignette
+// rehab (le projet a une part de réhabilitation, c'est l'info la plus
+// distinctive). Les fichiers PNG (filename historique : "rehabililtation"
+// avec triple 'i') sont hébergés dans le même bucket Supabase Storage.
+const REHAB_NEUF_VIGNETTE: Record<'rehab' | 'neuf', { url: string; label: string }> = {
+  rehab: { url: `${VIGNETTE_BASE}/rehabililtation.png`, label: 'Réhabilitation' },
+  neuf:  { url: `${VIGNETTE_BASE}/neuf.png`,           label: 'Neuf' },
+};
+
 export function headerHtml(projet: Projet): string {
   // Année placée dans le bandeau de statut, à la suite de l'état du chantier.
   const annee = projet.anneeLivraison ? ` · ${esc(String(projet.anneeLivraison))}` : '';
@@ -218,9 +247,22 @@ export function headerHtml(projet: Projet): string {
     const cls = active ? 't-header-vignette' : 't-header-vignette t-header-vignette--inactive';
     return `<img class="${cls}" src="${url}" alt="${v.code}" />`;
   }).join('');
+
+  // Vignette Rehab/Neuf conditionnelle (cf. RehabNeuf champ multi-select).
+  // "Rehab et Neuf" → vignette rehab. La vignette n'est rendue que si une
+  // valeur reconnue est présente — sinon, comportement historique inchangé.
+  const rn = (projet.rehabNeuf ?? '').toLowerCase();
+  const hasRehab = rn.includes('rehab') || rn.includes('réhab');
+  const hasNeuf = rn.includes('neuf');
+  const rehabNeufKey = hasRehab ? 'rehab' : hasNeuf ? 'neuf' : null;
+  const rehabNeufHtml = rehabNeufKey
+    ? `<img class="t-header-vignette" src="${REHAB_NEUF_VIGNETTE[rehabNeufKey].url}" alt="${REHAB_NEUF_VIGNETTE[rehabNeufKey].label}" />
+       <span class="t-header-rn-label">${REHAB_NEUF_VIGNETTE[rehabNeufKey].label}</span>`
+    : '';
+
   const statusStyle = styleToCss(projet.bandeauConfig?.status);
   return `<header class="t-header">
-    <div class="t-header-vignettes">${vignettes}</div>
+    <div class="t-header-vignettes">${vignettes}${rehabNeufHtml}</div>
     <div class="t-header-statut"${statusStyle ? ` style="${statusStyle}"` : ''}>● ${esc(projet.statut)}${annee}</div>
   </header>`;
 }
@@ -302,13 +344,18 @@ export function descriptionHtml(projet: Projet, columns: 1 | 2 = 1, singleParagr
   const text = (projet.description ?? '').trim();
   if (!text) return '';
 
+  // Surcharge typographique (police, taille, B/I/U, couleur, surlignage) du
+  // bloc description. Appliquée sur le wrapper — héritée par <p>/<li>/<a>…
+  const descStyle = styleToCss(projet.bandeauConfig?.description);
+  const styleAttr = descStyle ? ` style="${descStyle}"` : '';
+
   if (singleParagraph) {
     const flat = text.replace(/\s*\n+\s*/g, ' ');
-    return `<div class="t-texte-md t-texte-md--inline">${renderMarkdown(flat)}</div>`;
+    return `<div class="t-texte-md t-texte-md--inline"${styleAttr}>${renderMarkdown(flat)}</div>`;
   }
 
   const cls = columns === 2 ? 't-texte-md t-texte-cols-2' : 't-texte-md';
-  return `<div class="${cls}">${renderMarkdown(text)}</div>`;
+  return `<div class="${cls}"${styleAttr}>${renderMarkdown(text)}</div>`;
 }
 
 export function photoImg(photo: { url: string; filename?: string }, alt = ''): string {

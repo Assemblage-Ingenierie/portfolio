@@ -1,7 +1,7 @@
 import type { Projet } from '@/types/projet';
 import { cacheTag } from 'next/cache';
 import { base, TABLE } from './client';
-import { recordToProjet, type AuxValues, FIELD_PROGRAMME_PRINCIPAL, FIELD_PROGRAMME_SECONDAIRE, FIELD_POLE } from './mappers';
+import { recordToProjet, type AuxValues, FIELD_PROGRAMME_PRINCIPAL, FIELD_PROGRAMME_SECONDAIRE, FIELD_POLE, FIELD_PRESTATION_ASSEMBLAGE } from './mappers';
 import { fetchCrmNames } from './crm';
 
 export const PROJETS_TAG = 'projets';
@@ -45,25 +45,34 @@ function extractIds(v: any): string[] {
  *
  * Tolérante aux erreurs (renvoie une map vide plutôt que de propager).
  */
+interface AuxByFieldId {
+  principal?: string;
+  secondaire?: string;
+  pole?: string;
+  prestationAssemblage?: string;
+}
+
 async function fetchAuxByFieldId(
   filterFormula?: string,
-): Promise<Map<string, { principal?: string; secondaire?: string; pole?: string }>> {
-  const map = new Map<string, { principal?: string; secondaire?: string; pole?: string }>();
+): Promise<Map<string, AuxByFieldId>> {
+  const map = new Map<string, AuxByFieldId>();
   try {
     const records = await base(TABLE)
       .select({
         ...STRING_FORMAT,
-        fields: [FIELD_PROGRAMME_PRINCIPAL, FIELD_PROGRAMME_SECONDAIRE, FIELD_POLE],
+        fields: [FIELD_PROGRAMME_PRINCIPAL, FIELD_PROGRAMME_SECONDAIRE, FIELD_POLE, FIELD_PRESTATION_ASSEMBLAGE],
         returnFieldsByFieldId: true,
         ...(filterFormula ? { filterByFormula: filterFormula } : {}),
       })
       .all();
     records.forEach((r) => {
       const poleRaw = r.fields[FIELD_POLE];
+      const prestaRaw = r.fields[FIELD_PRESTATION_ASSEMBLAGE];
       map.set(r.id, {
         principal: firstValue(r.fields[FIELD_PROGRAMME_PRINCIPAL]),
         secondaire: firstValue(r.fields[FIELD_PROGRAMME_SECONDAIRE]),
         pole: typeof poleRaw === 'string' && poleRaw.trim() ? poleRaw.trim() : undefined,
+        prestationAssemblage: typeof prestaRaw === 'string' && prestaRaw.trim() ? prestaRaw : undefined,
       });
     });
   } catch (err) {
@@ -111,6 +120,7 @@ export async function getProjets(): Promise<Projet[]> {
         programmePrincipal: prog?.principal,
         programmeSecondaire: prog?.secondaire,
         pole: prog?.pole,
+        prestationAssemblage: prog?.prestationAssemblage,
         crmNames,
       };
       return recordToProjet(r, aux);
@@ -158,6 +168,7 @@ export async function getProjet(slug: string): Promise<Projet | null> {
       programmePrincipal: p?.principal,
       programmeSecondaire: p?.secondaire,
       pole: p?.pole,
+      prestationAssemblage: p?.prestationAssemblage,
       crmNames,
     };
     return recordToProjet(r, aux);

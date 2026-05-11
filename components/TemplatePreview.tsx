@@ -56,9 +56,17 @@ export default function TemplatePreview({
               })
         ));
         if (cancelled) return;
+        // Double rAF : 1er pour laisser le navigateur appliquer le layout
+        // après le re-render de l'iframe (changement de slider) ; 2e pour
+        // que les sub-pixel arrondis du letterboxing `object-fit:contain`
+        // soient finalisés avant la mesure. Sans ça, on lit un état
+        // intermédiaire et la mesure peut surestimer le débordement.
         raf = requestAnimationFrame(() => {
           if (cancelled) return;
-          setOverflow(measureOverflow(doc));
+          raf = requestAnimationFrame(() => {
+            if (cancelled) return;
+            setOverflow(measureOverflow(doc));
+          });
         });
       } catch {
         // L'iframe peut être cross-origin dans certains cas (jamais ici car

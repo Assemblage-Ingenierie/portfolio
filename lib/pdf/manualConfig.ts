@@ -50,6 +50,25 @@ export interface KeywordsConfig {
   style?: import('./bandeauConfig').BandeauStyle;
 }
 
+/**
+ * Bloc "Prestation Assemblage" — exclusif au template Dev. Affiche le
+ * titre + la valeur (Markdown rich text) du champ Airtable
+ * "Prestation Assemblage" (field id flddrMLBDxOc8r4lJ). Position
+ * superposée comme la liste de mots-clés, avec sliders H/V identiques.
+ */
+export interface PrestationAssemblageConfig {
+  /** Affiche le bloc sur la fiche. Default = false. */
+  show: boolean;
+  /** Nombre de colonnes pour le texte rich text (1 ou 2). Default = 1. */
+  columns?: 1 | 2;
+  /** Décalage horizontal 0..100 (50 = neutre, mappé sur ±H_RANGE_MM côté render). */
+  offsetPercent?: number;
+  /** Décalage vertical 0..100 (50 = neutre, mappé sur ±V_RANGE_MM côté render). */
+  offsetVerticalPercent?: number;
+  /** Surcharges typographiques (police, taille, B/I/U, couleur, surlignage). */
+  style?: import('./bandeauConfig').BandeauStyle;
+}
+
 export interface ManualConfig {
   mainPhotoFormat: PhotoFormat;
   mainPhoto: PhotoConfig;
@@ -57,6 +76,12 @@ export interface ManualConfig {
   mainPhoto2?: PhotoConfig;
   /** Liste flottante de mots-clés (optionnelle, superposition). */
   keywords?: KeywordsConfig;
+  /** Bloc "Prestation Assemblage" (template Dev uniquement). */
+  prestationAssemblage?: PrestationAssemblageConfig;
+  /** Décalage vertical du bandeau (header + titre + meta-grid) en 0..100.
+   *  50 = position neutre (comportement historique en flow). Mappé sur
+   *  ±V_RANGE_MM côté render (mêmes conventions que les sliders photos). */
+  bandeauVerticalOffset?: number;
   textColumns: 1 | 2;
   /** % du texte total à afficher en col 1 (0..100). Le point de coupure exact
    *  est calé sur le "." le plus proche de cette position. */

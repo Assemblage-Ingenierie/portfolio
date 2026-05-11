@@ -41,6 +41,10 @@ export interface Projet {
   departement?: string;
   rehabNeuf?: string;
 
+  /** Champ Airtable "Prestation Assemblage" (field id flddrMLBDxOc8r4lJ) — long
+   *  text rich text (Markdown). Affiché dans un bloc dédié du template Dev. */
+  prestationAssemblage?: string;
+
   statut: Statut;
   template: TemplateChoice;
   visiblePortfolio: boolean;

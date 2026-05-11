@@ -76,23 +76,26 @@ const CSS = `
    La quantité de texte affichée par colonne est contrôlée par les sliders
    col1Percent / col2Percent (% du texte total). Pas de hauteur explicite :
    la colonne s'adapte naturellement au contenu fourni. */
+/* Propriétés héritables (font-family, font-size, color, line-height) sur le
+   wrapper .dev-text — permet à un style inline (bandeauConfig.description)
+   appliqué sur ce wrapper d'être hérité par les <p>/<li>/<a> enfants. */
 .dev-text {
   width: 100%;
-}
-.dev-text p {
+  font-family: var(--sans);
   font-size: 9.5pt;
   line-height: 1.5;
   color: var(--ai-noir);
+}
+.dev-text p {
   margin-bottom: 2.5mm;
   text-align: justify;
   hyphens: auto;
-  font-family: var(--sans);
 }
 .dev-text strong { font-weight: 700; }
 .dev-text em { font-style: italic; }
 .dev-text u { text-decoration: underline; }
 .dev-text a { color: var(--ai-rouge); text-decoration: underline; }
-.dev-text ul, .dev-text ol { margin: 0 0 2.5mm 5mm; padding: 0; font-size: 9.5pt; line-height: 1.5; }
+.dev-text ul, .dev-text ol { margin: 0 0 2.5mm 5mm; padding: 0; }
 .dev-text li { margin-bottom: 0.8mm; }
 .dev-text--2col {
   display: grid;
@@ -171,6 +174,47 @@ const CSS = `
   color: var(--ai-noir);
   padding: 0.5mm 2mm;
 }
+
+/* ── Bloc Prestation Assemblage ────────────────────────
+   Position absolue, ancrage haut-gauche de la zone utile. Sliders X/Y
+   déplacent depuis cet ancrage en mm absolus. Width fixe pour qu'un texte
+   long ne s'étale pas sur toute la largeur. */
+.dev-presta {
+  position: absolute;
+  top: 80mm;
+  left: 18mm;
+  width: 174mm;
+  z-index: 90;
+  font-family: var(--sans);
+  font-size: 9.5pt;
+  line-height: 1.5;
+  color: var(--ai-noir);
+  transform: translate(
+    var(--photo-x-offset, 0mm),
+    var(--photo-y-offset, 0mm)
+  );
+}
+.dev-presta .dev-presta-title {
+  font-family: var(--sans);
+  font-size: 8.5pt;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ai-rouge);
+  margin: 0 0 1.5mm;
+}
+.dev-presta .dev-presta-body p { margin: 0 0 2mm; text-align: justify; hyphens: auto; }
+.dev-presta .dev-presta-body strong { font-weight: 700; }
+.dev-presta .dev-presta-body em { font-style: italic; }
+.dev-presta .dev-presta-body u { text-decoration: underline; }
+.dev-presta .dev-presta-body a { color: var(--ai-rouge); text-decoration: underline; }
+.dev-presta .dev-presta-body ul, .dev-presta .dev-presta-body ol { margin: 0 0 2mm 5mm; padding: 0; }
+.dev-presta--2col .dev-presta-body {
+  column-count: 2;
+  column-gap: 6mm;
+  column-rule: 1px solid var(--ai-gris);
+}
+.dev-presta--2col .dev-presta-body p { break-inside: avoid; }
 `;
 
 function clampPercent(v: number): number {
@@ -285,6 +329,9 @@ export function renderDev(projet: Projet, configIn?: ManualConfig): TemplateBund
   const col1Pct = clampPercent(cfg.textCol1Percent ?? 50);
   const col2Pct = clampPercent(cfg.textCol2Percent ?? 50);
 
+  const descStyle = styleToCss(projet.bandeauConfig?.description);
+  const descAttr = descStyle ? ` style="${descStyle}"` : '';
+
   let textHtml = '';
   if (description.length > 0) {
     if (cfg.textColumns === 1) {
@@ -292,10 +339,10 @@ export function renderDev(projet: Projet, configIn?: ManualConfig): TemplateBund
       const target = (col1Pct / 100) * description.length;
       const cutoff = findSplitIndex(description, target);
       const ps = paragraphsToHtml(description.slice(0, cutoff).trim());
-      textHtml = `<div class="dev-text dev-text--1col">${ps}</div>`;
+      textHtml = `<div class="dev-text dev-text--1col"${descAttr}>${ps}</div>`;
     } else {
       const [leftHtml, rightHtml] = splitDescription(description, col1Pct, col2Pct);
-      textHtml = `<div class="dev-text dev-text--2col">
+      textHtml = `<div class="dev-text dev-text--2col"${descAttr}>
         <div class="dev-col-1">${leftHtml}</div>
         <div class="dev-col-2">${rightHtml}</div>
       </div>`;
@@ -352,14 +399,44 @@ export function renderDev(projet: Projet, configIn?: ManualConfig): TemplateBund
     keywordsHtml = `<ul class="dev-keywords" style="--photo-x-offset:${kwXMm}mm; --photo-y-offset:${kwYMm}mm">${items}</ul>`;
   }
 
+  // ── Bloc "Prestation Assemblage" (superposition optionnelle) ──
+  // Affiche le titre + la valeur Markdown du champ Airtable
+  // "Prestation Assemblage" (lu par field ID). Position absolue,
+  // ancrée haut-gauche ; sliders X/Y déplacent en mm absolus.
+  let prestaHtml = '';
+  const presta = cfg.prestationAssemblage;
+  const prestaText = (projet.prestationAssemblage ?? '').trim();
+  // Default = activé sur Dev : `show` undefined → considéré comme `true`.
+  // Pour masquer, l'utilisateur doit explicitement passer `show: false` via
+  // le panneau de config (le toggle écrit show=false dans le payload).
+  const prestaShow = presta?.show !== false;
+  if (prestaShow && prestaText.length > 0) {
+    const H_RANGE_MM = 200;
+    const prXMm = ((clampPercent(presta?.offsetPercent ?? 50) - 50) / 50) * H_RANGE_MM;
+    const prYMm = ((clampPercent(presta?.offsetVerticalPercent ?? 50) - 50) / 50) * V_RANGE_MM;
+    const prStyle = styleToCss(presta?.style);
+    const cls = `dev-presta${presta?.columns === 2 ? ' dev-presta--2col' : ''}`;
+    prestaHtml = `<section class="${cls}" style="--photo-x-offset:${prXMm}mm; --photo-y-offset:${prYMm}mm${prStyle ? `;${prStyle}` : ''}">
+      <div class="dev-presta-title">Prestation Assemblage</div>
+      <div class="dev-presta-body">${renderMarkdown(prestaText)}</div>
+    </section>`;
+  }
+
+  // Décalage vertical du bandeau (slider 0..100 → ±V_RANGE_MM). 50 = neutre.
+  const bandeauYMm = ((clampPercent(cfg.bandeauVerticalOffset ?? 50) - 50) / 50) * V_RANGE_MM;
+  const bandeauStyle = bandeauYMm !== 0 ? ` style="transform:translateY(${bandeauYMm}mm)"` : '';
+
   const body = `<article class="page dev-page">
-    ${headerHtml(projet)}
-    ${titleBlockHtml(projet, '26pt')}
-    ${metaGridHtml(projet)}
+    <div class="t-bandeau-wrap"${bandeauStyle}>
+      ${headerHtml(projet)}
+      ${titleBlockHtml(projet, '26pt')}
+      ${metaGridHtml(projet)}
+    </div>
     ${photosHtml}
     ${textHtml}
     ${extraHtml}
     ${keywordsHtml}
+    ${prestaHtml}
     ${footerHtml(projet)}
   </article>`;
 
