@@ -30,6 +30,8 @@ export interface ProjetEditableFields {
   template?: string;
   certifications?: string[];
   motsCles?: string[];
+  /** Champ rich text long "Prestation Assemblage" (field id flddrMLBDxOc8r4lJ). */
+  prestationAssemblage?: string;
   savedManualConfig?: ManualConfig;
   bandeauConfig?: BandeauConfig;
 }
@@ -65,6 +67,7 @@ export async function updateProjetFields(slug: string, fields: ProjetEditableFie
   if (fields.template !== undefined)       update['Template']           = fields.template;
   if (fields.certifications !== undefined) update['Certification']      = fields.certifications.join('\n');
   if (fields.motsCles !== undefined)       update['Mots-clés']          = fields.motsCles.join(', ');
+  if (fields.prestationAssemblage !== undefined) update['Prestation Assemblage'] = fields.prestationAssemblage;
   // Config unifiée (bandeau + manuel) dans le même champ Airtable. On lit
   // l'existant pour merger correctement quand l'API ne reçoit qu'une des
   // deux sous-configs (ex. update bandeau seul ne doit pas effacer manuel).

@@ -49,6 +49,9 @@ export interface BandeauConfig {
    *  et font-size aux <p>/<li>/<a>/<strong>/<em> de la description sur les
    *  4 templates (Solo, Diptyque, Triptyque, Manuel/Dev). */
   description?: BandeauStyle;
+  /** Bloc "Prestation Assemblage" — uniquement rendu sur le template Dev,
+   *  mais le style est défini ici pour cohérence avec Description projet. */
+  prestationAssemblage?: BandeauStyle;
   /** Lignes horizontales qui encadrent le bandeau métadonnées. */
   lines?: BandeauLinesStyle;
 }

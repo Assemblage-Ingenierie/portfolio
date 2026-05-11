@@ -14,6 +14,7 @@ const SECTIONS: { key: Exclude<keyof BandeauConfig, 'lines'>; label: string; hel
   { key: 'labels',      label: 'Libellés du bandeau',         help: '"Architecte", "Budget", "Surface"…' },
   { key: 'values',      label: 'Valeurs du bandeau',          help: '"Encore Heureux", "8,2 M€ HT", "4 242 m²"…' },
   { key: 'description', label: 'Description projet',          help: 'Le texte courant de la fiche (paragraphes Markdown). Appliqué sur tous les templates.' },
+  { key: 'prestationAssemblage', label: 'Prestation Assemblage', help: 'Bloc rich text dédié, rendu uniquement par le template Dev (titre + valeur).' },
 ];
 
 const LABEL_S: React.CSSProperties = {
