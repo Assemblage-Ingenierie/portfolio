@@ -49,8 +49,13 @@ export default function LoginContent() {
     <div className={styles.page}>
       <div className={styles.card}>
         <div className={styles.logo}>
-          <span className={styles.logoText}>Assemblage ingénierie</span>
-          <span className={styles.logoDot}>·A</span>
+          {/* Logo Assemblage ingénierie servi depuis Supabase Storage (bucket Branding public) */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            className={styles.logoImg}
+            src="https://hhkofvbptnrtwbazftlm.supabase.co/storage/v1/object/public/Branding/logo/logo_Ai_rouge_HD.png"
+            alt="Assemblage ingénierie"
+          />
         </div>
         <h1 className={styles.title}>Portfolio</h1>
 
