@@ -302,13 +302,18 @@ export function descriptionHtml(projet: Projet, columns: 1 | 2 = 1, singleParagr
   const text = (projet.description ?? '').trim();
   if (!text) return '';
 
+  // Surcharge typographique (police, taille, B/I/U, couleur, surlignage) du
+  // bloc description. Appliquée sur le wrapper — héritée par <p>/<li>/<a>…
+  const descStyle = styleToCss(projet.bandeauConfig?.description);
+  const styleAttr = descStyle ? ` style="${descStyle}"` : '';
+
   if (singleParagraph) {
     const flat = text.replace(/\s*\n+\s*/g, ' ');
-    return `<div class="t-texte-md t-texte-md--inline">${renderMarkdown(flat)}</div>`;
+    return `<div class="t-texte-md t-texte-md--inline"${styleAttr}>${renderMarkdown(flat)}</div>`;
   }
 
   const cls = columns === 2 ? 't-texte-md t-texte-cols-2' : 't-texte-md';
-  return `<div class="${cls}">${renderMarkdown(text)}</div>`;
+  return `<div class="${cls}"${styleAttr}>${renderMarkdown(text)}</div>`;
 }
 
 export function photoImg(photo: { url: string; filename?: string }, alt = ''): string {

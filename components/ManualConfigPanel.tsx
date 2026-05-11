@@ -1,7 +1,7 @@
 'use client';
 
 import type { Projet } from '@/types/projet';
-import type { ManualConfig, PhotoConfig, PhotoFormat, KeywordsConfig } from '@/lib/pdf/manualConfig';
+import type { ManualConfig, PhotoConfig, PhotoFormat, KeywordsConfig, PrestationAssemblageConfig } from '@/lib/pdf/manualConfig';
 import type { BandeauStyle } from '@/lib/pdf/bandeauConfig';
 import { allPhotos } from '@/lib/pdf/templates/shared';
 import { StyleRow } from '@/components/projet/BandeauConfigPanel';
@@ -18,6 +18,8 @@ interface Props {
    * - `'right'` : colonne verticale = Photo principale + Texte description.
    */
   side?: PanelSide;
+  /** Quand `true`, affiche les sections réservées au template Dev (Prestation Assemblage). */
+  isDev?: boolean;
 }
 
 const SECTION: React.CSSProperties = {
@@ -94,7 +96,7 @@ function truncateFilename(name: string | undefined, maxLen = 18): string {
   return name.slice(0, maxLen - 1) + '…';
 }
 
-export default function ManualConfigPanel({ projet, config, onChange, side = 'all' }: Props) {
+export default function ManualConfigPanel({ projet, config, onChange, side = 'all', isDev = false }: Props) {
   const photos = allPhotos(projet);
   const photoOptions = photos.map((p, i) => ({
     value: i,
@@ -373,8 +375,93 @@ export default function ManualConfigPanel({ projet, config, onChange, side = 'al
           projet={projet}
           config={config.keywords}
           onChange={(kw) => onChange({ ...config, keywords: kw })}
+          containerStyleOverride={isDev ? sectionOverride : lastSectionOverride}
+        />
+      )}
+
+      {/* PRESTATION ASSEMBLAGE — bloc flottant, template Dev uniquement */}
+      {isDev && showKeywords && (
+        <PrestationSection
+          projet={projet}
+          config={config.prestationAssemblage}
+          onChange={(p) => onChange({ ...config, prestationAssemblage: p })}
           containerStyleOverride={lastSectionOverride}
         />
+      )}
+    </div>
+  );
+}
+
+interface PrestationSectionProps {
+  projet: Projet;
+  config: PrestationAssemblageConfig | undefined;
+  onChange: (next: PrestationAssemblageConfig) => void;
+  containerStyleOverride?: React.CSSProperties;
+}
+
+function PrestationSection({ projet, config, onChange, containerStyleOverride }: PrestationSectionProps) {
+  const pa = config ?? { show: false };
+  const hasValue = Boolean((projet.prestationAssemblage ?? '').trim());
+  const update = (patch: Partial<PrestationAssemblageConfig>) => onChange({ ...pa, ...patch });
+
+  return (
+    <div style={{ ...LAST_SECTION, ...containerStyleOverride }}>
+      <div style={STITLE}>Prestation Assemblage</div>
+      <div style={ROW}>
+        <button
+          onClick={() => update({ show: !pa.show })}
+          style={radioBtn(pa.show)}
+          disabled={!hasValue}
+        >
+          {pa.show ? 'Bloc activé' : 'Activer le bloc'}
+        </button>
+      </div>
+      {!hasValue && (
+        <p style={{ fontSize: '8pt', color: 'var(--ai-noir70)', margin: 0 }}>
+          Champ Airtable « Prestation Assemblage » vide pour ce projet.
+        </p>
+      )}
+      {pa.show && hasValue && (
+        <>
+          <div style={{ display: 'flex', gap: 4 }}>
+            {([1, 2] as const).map(n => (
+              <button
+                key={n}
+                onClick={() => update({ columns: n })}
+                style={radioBtn((pa.columns ?? 1) === n)}
+              >
+                {n} colonne{n > 1 ? 's' : ''}
+              </button>
+            ))}
+          </div>
+          <Slider
+            label="Horizontal"
+            value={pa.offsetPercent ?? 50}
+            onChange={(v) => update({ offsetPercent: v })}
+            min={0} max={100} step={5}
+          />
+          <Slider
+            label="Vertical"
+            value={pa.offsetVerticalPercent ?? 50}
+            onChange={(v) => update({ offsetVerticalPercent: v })}
+            min={0} max={100} step={5}
+          />
+          <div style={{ marginTop: 6 }}>
+            <label style={{ display: 'block', fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 6 }}>
+              Mise en page (police, taille, B/I/U, couleur texte, surlignage)
+            </label>
+            <StyleRow
+              style={(pa.style ?? {}) as BandeauStyle}
+              onChange={(st) => {
+                const isEmpty =
+                  !st.fontFamily && st.fontSize === undefined &&
+                  !st.bold && !st.italic && !st.underline &&
+                  !st.color && !st.background;
+                update({ style: isEmpty ? undefined : st });
+              }}
+            />
+          </div>
+        </>
       )}
     </div>
   );

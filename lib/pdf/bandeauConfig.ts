@@ -45,6 +45,10 @@ export interface BandeauConfig {
   labels?: BandeauStyle;
   /** Valeurs du bandeau métadonnées. */
   values?: BandeauStyle;
+  /** Description projet (paragraphes Markdown rendus). Applique font-family
+   *  et font-size aux <p>/<li>/<a>/<strong>/<em> de la description sur les
+   *  4 templates (Solo, Diptyque, Triptyque, Manuel/Dev). */
+  description?: BandeauStyle;
   /** Lignes horizontales qui encadrent le bandeau métadonnées. */
   lines?: BandeauLinesStyle;
 }

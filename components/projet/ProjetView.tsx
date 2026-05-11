@@ -57,6 +57,7 @@ export default function ProjetView({ projet, isPrint }: Props) {
               config={manualConfig}
               onChange={setManualConfig}
               side="left"
+              isDev={template === 'Dev'}
             />
           </aside>
           <main style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
@@ -71,6 +72,7 @@ export default function ProjetView({ projet, isPrint }: Props) {
               config={manualConfig}
               onChange={setManualConfig}
               side="right"
+              isDev={template === 'Dev'}
             />
           </aside>
         </div>

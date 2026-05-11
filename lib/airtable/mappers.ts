@@ -14,6 +14,9 @@ export const FIELD_PROGRAMME_SECONDAIRE = 'fldaTqKMNrIpeGBma';
 // Pôle (single-select : STR / ENV / DEV / Autre) — lu par field ID pour
 // éviter toute dérive si la colonne "Pôle" est renommée côté Airtable.
 export const FIELD_POLE = 'fldJyT3Lu0ZEH7EYE';
+// Prestation Assemblage (long text, rich text Markdown) — lu par field ID.
+// Affiché en bloc dédié dans le template "Dev" (titre + valeur rich text).
+export const FIELD_PRESTATION_ASSEMBLAGE = 'flddrMLBDxOc8r4lJ';
 
 /**
  * Valeurs auxiliaires injectées dans le mapper.
@@ -26,6 +29,7 @@ export interface AuxValues {
   programmePrincipal?: string;
   programmeSecondaire?: string;
   pole?: string;
+  prestationAssemblage?: string;
   crmNames?: Map<string, string>;
 }
 
@@ -147,6 +151,7 @@ export function recordToProjet(record: any, aux?: AuxValues): Projet {
     pole: aux?.pole ?? f['Pôle'] ?? undefined,
     departement: f['Département'] ?? undefined,
     rehabNeuf: selectValue(f['Rehab / Neuf']),
+    prestationAssemblage: aux?.prestationAssemblage,
 
     statut: normalizeStatut(f['État avancement']),
     template,

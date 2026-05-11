@@ -76,23 +76,27 @@ const CSS = `
    La quantité de texte affichée par colonne est contrôlée par les sliders
    col1Percent / col2Percent (% du texte total). Pas de hauteur explicite :
    la colonne s'adapte naturellement au contenu fourni. */
+/* Propriétés héritables (font-family, font-size, color, line-height) sur le
+   wrapper .man-text — permet à un style inline (bandeauConfig.description)
+   appliqué sur ce wrapper d'être hérité par les <p>/<li>/<a> enfants sans
+   se faire écraser par une règle plus spécifique. */
 .man-text {
   width: 100%;
-}
-.man-text p {
+  font-family: var(--sans);
   font-size: 9.5pt;
   line-height: 1.5;
   color: var(--ai-noir);
+}
+.man-text p {
   margin-bottom: 2.5mm;
   text-align: justify;
   hyphens: auto;
-  font-family: var(--sans);
 }
 .man-text strong { font-weight: 700; }
 .man-text em { font-style: italic; }
 .man-text u { text-decoration: underline; }
 .man-text a { color: var(--ai-rouge); text-decoration: underline; }
-.man-text ul, .man-text ol { margin: 0 0 2.5mm 5mm; padding: 0; font-size: 9.5pt; line-height: 1.5; }
+.man-text ul, .man-text ol { margin: 0 0 2.5mm 5mm; padding: 0; }
 .man-text li { margin-bottom: 0.8mm; }
 .man-text--2col {
   display: grid;
@@ -285,6 +289,9 @@ export function renderManuel(projet: Projet, configIn?: ManualConfig): TemplateB
   const col1Pct = clampPercent(cfg.textCol1Percent ?? 50);
   const col2Pct = clampPercent(cfg.textCol2Percent ?? 50);
 
+  const descStyle = styleToCss(projet.bandeauConfig?.description);
+  const descAttr = descStyle ? ` style="${descStyle}"` : '';
+
   let textHtml = '';
   if (description.length > 0) {
     if (cfg.textColumns === 1) {
@@ -292,10 +299,10 @@ export function renderManuel(projet: Projet, configIn?: ManualConfig): TemplateB
       const target = (col1Pct / 100) * description.length;
       const cutoff = findSplitIndex(description, target);
       const ps = paragraphsToHtml(description.slice(0, cutoff).trim());
-      textHtml = `<div class="man-text man-text--1col">${ps}</div>`;
+      textHtml = `<div class="man-text man-text--1col"${descAttr}>${ps}</div>`;
     } else {
       const [leftHtml, rightHtml] = splitDescription(description, col1Pct, col2Pct);
-      textHtml = `<div class="man-text man-text--2col">
+      textHtml = `<div class="man-text man-text--2col"${descAttr}>
         <div class="man-col-1">${leftHtml}</div>
         <div class="man-col-2">${rightHtml}</div>
       </div>`;
