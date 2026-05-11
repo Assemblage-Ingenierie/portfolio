@@ -64,7 +64,7 @@ const CSS = `
 .dev-photos--portrait .photo-img {
   width: 100%; height: auto;
   max-width: 100%;
-  /* `--cell-max` est défini par cellule (inline) ; fallback 100mm. */
+  /* --cell-max est défini par cellule (inline) ; fallback 100mm. */
   max-height: var(--cell-max, 100mm);
   object-fit: contain;
 }
