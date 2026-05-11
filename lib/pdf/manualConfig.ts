@@ -69,11 +69,18 @@ export interface PrestationAssemblageConfig {
   style?: import('./bandeauConfig').BandeauStyle;
 }
 
+/** Nombre max de photos principales en mode portrait (mainPhoto + mainPhoto2 + mainPhotosExtra). */
+export const MAX_MAIN_PORTRAIT_PHOTOS = 5;
+
 export interface ManualConfig {
   mainPhotoFormat: PhotoFormat;
   mainPhoto: PhotoConfig;
   /** Uniquement utilisé en format portrait (2 photos côte à côte). */
   mainPhoto2?: PhotoConfig;
+  /** Photos principales supplémentaires (3ᵉ, 4ᵉ, 5ᵉ…) en mode portrait.
+   *  Vient s'ajouter après `mainPhoto` et `mainPhoto2` dans une grille
+   *  N colonnes. Vide / absent = comportement historique (1 ou 2 photos). */
+  mainPhotosExtra?: PhotoConfig[];
   /** Liste flottante de mots-clés (optionnelle, superposition). */
   keywords?: KeywordsConfig;
   /** Bloc "Prestation Assemblage" (template Dev uniquement). */
