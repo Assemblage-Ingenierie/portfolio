@@ -146,6 +146,18 @@ export default function ManualConfigPanel({ projet, config, onChange }: Props) {
           </select>
         </div>
         <Slider label="Taille 1" value={config.mainPhoto.sizePercent} onChange={v => setMain({ sizePercent: v })} />
+        <Slider
+          label="Horizontal 1"
+          value={config.mainPhoto.offsetPercent ?? 50}
+          onChange={v => setMain({ offsetPercent: v })}
+          min={0} max={100} step={5}
+        />
+        <Slider
+          label="Vertical 1"
+          value={config.mainPhoto.offsetVerticalPercent ?? 50}
+          onChange={v => setMain({ offsetVerticalPercent: v })}
+          min={0} max={100} step={5}
+        />
         {config.mainPhotoFormat === 'portrait' && (
           <>
             <div style={ROW}>
@@ -155,6 +167,18 @@ export default function ManualConfigPanel({ projet, config, onChange }: Props) {
               </select>
             </div>
             <Slider label="Taille 2" value={config.mainPhoto2?.sizePercent ?? 100} onChange={v => setMain2({ sizePercent: v })} />
+            <Slider
+              label="Horizontal 2"
+              value={config.mainPhoto2?.offsetPercent ?? 50}
+              onChange={v => setMain2({ offsetPercent: v })}
+              min={0} max={100} step={5}
+            />
+            <Slider
+              label="Vertical 2"
+              value={config.mainPhoto2?.offsetVerticalPercent ?? 50}
+              onChange={v => setMain2({ offsetVerticalPercent: v })}
+              min={0} max={100} step={5}
+            />
           </>
         )}
       </div>

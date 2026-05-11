@@ -30,6 +30,18 @@ const CSS = `
 }
 
 /* ── Photos haut de page ─────────────────────────────── */
+/* Cadre photo principale : décalages X/Y identiques aux photos additionnelles.
+   z-index élevé pour passer au premier plan si chevauchement avec le texte. */
+.man-photos { position: relative; z-index: 5; }
+.man-photos .photo-frame {
+  position: relative;
+  z-index: 10;
+  transform: translate(
+    var(--photo-x-offset, 0%),
+    var(--photo-y-offset, 0%)
+  );
+}
+
 .man-photos--paysage { width: 100%; }
 .man-photos--paysage .photo-frame { width: 100%; height: auto; }
 .man-photos--paysage .photo-img {
@@ -201,15 +213,27 @@ export function renderManuel(projet: Projet, configIn?: ManualConfig): TemplateB
     (cfg.mainPhotoFormat === 'paysage' ? PAYSAGE_MAX_MM : PORTRAIT_MAX_MM) * main1Pct / 100;
   const main2MaxMm = PORTRAIT_MAX_MM * main2Pct / 100;
 
+  // Décalages horizontaux/verticaux des photos principales (mêmes conventions
+  // que les photos additionnelles : slider 0..100, 50 = neutre).
+  //   X : -50% .. +50% de la largeur du cadre
+  //   Y : -100% .. +100% de la hauteur du cadre (= peut chevaucher le texte)
+  const main1XPct = clampPercent(cfg.mainPhoto?.offsetPercent ?? 50) - 50;
+  const main1YPct = (clampPercent(cfg.mainPhoto?.offsetVerticalPercent ?? 50) - 50) * 2;
+  const main2XPct = clampPercent(main2Cfg.offsetPercent ?? 50) - 50;
+  const main2YPct = (clampPercent(main2Cfg.offsetVerticalPercent ?? 50) - 50) * 2;
+
+  const main1FrameStyle = `--photo-x-offset:${main1XPct}%; --photo-y-offset:${main1YPct}%`;
+  const main2FrameStyle = `--photo-x-offset:${main2XPct}%; --photo-y-offset:${main2YPct}%`;
+
   let photosHtml = '';
   if (cfg.mainPhotoFormat === 'paysage' && main1) {
     photosHtml = `<div class="man-photos man-photos--paysage" style="--main-photo-max:${main1MaxMm}mm">
-      <div class="photo-frame">${photoImg(main1, projet.nom)}</div>
+      <div class="photo-frame" style="${main1FrameStyle}">${photoImg(main1, projet.nom)}</div>
     </div>`;
   } else if (cfg.mainPhotoFormat === 'portrait' && (main1 || main2)) {
     photosHtml = `<div class="man-photos man-photos--portrait" style="--main-photo1-max:${main1MaxMm}mm; --main-photo2-max:${main2MaxMm}mm">
-      ${main1 ? `<div class="photo-frame">${photoImg(main1, projet.nom)}</div>` : '<div></div>'}
-      ${main2 ? `<div class="photo-frame">${photoImg(main2, projet.nom)}</div>` : '<div></div>'}
+      ${main1 ? `<div class="photo-frame" style="${main1FrameStyle}">${photoImg(main1, projet.nom)}</div>` : '<div></div>'}
+      ${main2 ? `<div class="photo-frame" style="${main2FrameStyle}">${photoImg(main2, projet.nom)}</div>` : '<div></div>'}
     </div>`;
   }
 
