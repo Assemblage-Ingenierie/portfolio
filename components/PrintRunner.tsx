@@ -49,8 +49,11 @@ export default function PrintRunner() {
 
   function handlePrint() {
     if (overflowing) {
+      const edgesText = overflow!.edges && overflow!.edges.length > 0
+        ? ` (bord${overflow!.edges.length > 1 ? 's' : ''} ${overflow!.edges.join(', ')})`
+        : '';
       const ok = window.confirm(
-        `Attention : le contenu dépasse la page A4 de ${overflow!.overflowMm} mm.\n\n` +
+        `Attention : le contenu dépasse la page A4 de ${overflow!.overflowMm} mm${edgesText}.\n\n` +
         `La portion masquée sera coupée à l'export PDF.\n\n` +
         `Continuer quand même ?`
       );
@@ -77,8 +80,9 @@ export default function PrintRunner() {
         >
           <span style={{ fontSize: 16, lineHeight: 1 }}>⚠</span>
           <span>
-            Contenu hors page A4 : <strong>{overflow!.overflowMm}&nbsp;mm</strong> seront
-            coupés à l&apos;impression. Revenir à l&apos;éditeur pour ajuster.
+            Contenu hors page A4 : <strong>{overflow!.overflowMm}&nbsp;mm</strong>
+            {overflow!.edges && overflow!.edges.length > 0 ? <> (bord{overflow!.edges.length > 1 ? 's' : ''} {overflow!.edges.join(', ')})</> : null}
+            {' '}seront coupés à l&apos;impression. Revenir à l&apos;éditeur pour ajuster.
           </span>
         </div>
       )}

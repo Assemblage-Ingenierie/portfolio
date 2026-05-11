@@ -103,9 +103,10 @@ export default function TemplatePreview({
         >
           <span style={{ fontSize: '11pt', lineHeight: 1 }}>⚠</span>
           <span>
-            Le contenu dépasse la page A4 de <strong>{overflow!.overflowMm}&nbsp;mm</strong>.
+            Le contenu dépasse la page A4 de <strong>{overflow!.overflowMm}&nbsp;mm</strong>
+            {overflow!.edges && overflow!.edges.length > 0 ? <> (bord{overflow!.edges.length > 1 ? 's' : ''} {overflow!.edges.join(', ')})</> : null}.
             La portion masquée sera coupée à l&apos;export PDF — raccourcir la description,
-            réduire la taille des photos, ou changer de template.
+            réduire la taille / repositionner les photos, ou changer de template.
           </span>
         </div>
       )}
