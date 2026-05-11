@@ -312,10 +312,32 @@ export default function ManualConfigPanel({ projet, config, onChange, side = 'al
           )}
         </div>
 
-        {extras.map((e, i) => (
-          <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {extras.map((e, i) => {
+          const isEnabled = e.enabled !== false; // undefined = activée par défaut
+          return (
+          <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 4, opacity: isEnabled ? 1 : 0.5 }}>
             <div style={SUBROW}>
-              <span style={{ minWidth: 60, color: 'var(--ai-noir70)' }}>Photo {i + 1}</span>
+              <button
+                type="button"
+                onClick={() => setExtraAt(i, { enabled: !isEnabled })}
+                title={isEnabled ? 'Désactiver cette photo (gardera sa config)' : 'Réactiver cette photo'}
+                aria-label={isEnabled ? 'Désactiver' : 'Activer'}
+                style={{
+                  width: 18, height: 18,
+                  padding: 0,
+                  border: '1px solid #DFE4E8',
+                  borderRadius: 2,
+                  background: isEnabled ? 'var(--ai-violet)' : 'white',
+                  color: 'white',
+                  cursor: 'pointer',
+                  fontSize: 11, lineHeight: '14px', fontWeight: 700,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flex: '0 0 18px',
+                }}
+              >
+                {isEnabled ? '✓' : ''}
+              </button>
+              <span style={{ minWidth: 50, color: 'var(--ai-noir70)' }}>Photo {i + 1}</span>
               <select value={e.index} onChange={ev => setExtraAt(i, { index: Number(ev.target.value) })} style={select}>
                 {photoOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
@@ -340,7 +362,8 @@ export default function ManualConfigPanel({ projet, config, onChange, side = 'al
               />
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
       )}
 

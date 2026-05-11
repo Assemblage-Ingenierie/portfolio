@@ -22,6 +22,11 @@ export interface PhotoConfig {
    *  positionne la photo au-dessus de la zone texte (z-index supérieur).
    *  Default = 50 (= comportement historique : photo en flux sous le texte). */
   offsetVerticalPercent?: number;
+  /** Si `false`, la photo est masquée de la fiche mais sa config est
+   *  conservée. Permet de désactiver une photo additionnelle sans perdre
+   *  ses sliders. Default = `true` (activée).
+   *  Uniquement pris en compte pour les photos additionnelles. */
+  enabled?: boolean;
 }
 
 /**

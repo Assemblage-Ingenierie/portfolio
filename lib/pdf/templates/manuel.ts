@@ -303,8 +303,11 @@ export function renderManuel(projet: Projet, configIn?: ManualConfig): TemplateB
   }
 
   // ── Photos additionnelles : grille N colonnes (identique en 1-col et 2-col) ──
+  // On filtre les entrées invalides (photo absente) ET celles désactivées
+  // explicitement par l'utilisateur via la checkbox (enabled === false).
   const extraPhotos = (cfg.extraPhotos ?? []).filter(
-    (e): e is PhotoConfig => Boolean(e) && photos[e.index] !== undefined
+    (e): e is PhotoConfig =>
+      Boolean(e) && photos[e.index] !== undefined && e.enabled !== false
   );
 
   let extraHtml = '';
