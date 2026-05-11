@@ -31,6 +31,9 @@ const CSS = `
 
 /* ── Photos haut de page ─────────────────────────────── */
 /* Cadre photo principale : décalages X/Y identiques aux photos additionnelles.
+   - X en % (relatif à la largeur du cadre)
+   - Y en mm absolus (relatif à la page A4 — indépendant de la taille
+     de la photo, pour que le slider couvre toute la hauteur utile)
    z-index élevé pour passer au premier plan si chevauchement avec le texte. */
 .man-photos { position: relative; z-index: 5; }
 .man-photos .photo-frame {
@@ -38,7 +41,7 @@ const CSS = `
   z-index: 10;
   transform: translate(
     var(--photo-x-offset, 0%),
-    var(--photo-y-offset, 0%)
+    var(--photo-y-offset, 0mm)
   );
 }
 
@@ -115,10 +118,13 @@ const CSS = `
 .man-extra-grid .photo-frame {
   width: 100%;
   height: auto;
-  /* Décalages slider 0..100 → -50%..+50% (horizontal) et 0%..+100% inversé pour vertical */
+  /* Décalages slider 0..100 → -50%..+50% horizontal (largeur du cadre)
+     et -250mm..+250mm vertical (distance absolue sur la page A4 utile,
+     calculée côté render pour couvrir toute la hauteur quelle que soit
+     la taille de la photo). */
   transform: translate(
     var(--photo-x-offset, 0%),
-    var(--photo-y-offset, 0%)
+    var(--photo-y-offset, 0mm)
   );
   /* Photo toujours au-dessus du texte de description en cas de chevauchement.
      L'utilisateur voit l'overlap et ajuste les sliders en conséquence. */
@@ -213,17 +219,20 @@ export function renderManuel(projet: Projet, configIn?: ManualConfig): TemplateB
     (cfg.mainPhotoFormat === 'paysage' ? PAYSAGE_MAX_MM : PORTRAIT_MAX_MM) * main1Pct / 100;
   const main2MaxMm = PORTRAIT_MAX_MM * main2Pct / 100;
 
-  // Décalages horizontaux/verticaux des photos principales (mêmes conventions
-  // que les photos additionnelles : slider 0..100, 50 = neutre).
-  //   X : -50% .. +50% de la largeur du cadre
-  //   Y : -100% .. +100% de la hauteur du cadre (= peut chevaucher le texte)
+  // Décalages photos (mêmes conventions sliders 0..100, 50 = neutre).
+  //   X : -50% .. +50% de la largeur du cadre (relatif au cadre)
+  //   Y : -V_RANGE_MM .. +V_RANGE_MM (millimètres absolus sur la page A4)
+  // V_RANGE_MM est choisi pour permettre de couvrir toute la hauteur utile
+  // de la page indépendamment de la taille de la photo (la page A4 fait
+  // 297mm ; ±250mm = bord à bord avec un peu de marge).
+  const V_RANGE_MM = 250;
   const main1XPct = clampPercent(cfg.mainPhoto?.offsetPercent ?? 50) - 50;
-  const main1YPct = (clampPercent(cfg.mainPhoto?.offsetVerticalPercent ?? 50) - 50) * 2;
+  const main1YMm = ((clampPercent(cfg.mainPhoto?.offsetVerticalPercent ?? 50) - 50) / 50) * V_RANGE_MM;
   const main2XPct = clampPercent(main2Cfg.offsetPercent ?? 50) - 50;
-  const main2YPct = (clampPercent(main2Cfg.offsetVerticalPercent ?? 50) - 50) * 2;
+  const main2YMm = ((clampPercent(main2Cfg.offsetVerticalPercent ?? 50) - 50) / 50) * V_RANGE_MM;
 
-  const main1FrameStyle = `--photo-x-offset:${main1XPct}%; --photo-y-offset:${main1YPct}%`;
-  const main2FrameStyle = `--photo-x-offset:${main2XPct}%; --photo-y-offset:${main2YPct}%`;
+  const main1FrameStyle = `--photo-x-offset:${main1XPct}%; --photo-y-offset:${main1YMm}mm`;
+  const main2FrameStyle = `--photo-x-offset:${main2XPct}%; --photo-y-offset:${main2YMm}mm`;
 
   let photosHtml = '';
   if (cfg.mainPhotoFormat === 'paysage' && main1) {
@@ -272,12 +281,12 @@ export function renderManuel(projet: Projet, configIn?: ManualConfig): TemplateB
       const maxMm = EXTRA_GRID_MAX_MM * pct / 100;
       // offsetPercent horizontal (0..100) → translateX -50%..+50% de la cellule
       const xPct = clampPercent(e.offsetPercent ?? 50) - 50;
-      // offsetVerticalPercent (0..100) → translateY -100%..+100%
-      // 0   = photo remontée d'une hauteur (= entièrement dans le bloc texte au-dessus)
+      // offsetVerticalPercent (0..100) → translateY en mm absolus (page A4).
+      // 0   = photo remontée de V_RANGE_MM (haut de la page utile)
       // 50  = position neutre (sous le texte, comportement historique)
-      // 100 = photo descendue d'une hauteur
-      const yPct = (clampPercent(e.offsetVerticalPercent ?? 50) - 50) * 2;
-      return `<div class="photo-frame" style="--extra-cell-max:${maxMm}mm; --photo-x-offset:${xPct}%; --photo-y-offset:${yPct}%">${photoImg(ph, projet.nom)}</div>`;
+      // 100 = photo descendue de V_RANGE_MM (bas de la page utile)
+      const yMm = ((clampPercent(e.offsetVerticalPercent ?? 50) - 50) / 50) * V_RANGE_MM;
+      return `<div class="photo-frame" style="--extra-cell-max:${maxMm}mm; --photo-x-offset:${xPct}%; --photo-y-offset:${yMm}mm">${photoImg(ph, projet.nom)}</div>`;
     }).join('');
     extraHtml = `<div class="man-extra-grid" style="grid-template-columns:repeat(${extraPhotos.length},1fr);">${cells}</div>`;
   }
