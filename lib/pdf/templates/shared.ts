@@ -111,16 +111,9 @@ html, body { background: white; }
   color: var(--ai-rouge);
 }
 
-.t-footer {
-  display: flex; justify-content: space-between; align-items: center;
-  border-top: 1px solid var(--ai-gris); padding-top: 2.5mm;
-  font-family: var(--sans); font-size: 7pt; color: var(--ai-noir70);
-}
-.t-footer-sigle {
-  font-family: var(--serif); font-size: 14pt; font-weight: 700;
-  color: var(--ai-rouge); line-height: 1;
-}
-.t-footer-legal { text-align: center; flex: 1; padding: 0 6mm; }
+/* Footer retiré du template — fonction footerHtml() renvoie '' désormais.
+   On garde les classes vides au cas où on réintroduirait un footer plus tard. */
+.t-footer { display: none; }
 
 /* Titre + identité */
 .t-surtitre {
@@ -232,10 +225,13 @@ export function headerHtml(projet: Projet): string {
   </header>`;
 }
 
+/**
+ * Footer désactivé : retourne une chaîne vide. La fonction est conservée
+ * (signature inchangée) pour ne pas avoir à modifier chaque template — un
+ * footer plus tard pourra être réintroduit ici si besoin.
+ */
 export function footerHtml(_projet: Projet): string {
-  return `<footer class="t-footer">
-    <span class="t-footer-sigle">.A</span>
-  </footer>`;
+  return '';
 }
 
 export function titleBlockHtml(projet: Projet, h1Size = '32pt'): string {
