@@ -1,6 +1,8 @@
 import { base, TABLE } from './client';
 import type { ManualConfig } from '@/lib/pdf/manualConfig';
 import { serializeConfig } from '@/lib/pdf/manualConfig';
+import type { BandeauConfig } from '@/lib/pdf/bandeauConfig';
+import { serializeBandeauConfig } from '@/lib/pdf/bandeauConfig';
 
 export interface ProjetEditableFields {
   nom?: string;
@@ -25,6 +27,7 @@ export interface ProjetEditableFields {
   certifications?: string[];
   motsCles?: string[];
   savedManualConfig?: ManualConfig;
+  bandeauConfig?: BandeauConfig;
 }
 
 export async function updateProjetFields(slug: string, fields: ProjetEditableFields): Promise<{ slug: string }> {
@@ -60,6 +63,8 @@ export async function updateProjetFields(slug: string, fields: ProjetEditableFie
   if (fields.motsCles !== undefined)       update['Mots-clés']          = fields.motsCles.join(', ');
   if (fields.savedManualConfig !== undefined)
     update['Config template manuel'] = serializeConfig(fields.savedManualConfig);
+  if (fields.bandeauConfig !== undefined)
+    update['Config bandeau'] = serializeBandeauConfig(fields.bandeauConfig);
 
   await base(TABLE).update(records[0].id, update, { typecast: true });
 

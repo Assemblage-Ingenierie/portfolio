@@ -8,6 +8,8 @@ import TemplatePreview from '@/components/TemplatePreview';
 import Link from 'next/link';
 import { authHeaders } from '@/lib/supabase/authHeaders';
 import RichTextEditor from './RichTextEditor';
+import BandeauConfigPanel from './BandeauConfigPanel';
+import type { BandeauConfig } from '@/lib/pdf/bandeauConfig';
 
 interface Props { projet: Projet; }
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
@@ -56,6 +58,7 @@ export default function ProjetEditor({ projet }: Props) {
   const [chiffresClesRaw, setChiffresClesRaw] = useState(
     (projet.chiffresCles ?? []).map(c => `${c.label} | ${c.valeur}`).join('\n')
   );
+  const [bandeauConfig, setBandeauConfig] = useState<BandeauConfig>(projet.bandeauConfig ?? {});
 
   const [preview, setPreview] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -113,6 +116,7 @@ export default function ProjetEditor({ projet }: Props) {
           template,
           certifications: certifications.split('\n').map(s => s.trim()).filter(Boolean),
           motsCles: motsCles.split(/[,;]+/).map(s => s.trim()).filter(Boolean),
+          bandeauConfig,
         }),
       });
       const data = await res.json();
@@ -184,6 +188,7 @@ export default function ProjetEditor({ projet }: Props) {
       chiffresCles: parseChiffres(),
       certifications: certifications.split('\n').map(s => s.trim()).filter(Boolean),
       motsCles: motsCles.split(',').map(s => s.trim()).filter(Boolean),
+      bandeauConfig,
     };
     return (
       <>
@@ -212,6 +217,11 @@ export default function ProjetEditor({ projet }: Props) {
               </button>
             ))}
           </div>
+        </div>
+
+        <div style={SECTION}>
+          <div style={STITLE}>Mise en page du bandeau</div>
+          <BandeauConfigPanel value={bandeauConfig} onChange={setBandeauConfig} />
         </div>
 
         <div style={SECTION}>

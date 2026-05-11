@@ -1,4 +1,5 @@
 import type { ManualConfig } from '@/lib/pdf/manualConfig';
+import type { BandeauConfig } from '@/lib/pdf/bandeauConfig';
 
 export type Statut =
   | 'En étude'
@@ -62,4 +63,8 @@ export interface Projet {
   /** Mise en page Manuel sauvegardée explicitement par l'utilisateur.
    *  Stocké dans le champ Airtable "Config template manuel" (Long text JSON). */
   savedManualConfig?: ManualConfig;
+
+  /** Configuration typographique du bandeau (header + meta grid).
+   *  Stocké dans le champ Airtable "Config bandeau" (Long text JSON). */
+  bandeauConfig?: BandeauConfig;
 }

@@ -1,5 +1,6 @@
 import type { Projet } from '@/types/projet';
 import { renderMarkdown } from '@/lib/utils/markdown';
+import { styleToCss } from '@/lib/pdf/bandeauConfig';
 
 export function esc(v: unknown): string {
   return String(v ?? '')
@@ -97,7 +98,7 @@ html, body { background: white; }
    grisées (et plus visibles qu'en pur blanc sur fond blanc). */
 .t-header-vignette--inactive {
   filter: grayscale(100%) brightness(0.85);
-  opacity: 0.45;
+  opacity: 0.70;
 }
 .t-header-meta {
   font-size: 9pt; font-weight: 400;
@@ -154,13 +155,12 @@ html, body { background: white; }
 .t-meta-item:last-child { padding-right: 0; border-right: none; }
 .t-meta-label {
   font-family: var(--sans); font-size: 8.5pt; font-weight: 400;
-  letter-spacing: 0.06em; font-variant: small-caps;
+  letter-spacing: 0.06em;
   color: var(--ai-rouge);
   margin-bottom: 1mm; display: block;
 }
 .t-meta-value {
   font-family: var(--serif); font-size: 11pt; font-weight: 400;
-  font-variant: small-caps; letter-spacing: 0.01em;
   line-height: 1.25; color: var(--ai-noir);
 }
 .t-meta-sub {
@@ -225,9 +225,10 @@ export function headerHtml(projet: Projet): string {
     const cls = active ? 't-header-vignette' : 't-header-vignette t-header-vignette--inactive';
     return `<img class="${cls}" src="${url}" alt="${v.code}" />`;
   }).join('');
+  const statusStyle = styleToCss(projet.bandeauConfig?.status);
   return `<header class="t-header">
     <div class="t-header-vignettes">${vignettes}</div>
-    <div class="t-header-statut">● ${esc(projet.statut)}${annee}</div>
+    <div class="t-header-statut"${statusStyle ? ` style="${statusStyle}"` : ''}>● ${esc(projet.statut)}${annee}</div>
   </header>`;
 }
 
@@ -264,11 +265,18 @@ export function metaGridHtml(projet: Projet): string {
 
   if (items.length === 0) return '';
 
+  // Surcharges typographiques optionnelles par projet (champ Airtable « Config
+  // bandeau ») — appliquées uniformément à tous les labels / values du bandeau.
+  const labelStyle = styleToCss(projet.bandeauConfig?.labels);
+  const valueStyle = styleToCss(projet.bandeauConfig?.values);
+  const labelAttr = labelStyle ? ` style="${labelStyle}"` : '';
+  const valueAttr = valueStyle ? ` style="${valueStyle}"` : '';
+
   return `<div class="t-meta-grid" style="grid-template-columns:repeat(${items.length},1fr);">
     ${items.map(i => `
       <div class="t-meta-item">
-        <span class="t-meta-label">${esc(i.label)}</span>
-        <div class="t-meta-value">${esc(i.value)}</div>
+        <span class="t-meta-label"${labelAttr}>${esc(i.label)}</span>
+        <div class="t-meta-value"${valueAttr}>${esc(i.value)}</div>
         ${i.sub ? `<div class="t-meta-sub">${esc(i.sub)}</div>` : ''}
       </div>
     `).join('')}

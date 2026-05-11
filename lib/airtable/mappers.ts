@@ -4,6 +4,7 @@ import { parseChiffresCles, parseTagsSiteWeb, formatBudget } from '@/lib/utils/p
 import { formulaValue, selectValue } from './client';
 import { autoSelectTemplate, isTemplateChoice } from '@/lib/pdf/selectTemplate';
 import { deserializeConfig } from '@/lib/pdf/manualConfig';
+import { deserializeBandeauConfig } from '@/lib/pdf/bandeauConfig';
 
 // Field IDs Airtable des nouveaux champs Programme principal / Programme
 // secondaire (multi-select). Lus via une requête auxiliaire en
@@ -160,5 +161,6 @@ export function recordToProjet(record: any, aux?: AuxValues): Projet {
     urlWordpress: f['URL'] ?? undefined,
     chiffresCles: parseChiffresCles(formulaValue(f['Chiffres clefs'])),
     savedManualConfig: deserializeConfig(f['Config template manuel']) ?? undefined,
+    bandeauConfig: deserializeBandeauConfig(f['Config bandeau']) ?? undefined,
   };
 }
