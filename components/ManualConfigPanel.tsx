@@ -88,11 +88,17 @@ function Slider({ label, value, onChange, min = 25, max = 100, step = 5, unit = 
 
 const MAX_EXTRA_PHOTOS = 5;
 
+function truncateFilename(name: string | undefined, maxLen = 18): string {
+  if (!name) return '';
+  if (name.length <= maxLen) return name;
+  return name.slice(0, maxLen - 1) + '…';
+}
+
 export default function ManualConfigPanel({ projet, config, onChange, side = 'all' }: Props) {
   const photos = allPhotos(projet);
   const photoOptions = photos.map((p, i) => ({
     value: i,
-    label: `Photo ${i + 1}${p.filename ? ` — ${p.filename}` : ''}`,
+    label: `Photo ${i + 1}${p.filename ? ` — ${truncateFilename(p.filename)}` : ''}`,
   }));
 
   // Mutateurs photo principale
@@ -148,14 +154,24 @@ export default function ManualConfigPanel({ projet, config, onChange, side = 'al
   };
 
   const select: React.CSSProperties = {
-    flex: 1, padding: '4px 6px', fontSize: '9pt',
+    // min-width: 0 indispensable pour qu'un <select> dans un flex puisse
+    // se rétrécir en dessous de la largeur intrinsèque de ses <option>
+    // (sinon le select déborde du conteneur quand un nom de fichier est long).
+    flex: 1, minWidth: 0, maxWidth: '100%',
+    padding: '4px 6px', fontSize: '9pt',
     border: '1px solid #DFE4E8', borderRadius: 2, background: 'white',
+    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
   };
 
   // Visibilité des sections par côté
-  const showMain = side === 'all' || side === 'right';
+  //   Gauche  : Photo principale (haut)  + Mots-clés (bas)
+  //   Droite  : Texte description (haut) + Photos additionnelles (bas)
+  // L'ordre d'apparition découle de l'ordre des sections dans le JSX
+  // (photo → texte → extra → keywords), ce qui donne bien ce résultat
+  // une fois les flags appliqués par colonne.
+  const showMain = side === 'all' || side === 'left';
   const showText = side === 'all' || side === 'right';
-  const showExtra = side === 'all' || side === 'left';
+  const showExtra = side === 'all' || side === 'right';
   const showKeywords = side === 'all' || side === 'left';
 
   const isVertical = side !== 'all';
