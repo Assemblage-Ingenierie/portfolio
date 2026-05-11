@@ -92,6 +92,13 @@ html, body { background: white; }
   width: auto;
   display: block;
 }
+/* Vignettes inactives : on garde le fichier blanc (silhouette) mais on
+   passe en niveaux de gris + opacity réduite pour qu'elles apparaissent
+   grisées (et plus visibles qu'en pur blanc sur fond blanc). */
+.t-header-vignette--inactive {
+  filter: grayscale(100%) brightness(0.85);
+  opacity: 0.45;
+}
 .t-header-meta {
   font-size: 9pt; font-weight: 400;
   letter-spacing: 0.06em; font-variant: small-caps;
@@ -213,8 +220,10 @@ export function headerHtml(projet: Projet): string {
   const annee = projet.anneeLivraison ? ` · ${esc(String(projet.anneeLivraison))}` : '';
   const poleActif = (projet.pole ?? '').toUpperCase();
   const vignettes = VIGNETTES.map((v) => {
-    const url = v.code === poleActif ? v.colored : v.blanc;
-    return `<img class="t-header-vignette" src="${url}" alt="${v.code}" />`;
+    const active = v.code === poleActif;
+    const url = active ? v.colored : v.blanc;
+    const cls = active ? 't-header-vignette' : 't-header-vignette t-header-vignette--inactive';
+    return `<img class="${cls}" src="${url}" alt="${v.code}" />`;
   }).join('');
   return `<header class="t-header">
     <div class="t-header-vignettes">${vignettes}</div>
