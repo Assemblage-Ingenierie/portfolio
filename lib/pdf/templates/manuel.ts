@@ -359,10 +359,16 @@ export function renderManuel(projet: Projet, configIn?: ManualConfig): TemplateB
     keywordsHtml = `<ul class="man-keywords" style="--photo-x-offset:${kwXMm}mm; --photo-y-offset:${kwYMm}mm">${items}</ul>`;
   }
 
+  // Décalage vertical du bandeau (slider 0..100 → ±V_RANGE_MM). 50 = neutre.
+  const bandeauYMm = ((clampPercent(cfg.bandeauVerticalOffset ?? 50) - 50) / 50) * V_RANGE_MM;
+  const bandeauStyle = bandeauYMm !== 0 ? ` style="transform:translateY(${bandeauYMm}mm)"` : '';
+
   const body = `<article class="page man-page">
-    ${headerHtml(projet)}
-    ${titleBlockHtml(projet, '26pt')}
-    ${metaGridHtml(projet)}
+    <div class="t-bandeau-wrap"${bandeauStyle}>
+      ${headerHtml(projet)}
+      ${titleBlockHtml(projet, '26pt')}
+      ${metaGridHtml(projet)}
+    </div>
     ${photosHtml}
     ${textHtml}
     ${extraHtml}

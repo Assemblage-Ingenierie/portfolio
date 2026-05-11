@@ -71,6 +71,16 @@ html, body { background: white; }
   object-fit: contain;
 }
 
+/* Wrapper bandeau (Manuel / Dev uniquement) : regroupe header + titre +
+   meta-grid pour leur appliquer un translateY commun via slider. Préserve
+   l'espacement interne 4mm identique au flex .man-page / .dev-page. */
+.t-bandeau-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4mm;
+  flex: 0 0 auto;
+}
+
 /* Header / Footer communs */
 .t-header {
   display: flex;

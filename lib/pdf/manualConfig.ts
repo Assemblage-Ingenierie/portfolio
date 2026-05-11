@@ -78,6 +78,10 @@ export interface ManualConfig {
   keywords?: KeywordsConfig;
   /** Bloc "Prestation Assemblage" (template Dev uniquement). */
   prestationAssemblage?: PrestationAssemblageConfig;
+  /** Décalage vertical du bandeau (header + titre + meta-grid) en 0..100.
+   *  50 = position neutre (comportement historique en flow). Mappé sur
+   *  ±V_RANGE_MM côté render (mêmes conventions que les sliders photos). */
+  bandeauVerticalOffset?: number;
   textColumns: 1 | 2;
   /** % du texte total à afficher en col 1 (0..100). Le point de coupure exact
    *  est calé sur le "." le plus proche de cette position. */
