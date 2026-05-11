@@ -1,6 +1,6 @@
 import type { Projet } from '@/types/projet';
 import { renderMarkdown } from '@/lib/utils/markdown';
-import { styleToCss } from '@/lib/pdf/bandeauConfig';
+import { styleToCss, linesToCss } from '@/lib/pdf/bandeauConfig';
 
 export function esc(v: unknown): string {
   return String(v ?? '')
@@ -270,14 +270,18 @@ export function metaGridHtml(projet: Projet): string {
 
   if (items.length === 0) return '';
 
-  // Surcharges typographiques optionnelles par projet (champ Airtable « Config
-  // bandeau ») — appliquées uniformément à tous les labels / values du bandeau.
+  // Surcharges typographiques par projet — appliquées uniformément à tous
+  // les labels / values du bandeau.
   const labelStyle = styleToCss(projet.bandeauConfig?.labels);
   const valueStyle = styleToCss(projet.bandeauConfig?.values);
   const labelAttr = labelStyle ? ` style="${labelStyle}"` : '';
   const valueAttr = valueStyle ? ` style="${valueStyle}"` : '';
 
-  return `<div class="t-meta-grid" style="grid-template-columns:repeat(${items.length},1fr);">
+  // Lignes horizontales du bandeau (toggle visible/masqué, couleur, épaisseur)
+  const linesCss = linesToCss(projet.bandeauConfig?.lines);
+  const gridStyle = `grid-template-columns:repeat(${items.length},1fr)${linesCss ? `;${linesCss}` : ''}`;
+
+  return `<div class="t-meta-grid" style="${gridStyle}">
     ${items.map(i => `
       <div class="t-meta-item">
         <span class="t-meta-label"${labelAttr}>${esc(i.label)}</span>

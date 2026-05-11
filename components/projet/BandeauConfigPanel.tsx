@@ -1,6 +1,6 @@
 'use client';
 
-import type { BandeauConfig, BandeauStyle, FontFamilyChoice } from '@/lib/pdf/bandeauConfig';
+import type { BandeauConfig, BandeauStyle, BandeauLinesStyle, FontFamilyChoice } from '@/lib/pdf/bandeauConfig';
 
 interface Props {
   value: BandeauConfig;
@@ -119,6 +119,51 @@ export default function BandeauConfigPanel({ value, onChange }: Props) {
           <StyleRow style={value[s.key] ?? {}} onChange={(st) => updateSection(s.key, st)} />
         </div>
       ))}
+      <LinesRow value={value.lines ?? {}} onChange={(l) => onChange({ ...value, lines: l })} />
+    </div>
+  );
+}
+
+function LinesRow({ value, onChange }: { value: BandeauLinesStyle; onChange: (v: BandeauLinesStyle) => void }) {
+  // Convention : `show` non défini = visible par défaut. Le toggle bascule
+  // explicitement vers false / true (jamais undefined) pour que l'intention
+  // de l'utilisateur soit persistée.
+  const visible = value.show !== false;
+  return (
+    <div style={{ marginBottom: '14px', paddingBottom: '14px' }}>
+      <label style={LABEL_S}>Lignes horizontales du bandeau</label>
+      <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', margin: '0 0 6px' }}>
+        Les deux traits qui encadrent le bandeau métadonnées (au-dessus de Maître d&apos;ouvrage et sous le bandeau).
+      </p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'auto 90px auto', gap: '8px', alignItems: 'center' }}>
+        <button
+          type="button"
+          onClick={() => onChange({ ...value, show: !visible })}
+          style={visible ? TOGGLE_ON : TOGGLE}
+          title={visible ? 'Masquer les lignes' : 'Afficher les lignes'}
+        >
+          {visible ? '✓ Affichées' : '✕ Masquées'}
+        </button>
+        <input
+          type="number"
+          step="0.5"
+          min="0.25"
+          max="6"
+          value={value.width ?? ''}
+          onChange={(e) => onChange({ ...value, width: e.target.value === '' ? undefined : Number(e.target.value) })}
+          placeholder="Épaisseur (pt)"
+          disabled={!visible}
+          style={{ ...INPUT_S, opacity: visible ? 1 : 0.4 }}
+        />
+        <input
+          type="color"
+          value={value.color ?? '#000000'}
+          onChange={(e) => onChange({ ...value, color: e.target.value })}
+          disabled={!visible}
+          style={{ ...INPUT_S, padding: '2px', height: '32px', cursor: visible ? 'pointer' : 'not-allowed', opacity: visible ? 1 : 0.4 }}
+          title="Couleur des lignes"
+        />
+      </div>
     </div>
   );
 }

@@ -24,6 +24,16 @@ export interface BandeauStyle {
   color?: string;
 }
 
+/** Style des deux lignes horizontales encadrant le bandeau métadonnées. */
+export interface BandeauLinesStyle {
+  /** `false` masque les deux lignes (default `true` = affichées). */
+  show?: boolean;
+  /** Couleur des lignes (hex / keyword). Default = noir. */
+  color?: string;
+  /** Épaisseur en points (pt). Default = 1. */
+  width?: number;
+}
+
 export interface BandeauConfig {
   /** Titre principal (h1) de la fiche. */
   titre?: BandeauStyle;
@@ -33,6 +43,22 @@ export interface BandeauConfig {
   labels?: BandeauStyle;
   /** Valeurs du bandeau métadonnées. */
   values?: BandeauStyle;
+  /** Lignes horizontales qui encadrent le bandeau métadonnées. */
+  lines?: BandeauLinesStyle;
+}
+
+/** Convertit un BandeauLinesStyle en surcharges CSS pour `.t-meta-grid`. */
+export function linesToCss(lines?: BandeauLinesStyle): string {
+  if (!lines) return '';
+  if (lines.show === false) {
+    return 'border-top:none;border-bottom:none';
+  }
+  const parts: string[] = [];
+  const color = lines.color ?? 'var(--ai-noir)';
+  const width = lines.width !== undefined && Number.isFinite(lines.width) ? `${lines.width}pt` : '1pt';
+  parts.push(`border-top:${width} solid ${color}`);
+  parts.push(`border-bottom:${width} solid ${color}`);
+  return parts.join(';');
 }
 
 export const DEFAULT_BANDEAU_CONFIG: BandeauConfig = {};
