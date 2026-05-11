@@ -1,6 +1,6 @@
 import type { Projet } from '@/types/projet';
 import { renderMarkdown } from '@/lib/utils/markdown';
-import { styleToCss, linesToCss } from '@/lib/pdf/bandeauConfig';
+import { styleToCss, linesToCss, titleMetaGapCss } from '@/lib/pdf/bandeauConfig';
 
 export function esc(v: unknown): string {
   return String(v ?? '')
@@ -126,7 +126,7 @@ html, body { background: white; }
 }
 .t-header-statut {
   font-size: 9pt; font-weight: 500;
-  letter-spacing: 0.06em; font-variant: small-caps;
+  letter-spacing: 0.06em;
   color: var(--ai-rouge);
 }
 
@@ -317,7 +317,14 @@ export function metaGridHtml(projet: Projet): string {
 
   // Lignes horizontales du bandeau (toggle visible/masqué, couleur, épaisseur)
   const linesCss = linesToCss(projet.bandeauConfig?.lines);
-  const gridStyle = `grid-template-columns:repeat(${items.length},1fr)${linesCss ? `;${linesCss}` : ''}`;
+  // Espacement titre ↔ bandeau (slider 0..100, 50 = neutre). Appliqué en
+  // margin-top sur la grille — négatif rapproche, positif éloigne.
+  const gapCss = titleMetaGapCss(projet.bandeauConfig);
+  const gridStyle = [
+    `grid-template-columns:repeat(${items.length},1fr)`,
+    linesCss,
+    gapCss,
+  ].filter(Boolean).join(';');
 
   return `<div class="t-meta-grid" style="${gridStyle}">
     ${items.map(i => `
