@@ -1,6 +1,7 @@
 'use client';
 
 import type { BandeauConfig, BandeauStyle, BandeauLinesStyle, FontFamilyChoice } from '@/lib/pdf/bandeauConfig';
+import ColorSelector from './ColorSelector';
 
 interface Props {
   value: BandeauConfig;
@@ -77,24 +78,12 @@ function StyleRow({ style, onChange }: { style: BandeauStyle; onChange: (s: Band
           <button type="button" onClick={() => set('italic', !style.italic)} style={style.italic ? TOGGLE_ON : TOGGLE} title="Italique"><i>I</i></button>
           <button type="button" onClick={() => set('underline', !style.underline)} style={style.underline ? TOGGLE_ON : TOGGLE} title="Souligné"><u>U</u></button>
         </div>
-        <label title="Couleur du texte" style={{ display: 'flex', flex: '0 0 auto', alignItems: 'center', gap: '4px', fontSize: '8pt', color: 'var(--ai-noir70)' }}>
-          <input
-            type="color"
-            value={style.color ?? '#000000'}
-            onChange={(e) => set('color', e.target.value)}
-            style={COLOR_INPUT}
-          />
-          texte
-        </label>
-        <label title="Surlignage (fond)" style={{ display: 'flex', flex: '0 0 auto', alignItems: 'center', gap: '4px', fontSize: '8pt', color: 'var(--ai-noir70)' }}>
-          <input
-            type="color"
-            value={style.background ?? '#ffffff'}
-            onChange={(e) => set('background', e.target.value)}
-            style={COLOR_INPUT}
-          />
-          fond
-        </label>
+        <div style={{ flex: '1 1 100%', display: 'grid', gridTemplateColumns: '36px 1fr', gap: '4px', alignItems: 'center', fontSize: '8pt', color: 'var(--ai-noir70)' }}>
+          <span>Texte</span>
+          <ColorSelector value={style.color} onChange={(c) => set('color', c)} customTitle="Couleur de texte personnalisée" />
+          <span>Fond</span>
+          <ColorSelector value={style.background} onChange={(c) => set('background', c)} fallback="#ffffff" customTitle="Couleur de surlignage personnalisée" />
+        </div>
       </div>
     </div>
   );
@@ -157,7 +146,7 @@ function LinesRow({ value, onChange }: { value: BandeauLinesStyle; onChange: (v:
       <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', margin: '0 0 6px' }}>
         Les deux traits qui encadrent le bandeau métadonnées (au-dessus de Maître d&apos;ouvrage et sous le bandeau).
       </p>
-      <div style={{ display: 'grid', gridTemplateColumns: 'auto 90px auto', gap: '8px', alignItems: 'center' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
         <button
           type="button"
           onClick={() => onChange({ ...value, show: !visible })}
@@ -175,16 +164,16 @@ function LinesRow({ value, onChange }: { value: BandeauLinesStyle; onChange: (v:
           onChange={(e) => onChange({ ...value, width: e.target.value === '' ? undefined : Number(e.target.value) })}
           placeholder="Épaisseur (pt)"
           disabled={!visible}
-          style={{ ...INPUT_S, opacity: visible ? 1 : 0.4 }}
+          style={{ ...INPUT_S, width: '110px', flex: '0 0 110px', opacity: visible ? 1 : 0.4 }}
         />
-        <input
-          type="color"
-          value={value.color ?? '#000000'}
-          onChange={(e) => onChange({ ...value, color: e.target.value })}
-          disabled={!visible}
-          style={{ ...INPUT_S, padding: '2px', height: '32px', cursor: visible ? 'pointer' : 'not-allowed', opacity: visible ? 1 : 0.4 }}
-          title="Couleur des lignes"
-        />
+        <div style={{ flex: '1 1 100%' }}>
+          <ColorSelector
+            value={value.color}
+            onChange={(c) => onChange({ ...value, color: c })}
+            disabled={!visible}
+            customTitle="Couleur de ligne personnalisée"
+          />
+        </div>
       </div>
     </div>
   );
