@@ -123,6 +123,7 @@ export function measureOverflow(doc: Document | null | undefined): OverflowMeasu
   let rightOverflow = 0;
   let leftOverflow = 0;
 
+  const SVG_NS = 'http://www.w3.org/2000/svg';
   const all = page.querySelectorAll<HTMLElement>('*');
   all.forEach((el) => {
     if (!isVisible(el, win)) return;
@@ -132,12 +133,19 @@ export function measureOverflow(doc: Document | null | undefined): OverflowMeasu
     // débordement horizontal alors que la photo affichée est plus petite.
     if (el.classList.contains('photo-frame')) return;
 
+    // Checks cross-realm safe : `instanceof SVGElement` ne marche PAS ici
+    // car les éléments viennent de l'iframe (autre realm que celui où
+    // tourne measureOverflow). On utilise namespaceURI + tagName qui sont
+    // des strings, donc indépendants des classes JS de chaque realm.
+    const inSvgNs = el.namespaceURI === SVG_NS;
+    const isSvgRoot = inSvgNs && el.tagName.toLowerCase() === 'svg';
+
     // Éléments internes à un SVG (<image>, <g>, <path>…) : leur bounding
     // rect peut être bien plus grand que le SVG container (notamment
     // <image x=0 y=0 width=NATURAL_PX> qui projette en coords écran à
     // travers le viewBox = peut faire 2-10× la taille du SVG). On les
     // skip — seul le `<svg>` container compte pour l'overflow.
-    if (el instanceof SVGElement && !(el instanceof SVGSVGElement)) return;
+    if (inSvgNs && !isSvgRoot) return;
 
     let r: DOMRect;
     if (el.tagName === 'IMG') {
@@ -152,10 +160,10 @@ export function measureOverflow(doc: Document | null | undefined): OverflowMeasu
       // getRenderedImgRect retourne null si object-fit n'est pas 'contain'
       // — dans ce cas on garde le bounding rect comme avant.
       r = rendered ?? img.getBoundingClientRect();
-    } else if (el instanceof SVGSVGElement) {
+    } else if (isSvgRoot) {
       // Photo recadrée : on calcule le rect du contenu effectivement
       // rendu (letterboxing preserveAspectRatio=meet).
-      const rendered = getRenderedSvgRect(el);
+      const rendered = getRenderedSvgRect(el as unknown as SVGSVGElement);
       r = rendered ?? el.getBoundingClientRect();
     } else {
       r = el.getBoundingClientRect();
