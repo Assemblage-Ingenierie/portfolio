@@ -205,6 +205,19 @@ export function measureOverflow(doc: Document | null | undefined): OverflowMeasu
         console.log(`${edge}: Δ=${c.delta.toFixed(1)}px`, c.el, 'rect:', c.el.getBoundingClientRect());
       }
     });
+    // Si flowOverflowH > 0 mais aucun élément ne déborde via rect → fuite
+    // fantôme dans scrollWidth. On liste tous les descendants qui ont eux
+    // un scrollWidth > clientWidth pour localiser la source.
+    if (flowOverflowH > 0 && culprits.right.delta === 0) {
+      console.log('🕵️ scrollWidth-only overflow detected. Suspects (own scrollW > clientW):');
+      page.querySelectorAll<HTMLElement>('*').forEach((el) => {
+        const sw = el.scrollWidth;
+        const cw = el.clientWidth;
+        if (sw > cw + 1 && cw > 0) {
+          console.log(`  ${el.tagName}.${el.className || '(no class)'}: clientW=${cw}, scrollW=${sw}, Δ=${sw - cw}`, el);
+        }
+      });
+    }
     console.groupEnd();
     /* eslint-enable no-console */
   }
