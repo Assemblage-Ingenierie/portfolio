@@ -115,10 +115,15 @@ export function measureOverflow(doc: Document | null | undefined): OverflowMeasu
       r = el.getBoundingClientRect();
     }
     if (r.height === 0 || r.width === 0) return;
+    // Les enfants d'un .photo-frame ont leur bounding rect décalé par le
+    // translateX de leur parent (offset horizontal du slider). Ce décalage est
+    // intentionnel et clippé par overflow:hidden de la page — ignorer les
+    // bords gauche/droite pour ces éléments pour éviter les faux positifs.
+    const insidePhotoFrame = el.closest('.photo-frame') !== null;
     const bottomDelta = r.bottom - pageRect.bottom;
     const topDelta = pageRect.top - r.top;
-    const rightDelta = r.right - pageRect.right;
-    const leftDelta = pageRect.left - r.left;
+    const rightDelta = insidePhotoFrame ? 0 : r.right - pageRect.right;
+    const leftDelta = insidePhotoFrame ? 0 : pageRect.left - r.left;
     if (bottomDelta > bottomOverflow) bottomOverflow = bottomDelta;
     if (topDelta > topOverflow) topOverflow = topDelta;
     if (rightDelta > rightOverflow) rightOverflow = rightDelta;

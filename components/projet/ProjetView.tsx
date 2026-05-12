@@ -3,9 +3,10 @@
 import { useState } from 'react';
 import type { Projet, TemplateChoice } from '@/types/projet';
 import TemplatePreview from '@/components/TemplatePreview';
-import ManualConfigPanel from '@/components/ManualConfigPanel';
+import LayoutSidebar from '@/components/projet/LayoutSidebar';
 import { authedFetch } from '@/lib/supabase/authHeaders';
 import { DEFAULT_MANUAL_CONFIG, ManualConfig } from '@/lib/pdf/manualConfig';
+import type { BandeauConfig } from '@/lib/pdf/bandeauConfig';
 import ProjetToolbar from './ProjetToolbar';
 
 interface Props {
@@ -18,11 +19,15 @@ export default function ProjetView({ projet, isPrint }: Props) {
   const [manualConfig, setManualConfig] = useState<ManualConfig>(
     projet.savedManualConfig ?? DEFAULT_MANUAL_CONFIG
   );
+  const [bandeauConfig, setBandeauConfig] = useState<BandeauConfig>(
+    projet.bandeauConfig ?? {}
+  );
+  const [measureTrigger, setMeasureTrigger] = useState(0);
 
   async function handleTemplateChange(newTemplate: TemplateChoice) {
     setTemplate(newTemplate);
-    // 'Manuel' / 'Dev' ne sont pas persistés en Airtable (pas dans les options du champ Template).
-    if (newTemplate === 'Manuel' || newTemplate === 'Dev') return;
+    // Dev est une variante UI de Manuel, non persistée dans Airtable.
+    if (newTemplate === 'Dev') return;
     try {
       await authedFetch(`/api/projet/${projet.slug}/fields`, {
         method: 'PATCH',
@@ -34,10 +39,7 @@ export default function ProjetView({ projet, isPrint }: Props) {
     }
   }
 
-  // En template Manuel (hors print), on bascule sur un layout 3 colonnes :
-  // panneau gauche (Photos additionnelles + Mots-clés) | aperçu | panneau
-  // droit (Photo principale + Texte description).
-  const isManualLayout = !isPrint && (template === 'Manuel' || template === 'Dev');
+  const isManualLayout = !isPrint && (template === 'Str-Env' || template === 'Dev');
 
   return (
     <>
@@ -46,39 +48,32 @@ export default function ProjetView({ projet, isPrint }: Props) {
           projet={projet}
           template={template}
           manualConfig={manualConfig}
+          bandeauConfig={bandeauConfig}
           onTemplateChange={handleTemplateChange}
+          onSave={() => setMeasureTrigger(t => t + 1)}
         />
       )}
       {isManualLayout ? (
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16, padding: '16px', background: '#ECECEC', minHeight: 'calc(100vh - 48px)' }}>
-          <aside style={{ width: 280, flex: '0 0 280px' }}>
-            <ManualConfigPanel
-              projet={projet}
-              config={manualConfig}
-              onChange={setManualConfig}
-              side="left"
-              isDev={template === 'Dev'}
-            />
-          </aside>
-          <main style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'stretch', background: '#ECECEC', minHeight: 'calc(100vh - 48px)' }}>
+          <LayoutSidebar
+            projet={projet}
+            config={manualConfig}
+            onChange={setManualConfig}
+            bandeauConfig={bandeauConfig}
+            onBandeauChange={setBandeauConfig}
+            isDev={template === 'Dev'}
+          />
+          <main style={{ flex: 1, display: 'flex', justifyContent: 'center', padding: 16 }}>
             <TemplatePreview
-              projet={{ ...projet, template }}
+              projet={{ ...projet, template, bandeauConfig }}
               manualConfig={manualConfig}
+              measureTrigger={measureTrigger}
             />
           </main>
-          <aside style={{ width: 280, flex: '0 0 280px' }}>
-            <ManualConfigPanel
-              projet={projet}
-              config={manualConfig}
-              onChange={setManualConfig}
-              side="right"
-              isDev={template === 'Dev'}
-            />
-          </aside>
         </div>
       ) : (
         <TemplatePreview
-          projet={{ ...projet, template }}
+          projet={{ ...projet, template, bandeauConfig }}
           manualConfig={undefined}
         />
       )}

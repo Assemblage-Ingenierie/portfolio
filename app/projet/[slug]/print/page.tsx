@@ -35,7 +35,7 @@ export default async function PrintPage({
     : projet;
 
   // Si template === 'Manuel' ou 'Dev' et qu'une config est fournie, on la décode.
-  const manualConfig = (effectiveProjet.template === 'Manuel' || effectiveProjet.template === 'Dev') && configRaw
+  const manualConfig = (effectiveProjet.template === 'Str-Env' || effectiveProjet.template === 'Dev') && configRaw
     ? decodeConfig(configRaw) ?? undefined
     : undefined;
 
