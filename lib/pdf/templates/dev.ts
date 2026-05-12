@@ -26,6 +26,7 @@ const CSS = `
 .dev-page > .dev-photos,
 .dev-page > .dev-text,
 .dev-page > .dev-extra-grid,
+.dev-page > .dev-presta,
 .dev-page > footer {
   flex: 0 0 auto;
 }
@@ -203,15 +204,14 @@ const CSS = `
 }
 
 /* ── Bloc Prestation Assemblage ────────────────────────
-   Position absolue, ancrage haut-gauche de la zone utile. Sliders X/Y
-   déplacent depuis cet ancrage en mm absolus. Width fixe pour qu'un texte
-   long ne s'étale pas sur toute la largeur. */
+   IN-FLOW (flex item de .dev-page) — apparaît systématiquement après le
+   bloc texte / photos additionnelles, jamais de superposition avec la
+   description, quelles que soient les métriques de wrap (fonts, hyphens,
+   justification…). Les sliders X/Y restent fonctionnels via
+   `transform: translate` qui déplace visuellement sans casser le flux. */
 .dev-presta {
-  position: absolute;
-  top: 80mm;
-  left: 18mm;
-  width: 174mm;
-  z-index: 90;
+  width: 100%;
+  flex: 0 0 auto;
   font-family: var(--sans);
   font-size: 9.5pt;
   line-height: 1.5;
