@@ -67,6 +67,39 @@ function getRenderedImgRect(img: HTMLImageElement, win: Window): DOMRect | null 
   return new DOMRect(left, top, rw, rh);
 }
 
+/**
+ * Équivalent pour les photos recadrées rendues en `<svg>` avec
+ * `preserveAspectRatio="xMidYMid meet"` (= object-fit:contain sémantique).
+ * Le viewBox définit l'aspect du contenu effectivement rendu ; quand la
+ * box CSS a une aspect différente (max-height clamp, etc.), le contenu
+ * est letterboxé centré. On retourne le rect du contenu visible — sinon
+ * la mesure utilise la box CSS, plus large, et produit des faux positifs.
+ */
+function getRenderedSvgRect(svg: SVGSVGElement): DOMRect | null {
+  const vb = svg.getAttribute('viewBox');
+  if (!vb) return null;
+  const parts = vb.split(/[\s,]+/).map(Number);
+  if (parts.length !== 4 || parts.some((n) => !isFinite(n))) return null;
+  const [, , vbW, vbH] = parts;
+  if (vbW <= 0 || vbH <= 0) return null;
+  const par = svg.getAttribute('preserveAspectRatio') ?? 'xMidYMid meet';
+  if (!par.includes('meet')) return null;
+  const r = svg.getBoundingClientRect();
+  if (r.width === 0 || r.height === 0) return null;
+  const vbRatio = vbW / vbH;
+  const boxRatio = r.width / r.height;
+  let rw = r.width;
+  let rh = r.height;
+  if (vbRatio > boxRatio) {
+    rh = r.width / vbRatio;
+  } else {
+    rw = r.height * vbRatio;
+  }
+  const left = r.left + (r.width - rw) / 2;
+  const top = r.top + (r.height - rh) / 2;
+  return new DOMRect(left, top, rw, rh);
+}
+
 export function measureOverflow(doc: Document | null | undefined): OverflowMeasure | null {
   if (!doc) return null;
   const page = doc.querySelector<HTMLElement>('.page');
@@ -98,6 +131,14 @@ export function measureOverflow(doc: Document | null | undefined): OverflowMeasu
     // séparément avec son rendered rect — sinon le frame reporte un
     // débordement horizontal alors que la photo affichée est plus petite.
     if (el.classList.contains('photo-frame')) return;
+
+    // Éléments internes à un SVG (<image>, <g>, <path>…) : leur bounding
+    // rect peut être bien plus grand que le SVG container (notamment
+    // <image x=0 y=0 width=NATURAL_PX> qui projette en coords écran à
+    // travers le viewBox = peut faire 2-10× la taille du SVG). On les
+    // skip — seul le `<svg>` container compte pour l'overflow.
+    if (el instanceof SVGElement && !(el instanceof SVGSVGElement)) return;
+
     let r: DOMRect;
     if (el.tagName === 'IMG') {
       const img = el as HTMLImageElement;
@@ -111,19 +152,26 @@ export function measureOverflow(doc: Document | null | undefined): OverflowMeasu
       // getRenderedImgRect retourne null si object-fit n'est pas 'contain'
       // — dans ce cas on garde le bounding rect comme avant.
       r = rendered ?? img.getBoundingClientRect();
+    } else if (el instanceof SVGSVGElement) {
+      // Photo recadrée : on calcule le rect du contenu effectivement
+      // rendu (letterboxing preserveAspectRatio=meet).
+      const rendered = getRenderedSvgRect(el);
+      r = rendered ?? el.getBoundingClientRect();
     } else {
       r = el.getBoundingClientRect();
     }
     if (r.height === 0 || r.width === 0) return;
-    // Les enfants d'un .photo-frame ont leur bounding rect décalé par le
-    // translateX de leur parent (offset horizontal du slider). Ce décalage est
-    // intentionnel et clippé par overflow:hidden de la page — ignorer les
-    // bords gauche/droite pour ces éléments pour éviter les faux positifs.
-    const insidePhotoFrame = el.closest('.photo-frame') !== null;
+
+    // Plus d'exemption horizontale pour les éléments dans `.photo-frame` :
+    // les sliders H peuvent pousser une photo hors-page (cf. screenshot
+    // utilisateur où le 3e photo va à -50% du slot et sort par la gauche).
+    // On veut que l'alarme se déclenche dans ce cas. Pour les <img> et
+    // <svg> photos, les rendered rects ci-dessus excluent déjà le
+    // letterboxing donc pas de faux positif sur leur box CSS surdimensionnée.
     const bottomDelta = r.bottom - pageRect.bottom;
     const topDelta = pageRect.top - r.top;
-    const rightDelta = insidePhotoFrame ? 0 : r.right - pageRect.right;
-    const leftDelta = insidePhotoFrame ? 0 : pageRect.left - r.left;
+    const rightDelta = r.right - pageRect.right;
+    const leftDelta = pageRect.left - r.left;
     if (bottomDelta > bottomOverflow) bottomOverflow = bottomDelta;
     if (topDelta > topOverflow) topOverflow = topDelta;
     if (rightDelta > rightOverflow) rightOverflow = rightDelta;
