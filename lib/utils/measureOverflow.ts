@@ -113,8 +113,20 @@ export function measureOverflow(doc: Document | null | undefined): OverflowMeasu
 
   // 1) Débordement par scroll* (contenu dans le flux). Tolérance 1px pour
   //    absorber le sub-pixel rounding du navigateur.
+  //
+  // ⚠ flowOverflowH (page.scrollWidth) est volontairement IGNORÉ pour le
+  //   bord droit/gauche : les <svg class="photo-cropped"> letterboxés via
+  //   preserveAspectRatio=meet ont une box CSS plus large que leur contenu
+  //   visible (les bandes de letterbox étant transparentes). scrollWidth
+  //   mesure la box CSS, pas le contenu visible → faux positif systématique
+  //   dès qu'une photo recadrée a un ratio différent de son slot.
+  //   La boucle élément-par-élément ci-dessous utilise getRenderedSvgRect /
+  //   getRenderedImgRect qui calcule le rendu visuel réel — c'est cette
+  //   mesure-là qui fait foi pour l'overflow horizontal.
+  //   (Le flowOverflowV vertical reste utile : scrollHeight reflète le
+  //   contenu réel dans le flux, sans souci de letterboxing.)
   const flowOverflowV = Math.max(0, page.scrollHeight - pagePx - 1);
-  const flowOverflowH = Math.max(0, page.scrollWidth - pageWidthPx - 1);
+  const flowOverflowH = 0;
 
   // 2) Débordement par enfants positionnés / translatés.
   const pageRect = page.getBoundingClientRect();
@@ -124,15 +136,6 @@ export function measureOverflow(doc: Document | null | undefined): OverflowMeasu
   let leftOverflow = 0;
 
   const SVG_NS = 'http://www.w3.org/2000/svg';
-  // Debug temporaire : trace l'élément qui contribue le plus à chaque bord.
-  // À retirer une fois la cause du faux positif identifiée.
-  const debug = true;
-  const culprits: Record<'top' | 'bottom' | 'left' | 'right', { el?: Element; delta: number }> = {
-    top: { delta: 0 },
-    bottom: { delta: 0 },
-    left: { delta: 0 },
-    right: { delta: 0 },
-  };
   const all = page.querySelectorAll<HTMLElement>('*');
   all.forEach((el) => {
     if (!isVisible(el, win)) return;
@@ -189,38 +192,11 @@ export function measureOverflow(doc: Document | null | undefined): OverflowMeasu
     const topDelta = pageRect.top - r.top;
     const rightDelta = r.right - pageRect.right;
     const leftDelta = pageRect.left - r.left;
-    if (bottomDelta > bottomOverflow) { bottomOverflow = bottomDelta; if (debug) culprits.bottom = { el, delta: bottomDelta }; }
-    if (topDelta > topOverflow) { topOverflow = topDelta; if (debug) culprits.top = { el, delta: topDelta }; }
-    if (rightDelta > rightOverflow) { rightOverflow = rightDelta; if (debug) culprits.right = { el, delta: rightDelta }; }
-    if (leftDelta > leftOverflow) { leftOverflow = leftDelta; if (debug) culprits.left = { el, delta: leftDelta }; }
+    if (bottomDelta > bottomOverflow) bottomOverflow = bottomDelta;
+    if (topDelta > topOverflow) topOverflow = topDelta;
+    if (rightDelta > rightOverflow) rightOverflow = rightDelta;
+    if (leftDelta > leftOverflow) leftOverflow = leftDelta;
   });
-
-  if (debug) {
-    /* eslint-disable no-console */
-    console.group('[measureOverflow] debug');
-    console.log('pageRect:', pageRect, 'clientW:', pageWidthPx, 'scrollW:', page.scrollWidth);
-    console.log('flowOverflowH:', flowOverflowH, 'flowOverflowV:', flowOverflowV);
-    Object.entries(culprits).forEach(([edge, c]) => {
-      if (c.delta > 0 && c.el) {
-        console.log(`${edge}: Δ=${c.delta.toFixed(1)}px`, c.el, 'rect:', c.el.getBoundingClientRect());
-      }
-    });
-    // Si flowOverflowH > 0 mais aucun élément ne déborde via rect → fuite
-    // fantôme dans scrollWidth. On liste tous les descendants qui ont eux
-    // un scrollWidth > clientWidth pour localiser la source.
-    if (flowOverflowH > 0 && culprits.right.delta === 0) {
-      console.log('🕵️ scrollWidth-only overflow detected. Suspects (own scrollW > clientW):');
-      page.querySelectorAll<HTMLElement>('*').forEach((el) => {
-        const sw = el.scrollWidth;
-        const cw = el.clientWidth;
-        if (sw > cw + 1 && cw > 0) {
-          console.log(`  ${el.tagName}.${el.className || '(no class)'}: clientW=${cw}, scrollW=${sw}, Δ=${sw - cw}`, el);
-        }
-      });
-    }
-    console.groupEnd();
-    /* eslint-enable no-console */
-  }
 
   // Tolérance : 1px en vertical, 3px en horizontal (le letterboxing
   // object-fit:contain a un arrondi sub-pixel plus marqué que les flux
