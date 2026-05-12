@@ -1,145 +1,57 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import ReactCrop, { type PercentCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import type { Projet } from '@/types/projet';
-import { allPhotos } from '@/lib/pdf/templates/shared';
+import { allPhotos, type PhotoRef } from '@/lib/pdf/templates/shared';
 import { photoCropKey, type CropData } from '@/lib/pdf/photoCrop';
 
 /**
- * Overlay de recadrage in-place sur l'aperçu A4.
+ * Modale de recadrage non-destructif des photos.
  *
- * Objectif : permettre à l'utilisateur d'aligner les bords horizontaux de
- * photos placées côte à côte dans la fiche, en voyant le résultat dans le
- * contexte exact de la mise en page A4.
+ * Ouverte depuis la toolbar (« ✂ Recadrer les photos »). Affiche toutes les
+ * photos du projet dans une grille, avec un ReactCrop sur chacune. Les
+ * sélections sont libres (8 poignées : 4 coins + 4 côtés), ce qui permet
+ * des crops uniquement horizontaux ou verticaux pour aligner les bords des
+ * photos côte à côte dans la fiche A4.
  *
- * Principe :
- * 1. L'iframe rend toujours les photos avec leurs crops actuels (live).
- * 2. Pour chaque `.photo-frame` détecté dans l'iframe, on calcule sa
- *    position (translatée dans les coords du conteneur parent).
- * 3. On affiche par-dessus un composant <ReactCrop> qui montre l'image
- *    originale ; la sélection initiale = le crop sauvegardé ; l'image
- *    affichée est scalée de sorte que la sélection occupe exactement la
- *    taille du slot dans l'iframe.
- * 4. À chaque drag, on appelle `onChange(filename, percentCrop)`.
- * 5. L'aspect ratio de la sélection est verrouillé à celui du slot, pour
- *    que ce qui est recadré remplisse exactement le cadre de la fiche.
+ * L'aperçu A4 en arrière-plan est mis à jour en temps réel à chaque drag.
  */
 
-interface FrameSlot {
-  key: string;
-  url: string;
-  left: number;
-  top: number;
-  width: number;
-  height: number;
-  /** Aspect ratio du slot (width / height). Utilisé pour locker la sélection. */
-  aspect: number;
-}
-
 interface Props {
-  iframeRef: React.RefObject<HTMLIFrameElement | null>;
-  /** Conteneur parent dans lequel positionner les overlays (coords relatives). */
-  containerRef: React.RefObject<HTMLDivElement | null>;
+  /** L'overlay ne s'affiche que si open est true. */
+  open: boolean;
+  onClose: () => void;
   projet: Projet;
   photoCrops: Record<string, CropData>;
   onChange: (next: Record<string, CropData>) => void;
-  /** Re-mesure forcée (incrémenter pour déclencher) — utile après une
-   *  re-render d'iframe due à un changement de config layout. */
-  measureKey: number;
 }
 
 const FULL_CROP: CropData = { unit: '%', x: 0, y: 0, width: 100, height: 100 };
 
 export default function PhotoCropOverlay({
-  iframeRef,
-  containerRef,
+  open,
+  onClose,
   projet,
   photoCrops,
   onChange,
-  measureKey,
 }: Props) {
-  const [slots, setSlots] = useState<FrameSlot[]>([]);
-  const measureRafRef = useRef<number | undefined>(undefined);
+  const photos = useMemo(() => allPhotos(projet), [projet]);
 
-  // (Re)mesure les positions des photo-frames dans l'iframe.
+  // ESC pour fermer
   useEffect(() => {
-    const iframe = iframeRef.current;
-    const container = containerRef.current;
-    if (!iframe || !container) return;
-
-    const photos = allPhotos(projet);
-
-    function measure() {
-      const doc = iframe?.contentDocument;
-      if (!doc || !container) return;
-      const frames = Array.from(
-        doc.querySelectorAll<HTMLElement>('.photo-frame, .photo-cropped')
-      );
-      const containerRect = container.getBoundingClientRect();
-      const next: FrameSlot[] = [];
-
-      for (const frame of frames) {
-        const img = frame.querySelector('img');
-        if (!img) continue;
-        const src = img.getAttribute('src') ?? '';
-        const photo = photos.find((p) => p.url === src);
-        if (!photo) continue;
-        const r = frame.getBoundingClientRect();
-        if (r.width < 4 || r.height < 4) continue;
-        next.push({
-          key: photoCropKey(photo),
-          url: photo.url,
-          left: r.left - containerRect.left,
-          top: r.top - containerRect.top,
-          width: r.width,
-          height: r.height,
-          aspect: r.width / Math.max(1, r.height),
-        });
-      }
-      setSlots(next);
+    if (!open) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose();
     }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
 
-    function scheduleMeasure() {
-      if (measureRafRef.current !== undefined) {
-        cancelAnimationFrame(measureRafRef.current);
-      }
-      // Double rAF pour laisser le layout se stabiliser après load/changement.
-      measureRafRef.current = requestAnimationFrame(() => {
-        measureRafRef.current = requestAnimationFrame(measure);
-      });
-    }
+  if (!open) return null;
 
-    function onLoad() {
-      scheduleMeasure();
-    }
-
-    iframe.addEventListener('load', onLoad);
-    scheduleMeasure();
-
-    // Surveiller les redimensionnements de la fenêtre (zoom navigateur,
-    // resize) — les slots bougent quand la taille du container change.
-    const ro = new ResizeObserver(scheduleMeasure);
-    ro.observe(iframe);
-    ro.observe(container);
-    window.addEventListener('resize', scheduleMeasure);
-    window.addEventListener('scroll', scheduleMeasure, true);
-
-    return () => {
-      iframe.removeEventListener('load', onLoad);
-      ro.disconnect();
-      window.removeEventListener('resize', scheduleMeasure);
-      window.removeEventListener('scroll', scheduleMeasure, true);
-      if (measureRafRef.current !== undefined) {
-        cancelAnimationFrame(measureRafRef.current);
-      }
-    };
-  }, [iframeRef, containerRef, projet, measureKey, photoCrops]);
-
-  function handleChange(slotKey: string, percent: PercentCrop) {
-    // PercentCrop : { unit:'%', x, y, width, height }
-    // On filtre les valeurs invalides (NaN) et on clampe à [0, 100].
+  function handleCropChange(photo: PhotoRef, percent: PercentCrop) {
     if (
       !isFinite(percent.x) ||
       !isFinite(percent.y) ||
@@ -156,97 +68,234 @@ export default function PhotoCropOverlay({
       width: Math.max(0.5, Math.min(100, percent.width)),
       height: Math.max(0.5, Math.min(100, percent.height)),
     };
-    onChange({ ...photoCrops, [slotKey]: next });
+    onChange({ ...photoCrops, [photoCropKey(photo)]: next });
   }
 
-  function handleReset(slotKey: string) {
+  function handleReset(photo: PhotoRef) {
     const next = { ...photoCrops };
-    delete next[slotKey];
+    delete next[photoCropKey(photo)];
     onChange(next);
   }
 
-  return (
-    <>
-      {slots.map((slot) => {
-        const crop = photoCrops[slot.key] ?? FULL_CROP;
-        // Scale : afficher l'image originale de sorte que la zone du crop
-        // occupe exactement la taille du slot. Si crop = 100% → image
-        // displayée à la taille du slot. Si crop = 50% → image displayée
-        // 2× la taille du slot.
-        const cw = Math.max(0.01, crop.width);
-        const ch = Math.max(0.01, crop.height);
-        const imgWidth = slot.width * (100 / cw);
-        const imgHeight = slot.height * (100 / ch);
-        // Position de l'image affichée pour que la zone du crop coïncide
-        // avec le slot dans l'iframe.
-        const imgLeft = slot.left - (crop.x / 100) * imgWidth;
-        const imgTop = slot.top - (crop.y / 100) * imgHeight;
+  function handleResetAll() {
+    onChange({});
+  }
 
-        return (
-          <div
-            key={slot.key}
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Recadrer les photos"
+      onClick={(e) => {
+        // Clic sur le backdrop = fermer
+        if (e.target === e.currentTarget) onClose();
+      }}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 1000,
+        background: 'rgba(20, 22, 30, 0.72)',
+        backdropFilter: 'blur(2px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 24,
+      }}
+    >
+      <div
+        style={{
+          background: 'white',
+          borderRadius: 4,
+          boxShadow: '0 24px 60px rgba(0,0,0,0.35)',
+          width: 'min(1100px, 100%)',
+          maxHeight: 'calc(100vh - 48px)',
+          display: 'flex',
+          flexDirection: 'column',
+          fontFamily: 'var(--sans)',
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            padding: '14px 20px',
+            borderBottom: '1px solid var(--ai-gris)',
+          }}
+        >
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '11pt', fontWeight: 700, color: 'var(--ai-violet)' }}>
+              ✂ Recadrer les photos
+            </div>
+            <div style={{ fontSize: '8.5pt', color: 'var(--ai-noir70)', marginTop: 2 }}>
+              Glissez les poignées (coins ou milieux des côtés) pour ajuster. L&apos;aperçu A4 se met à jour en direct.
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleResetAll}
             style={{
-              position: 'absolute',
-              left: imgLeft,
-              top: imgTop,
-              width: imgWidth,
-              height: imgHeight,
-              zIndex: 50,
-              // L'image dépasse le slot — masquer les zones hors écran A4
-              // n'est pas nécessaire car ReactCrop affiche le fond original
-              // (utile pour aligner par référence au-delà du cadre).
+              padding: '6px 12px',
+              borderRadius: 2,
+              border: '1px solid var(--ai-gris)',
+              background: 'white',
+              color: 'var(--ai-violet)',
+              fontFamily: 'var(--sans)',
+              fontSize: '8.5pt',
+              fontWeight: 600,
+              cursor: 'pointer',
             }}
           >
-            <ReactCrop
-              crop={crop}
-              onChange={(_, p) => handleChange(slot.key, p)}
-              aspect={slot.aspect}
-              keepSelection
-              ruleOfThirds
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={slot.url}
-                alt=""
-                draggable={false}
+            Tout réinitialiser
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              padding: '6px 14px',
+              borderRadius: 2,
+              border: 'none',
+              background: 'var(--ai-violet)',
+              color: 'white',
+              fontFamily: 'var(--sans)',
+              fontSize: '8.5pt',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Fermer
+          </button>
+        </div>
+
+        {/* Grille de photos */}
+        <div
+          style={{
+            overflow: 'auto',
+            padding: 20,
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
+            gap: 20,
+            background: '#F7F8FA',
+          }}
+        >
+          {photos.length === 0 && (
+            <div style={{ padding: 40, textAlign: 'center', color: 'var(--ai-noir70)' }}>
+              Aucune photo dans ce projet.
+            </div>
+          )}
+          {photos.map((photo, idx) => {
+            const key = photoCropKey(photo);
+            const crop = photoCrops[key] ?? FULL_CROP;
+            const cropped = !!photoCrops[key];
+            return (
+              <div
+                key={key}
                 style={{
-                  width: '100%',
-                  height: '100%',
-                  display: 'block',
-                  userSelect: 'none',
-                  WebkitUserDrag: 'none',
-                } as React.CSSProperties}
-              />
-            </ReactCrop>
-            {/* Mini-bouton reset si crop actif */}
-            {photoCrops[slot.key] && (
-              <button
-                type="button"
-                onClick={() => handleReset(slot.key)}
-                style={{
-                  position: 'absolute',
-                  top: (crop.y / 100) * imgHeight + 4,
-                  left: (crop.x / 100) * imgWidth + (crop.width / 100) * imgWidth - 28,
-                  width: 24,
-                  height: 24,
-                  borderRadius: '50%',
-                  border: 'none',
-                  background: 'rgba(0, 0, 0, 0.7)',
-                  color: 'white',
-                  cursor: 'pointer',
-                  fontFamily: 'var(--sans)',
-                  fontSize: '11pt',
-                  lineHeight: 1,
-                  zIndex: 51,
+                  background: 'white',
+                  borderRadius: 4,
+                  border: '1px solid var(--ai-gris)',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column',
                 }}
-                title="Réinitialiser le recadrage"
               >
-                ×
-              </button>
-            )}
-          </div>
-        );
-      })}
-    </>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '8px 12px',
+                    borderBottom: '1px solid var(--ai-gris)',
+                    background: 'var(--ai-gris-tres-clair, #F2F2F2)',
+                  }}
+                >
+                  <span style={{ fontSize: '8.5pt', fontWeight: 700, color: 'var(--ai-violet)' }}>
+                    Photo {idx + 1}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: '8pt',
+                      color: 'var(--ai-noir70)',
+                      flex: 1,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                    title={photo.filename}
+                  >
+                    {photo.filename}
+                  </span>
+                  {cropped && (
+                    <button
+                      type="button"
+                      onClick={() => handleReset(photo)}
+                      style={{
+                        padding: '3px 8px',
+                        borderRadius: 2,
+                        border: '1px solid var(--ai-rouge)',
+                        background: 'white',
+                        color: 'var(--ai-rouge)',
+                        fontFamily: 'var(--sans)',
+                        fontSize: '7.5pt',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Réinitialiser
+                    </button>
+                  )}
+                </div>
+                <div
+                  style={{
+                    padding: 12,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background:
+                      'repeating-conic-gradient(#eee 0% 25%, #f7f7f7 0% 50%) 50% / 14px 14px',
+                  }}
+                >
+                  <ReactCrop
+                    crop={crop}
+                    onChange={(_, p) => handleCropChange(photo, p)}
+                    keepSelection
+                    ruleOfThirds
+                    // Pas d'aspect lock → 8 poignées (4 coins + 4 milieux des côtés)
+                    // permettant des crops uniquement horizontaux ou verticaux.
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={photo.url}
+                      alt={photo.filename}
+                      draggable={false}
+                      style={{
+                        display: 'block',
+                        maxWidth: '100%',
+                        maxHeight: '50vh',
+                        userSelect: 'none',
+                      }}
+                    />
+                  </ReactCrop>
+                </div>
+                <div
+                  style={{
+                    padding: '8px 12px',
+                    fontSize: '7.5pt',
+                    color: 'var(--ai-noir70)',
+                    fontFamily: 'monospace',
+                    borderTop: '1px solid var(--ai-gris)',
+                  }}
+                >
+                  {cropped
+                    ? `x: ${crop.x.toFixed(1)}%  ·  y: ${crop.y.toFixed(1)}%  ·  ${crop.width.toFixed(1)} × ${crop.height.toFixed(1)} %`
+                    : 'Aucun recadrage'}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 }

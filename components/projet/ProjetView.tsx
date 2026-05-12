@@ -4,6 +4,7 @@ import { useState } from 'react';
 import type { Projet, TemplateChoice } from '@/types/projet';
 import TemplatePreview from '@/components/TemplatePreview';
 import LayoutSidebar from '@/components/projet/LayoutSidebar';
+import PhotoCropOverlay from '@/components/projet/PhotoCropOverlay';
 import { authedFetch } from '@/lib/supabase/authHeaders';
 import { DEFAULT_MANUAL_CONFIG, ManualConfig } from '@/lib/pdf/manualConfig';
 import type { BandeauConfig } from '@/lib/pdf/bandeauConfig';
@@ -46,9 +47,9 @@ export default function ProjetView({ projet, isPrint }: Props) {
 
   const isManualLayout = !isPrint && (template === 'Str-Env' || template === 'Dev');
 
-  // Le projet visualisé inclut les crops courants — l'iframe les applique
-  // automatiquement (CSS). En mode crop, les overlays se superposent à ces
-  // photos déjà recadrées pour permettre l'ajustement.
+  // Le projet visualisé inclut les crops courants — l'iframe applique
+  // automatiquement les recadrages via CSS. Pendant que la modale est
+  // ouverte, l'aperçu A4 se met à jour à chaque drag (live preview).
   const previewProjet = { ...projet, template, bandeauConfig, photoCrops };
 
   return (
@@ -81,9 +82,6 @@ export default function ProjetView({ projet, isPrint }: Props) {
               projet={previewProjet}
               manualConfig={manualConfig}
               measureTrigger={measureTrigger}
-              cropEditMode={cropEditMode}
-              photoCrops={photoCrops}
-              onPhotoCropsChange={setPhotoCrops}
             />
           </main>
         </div>
@@ -91,9 +89,15 @@ export default function ProjetView({ projet, isPrint }: Props) {
         <TemplatePreview
           projet={previewProjet}
           manualConfig={undefined}
-          cropEditMode={cropEditMode}
+        />
+      )}
+      {!isPrint && (
+        <PhotoCropOverlay
+          open={cropEditMode}
+          onClose={() => setCropEditMode(false)}
+          projet={projet}
           photoCrops={photoCrops}
-          onPhotoCropsChange={setPhotoCrops}
+          onChange={setPhotoCrops}
         />
       )}
     </>
