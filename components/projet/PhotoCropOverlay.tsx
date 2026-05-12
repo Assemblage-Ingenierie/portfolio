@@ -1,11 +1,20 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import ReactCrop, { type PercentCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import type { Projet } from '@/types/projet';
 import { allPhotos, type PhotoRef } from '@/lib/pdf/templates/shared';
 import { photoCropKey, type CropData } from '@/lib/pdf/photoCrop';
+
+/** Hauteur display commune à toutes les photos dans la modale.
+ *  Toutes les photos sont rendues à exactement cette hauteur en pixels →
+ *  les bords des sélections crop à la même valeur Y % sont au même pixel
+ *  vertical, ce qui permet un alignement visuel direct entre photos.
+ *  Modifiable via le slider en haut de la modale. */
+const DEFAULT_DISPLAY_HEIGHT = 240;
+const MIN_DISPLAY_HEIGHT = 140;
+const MAX_DISPLAY_HEIGHT = 480;
 
 /**
  * Modale de recadrage non-destructif des photos.
@@ -38,6 +47,9 @@ export default function PhotoCropOverlay({
   onChange,
 }: Props) {
   const photos = useMemo(() => allPhotos(projet), [projet]);
+  const [displayHeight, setDisplayHeight] = useState(DEFAULT_DISPLAY_HEIGHT);
+  const [showGuide, setShowGuide] = useState(false);
+  const [guideY, setGuideY] = useState(0.5); // 0..1 fraction of displayHeight
 
   // ESC pour fermer
   useEffect(() => {
@@ -122,16 +134,55 @@ export default function PhotoCropOverlay({
             gap: 12,
             padding: '14px 20px',
             borderBottom: '1px solid var(--ai-gris)',
+            flexWrap: 'wrap',
           }}
         >
-          <div style={{ flex: 1 }}>
+          <div style={{ flex: 1, minWidth: 240 }}>
             <div style={{ fontSize: '11pt', fontWeight: 700, color: 'var(--ai-violet)' }}>
               ✂ Recadrer les photos
             </div>
             <div style={{ fontSize: '8.5pt', color: 'var(--ai-noir70)', marginTop: 2 }}>
-              Glissez les poignées (coins ou milieux des côtés) pour ajuster. L&apos;aperçu A4 se met à jour en direct.
+              Toutes les photos partagent la même hauteur display — les sélections au même % Y sont alignées au pixel près.
             </div>
           </div>
+
+          {/* Slider hauteur display */}
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '8pt', color: 'var(--ai-noir70)' }}>
+            Zoom
+            <input
+              type="range"
+              min={MIN_DISPLAY_HEIGHT}
+              max={MAX_DISPLAY_HEIGHT}
+              step={10}
+              value={displayHeight}
+              onChange={(e) => setDisplayHeight(Number(e.target.value))}
+              style={{ width: 140 }}
+            />
+            <span style={{ fontFamily: 'monospace', fontSize: '7.5pt', width: 36, textAlign: 'right' }}>
+              {displayHeight}px
+            </span>
+          </label>
+
+          {/* Guide horizontal d'alignement */}
+          <button
+            type="button"
+            onClick={() => setShowGuide((v) => !v)}
+            style={{
+              padding: '6px 12px',
+              borderRadius: 2,
+              border: '1px solid var(--ai-gris)',
+              background: showGuide ? 'var(--ai-violet)' : 'white',
+              color: showGuide ? 'white' : 'var(--ai-violet)',
+              fontFamily: 'var(--sans)',
+              fontSize: '8.5pt',
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+            title="Affiche une règle horizontale traversant toutes les photos"
+          >
+            {showGuide ? '✓ Règle' : 'Règle'}
+          </button>
+
           <button
             type="button"
             onClick={handleResetAll}
@@ -168,15 +219,14 @@ export default function PhotoCropOverlay({
           </button>
         </div>
 
-        {/* Grille de photos */}
+        {/* Rangée horizontale — toutes les photos à la même hauteur display
+            pour permettre l'alignement visuel des bords entre photos. */}
         <div
           style={{
             overflow: 'auto',
-            padding: 20,
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
-            gap: 20,
+            padding: '24px 20px',
             background: '#F7F8FA',
+            position: 'relative',
           }}
         >
           {photos.length === 0 && (
@@ -184,116 +234,168 @@ export default function PhotoCropOverlay({
               Aucune photo dans ce projet.
             </div>
           )}
-          {photos.map((photo, idx) => {
-            const key = photoCropKey(photo);
-            const crop = photoCrops[key] ?? FULL_CROP;
-            const cropped = !!photoCrops[key];
-            return (
-              <div
-                key={key}
-                style={{
-                  background: 'white',
-                  borderRadius: 4,
-                  border: '1px solid var(--ai-gris)',
-                  overflow: 'hidden',
-                  display: 'flex',
-                  flexDirection: 'column',
-                }}
-              >
+          <div
+            style={{
+              display: 'flex',
+              gap: 12,
+              alignItems: 'flex-start',
+              // Largeur naturelle (somme des photos) → scroll horizontal si dépassement
+              minWidth: 'min-content',
+              position: 'relative',
+            }}
+          >
+            {photos.map((photo, idx) => {
+              const key = photoCropKey(photo);
+              const crop = photoCrops[key] ?? FULL_CROP;
+              const cropped = !!photoCrops[key];
+              return (
                 <div
+                  key={key}
                   style={{
+                    background: 'white',
+                    borderRadius: 4,
+                    border: '1px solid var(--ai-gris)',
+                    overflow: 'hidden',
                     display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    padding: '8px 12px',
-                    borderBottom: '1px solid var(--ai-gris)',
-                    background: 'var(--ai-gris-tres-clair, #F2F2F2)',
+                    flexDirection: 'column',
+                    flex: '0 0 auto',
                   }}
                 >
-                  <span style={{ fontSize: '8.5pt', fontWeight: 700, color: 'var(--ai-violet)' }}>
-                    Photo {idx + 1}
-                  </span>
-                  <span
+                  <div
                     style={{
-                      fontSize: '8pt',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      padding: '6px 10px',
+                      borderBottom: '1px solid var(--ai-gris)',
+                      background: 'var(--ai-gris-tres-clair, #F2F2F2)',
+                      minHeight: 28,
+                    }}
+                  >
+                    <span style={{ fontSize: '8pt', fontWeight: 700, color: 'var(--ai-violet)' }}>
+                      Photo {idx + 1}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: '7.5pt',
+                        color: 'var(--ai-noir70)',
+                        flex: 1,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        maxWidth: 220,
+                      }}
+                      title={photo.filename}
+                    >
+                      {photo.filename}
+                    </span>
+                    {cropped && (
+                      <button
+                        type="button"
+                        onClick={() => handleReset(photo)}
+                        style={{
+                          padding: '2px 6px',
+                          borderRadius: 2,
+                          border: '1px solid var(--ai-rouge)',
+                          background: 'white',
+                          color: 'var(--ai-rouge)',
+                          fontFamily: 'var(--sans)',
+                          fontSize: '7pt',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Reset
+                      </button>
+                    )}
+                  </div>
+                  <div
+                    style={{
+                      padding: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background:
+                        'repeating-conic-gradient(#eee 0% 25%, #f7f7f7 0% 50%) 50% / 14px 14px',
+                    }}
+                  >
+                    <ReactCrop
+                      crop={crop}
+                      onChange={(_, p) => handleCropChange(photo, p)}
+                      keepSelection
+                      ruleOfThirds
+                      // Pas d'aspect lock → 8 poignées (4 coins + 4 milieux des côtés)
+                      // permettant des crops uniquement horizontaux ou verticaux.
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={photo.url}
+                        alt={photo.filename}
+                        draggable={false}
+                        style={{
+                          display: 'block',
+                          height: displayHeight,
+                          width: 'auto',
+                          maxWidth: 'none',
+                          userSelect: 'none',
+                        }}
+                      />
+                    </ReactCrop>
+                  </div>
+                  <div
+                    style={{
+                      padding: '4px 10px',
+                      fontSize: '7pt',
                       color: 'var(--ai-noir70)',
-                      flex: 1,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
+                      fontFamily: 'monospace',
+                      borderTop: '1px solid var(--ai-gris)',
                       whiteSpace: 'nowrap',
                     }}
-                    title={photo.filename}
                   >
-                    {photo.filename}
-                  </span>
-                  {cropped && (
-                    <button
-                      type="button"
-                      onClick={() => handleReset(photo)}
-                      style={{
-                        padding: '3px 8px',
-                        borderRadius: 2,
-                        border: '1px solid var(--ai-rouge)',
-                        background: 'white',
-                        color: 'var(--ai-rouge)',
-                        fontFamily: 'var(--sans)',
-                        fontSize: '7.5pt',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Réinitialiser
-                    </button>
-                  )}
+                    {cropped
+                      ? `y:${crop.y.toFixed(0)}  h:${crop.height.toFixed(0)}  x:${crop.x.toFixed(0)}  w:${crop.width.toFixed(0)} (%)`
+                      : 'non recadré'}
+                  </div>
                 </div>
-                <div
-                  style={{
-                    padding: 12,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background:
-                      'repeating-conic-gradient(#eee 0% 25%, #f7f7f7 0% 50%) 50% / 14px 14px',
-                  }}
-                >
-                  <ReactCrop
-                    crop={crop}
-                    onChange={(_, p) => handleCropChange(photo, p)}
-                    keepSelection
-                    ruleOfThirds
-                    // Pas d'aspect lock → 8 poignées (4 coins + 4 milieux des côtés)
-                    // permettant des crops uniquement horizontaux ou verticaux.
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={photo.url}
-                      alt={photo.filename}
-                      draggable={false}
-                      style={{
-                        display: 'block',
-                        maxWidth: '100%',
-                        maxHeight: '50vh',
-                        userSelect: 'none',
-                      }}
-                    />
-                  </ReactCrop>
-                </div>
-                <div
-                  style={{
-                    padding: '8px 12px',
-                    fontSize: '7.5pt',
-                    color: 'var(--ai-noir70)',
-                    fontFamily: 'monospace',
-                    borderTop: '1px solid var(--ai-gris)',
-                  }}
-                >
-                  {cropped
-                    ? `x: ${crop.x.toFixed(1)}%  ·  y: ${crop.y.toFixed(1)}%  ·  ${crop.width.toFixed(1)} × ${crop.height.toFixed(1)} %`
-                    : 'Aucun recadrage'}
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
+            {/* Règle horizontale d'alignement — barre rouge fine traversant
+                toutes les photos. La position Y est en fraction (0..1) de la
+                hauteur display, donc cohérente entre photos. */}
+            {showGuide && (
+              <div
+                onMouseDown={(e) => {
+                  // Drag handler pour repositionner la règle
+                  const startY = e.clientY;
+                  const startGuide = guideY;
+                  function onMove(ev: MouseEvent) {
+                    const dy = ev.clientY - startY;
+                    setGuideY(Math.max(0, Math.min(1, startGuide + dy / displayHeight)));
+                  }
+                  function onUp() {
+                    window.removeEventListener('mousemove', onMove);
+                    window.removeEventListener('mouseup', onUp);
+                  }
+                  window.addEventListener('mousemove', onMove);
+                  window.addEventListener('mouseup', onUp);
+                }}
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  right: 0,
+                  // Position relative au début de la zone photo (header ~28px + border)
+                  top: 28 + 1 + guideY * displayHeight - 1,
+                  height: 2,
+                  background: 'var(--ai-rouge)',
+                  cursor: 'ns-resize',
+                  zIndex: 10,
+                  boxShadow: '0 0 0 1px white, 0 0 4px rgba(0,0,0,0.3)',
+                  pointerEvents: 'auto',
+                }}
+                title="Glissez pour déplacer la règle"
+              />
+            )}
+          </div>
         </div>
       </div>
     </div>
