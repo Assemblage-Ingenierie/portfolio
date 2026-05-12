@@ -68,9 +68,9 @@ function buildWpEditorialV2(projet: Projet, coverUrl: string | undefined, photoU
   <div style="border-top:2px solid ${ROUGE};border-bottom:1px solid ${GRIS};padding:20px 0;margin-bottom:32px;">
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px 28px;">
       ${champsCles.map(f => `
-        <div style="${f.highlight ? `color:${ROUGE};` : ''}font-family:${SANS};font-size:10pt;line-height:1.4;">
-          <div style="font-weight:400;color:${f.highlight ? ROUGE : NOIR70};margin-bottom:4px;">${esc(f.label)}</div>
-          <div style="font-weight:400;color:${f.highlight ? ROUGE : '#000'};">${esc(f.value!)}</div>
+        <div style="font-family:${SANS} !important;font-size:10pt !important;line-height:1.4 !important;font-variant:normal !important;text-transform:none !important;letter-spacing:normal !important;">
+          <div style="font-family:${SANS} !important;font-size:10pt !important;font-weight:400 !important;font-variant:normal !important;text-transform:none !important;letter-spacing:normal !important;color:${f.highlight ? ROUGE : NOIR70} !important;margin-bottom:4px;">${esc(f.label)}</div>
+          <div style="font-family:${SANS} !important;font-size:10pt !important;font-weight:400 !important;font-variant:normal !important;text-transform:none !important;letter-spacing:normal !important;color:${f.highlight ? ROUGE : '#000'} !important;">${esc(f.value!)}</div>
         </div>`).join('')}
     </div>
   </div>` : ''}

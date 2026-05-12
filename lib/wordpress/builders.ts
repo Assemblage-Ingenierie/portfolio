@@ -236,10 +236,10 @@ function buildWpEditorial(projet: Projet, coverUrl: string | undefined, photoUrl
           </figure>`
         : ''}
     </div>
-    <ul style="list-style:none;margin:0;padding:0;font-family:${SANS};font-size:10pt;line-height:1.5;color:#000;">
+    <ul style="list-style:none;margin:0;padding:0;font-family:${SANS} !important;font-size:10pt !important;line-height:1.5 !important;color:#000;font-variant:normal !important;text-transform:none !important;letter-spacing:normal !important;">
       ${champsCles.map(f => `
-        <li style="padding:6px 0;${f.highlight ? `color:${ROUGE};` : ''}font-weight:400;">
-          <span>${esc(f.label)} :</span> ${esc(f.value!)}
+        <li style="padding:6px 0;font-family:${SANS} !important;font-size:10pt !important;font-weight:400 !important;font-variant:normal !important;text-transform:none !important;letter-spacing:normal !important;${f.highlight ? `color:${ROUGE} !important;` : 'color:#000 !important;'}">
+          <span style="font-family:${SANS} !important;font-variant:normal !important;text-transform:none !important;letter-spacing:normal !important;">${esc(f.label)} :</span> ${esc(f.value!)}
         </li>`).join('')}
     </ul>
   </div>
