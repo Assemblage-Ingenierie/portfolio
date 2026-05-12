@@ -33,7 +33,7 @@ export default function ProjetToolbar({
   onSave,
 }: Props) {
   const [publishing, setPublishing] = useState(false);
-  const [result, setResult] = useState<{ url?: string; error?: string; warning?: string } | null>(null);
+  const [result, setResult] = useState<{ url?: string; error?: string; warning?: string; status?: string; type?: string; author?: number; id?: number } | null>(null);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   async function handlePublish(variant: 'v1' | 'v2') {
@@ -49,7 +49,7 @@ export default function ProjetToolbar({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Erreur inconnue');
-      setResult({ url: data.url, warning: data.warning });
+      setResult({ url: data.url, warning: data.warning, status: data.status, type: data.type, author: data.author, id: data.id });
     } catch (e) {
       setResult({ error: e instanceof Error ? e.message : 'Erreur' });
     } finally {
@@ -178,7 +178,8 @@ export default function ProjetToolbar({
       )}
       {result?.url && (
         <span style={{ color: '#90EE90', fontWeight: 600 }}>
-          ✓ Publié — <a href={result.url} target="_blank" rel="noopener noreferrer" style={{ color: '#90EE90' }}>voir le brouillon</a>
+          ✓ Publié #{result.id} [{result.type}/{result.status}, author {result.author}] —{' '}
+          <a href={result.url} target="_blank" rel="noopener noreferrer" style={{ color: '#90EE90' }}>voir le brouillon</a>
           {result.warning && <span style={{ color: '#ffdd88', marginLeft: 8 }}>({result.warning})</span>}
         </span>
       )}
