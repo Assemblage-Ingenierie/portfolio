@@ -75,6 +75,22 @@ export function croppedPhotoHtml(
   // natives Airtable, on calcule la taille pixel de la région cropée → le
   // conteneur se comporte exactement comme l'<img> qu'il remplace. Sans dims
   // natives, fallback en width:100% (peut déborder sur grands slots).
+  //
+  // Note importante sur le cascade CSS :
+  //
+  //   On NE déclare PAS max-width / max-height en inline ici. Les templates
+  //   définissent ces contraintes via leurs propres règles ciblant
+  //   `.photo-img` (ex. `.man-photos--paysage .photo-img { max-height:
+  //   var(--main-photo-max) }`). Comme l'inline a la spécificité la plus
+  //   forte, le déclarer ici écraserait ces overrides et casserait les
+  //   sliders de taille / position. La cascade ci-dessous fonctionne :
+  //
+  //   1. shared.ts `.photo-img { max-width:100%; max-height:100% }` →
+  //      fallback générique
+  //   2. template-specific `.man-photos--paysage .photo-img { max-height:
+  //      var(--main-photo-max) }` → override
+  //   3. notre inline : seulement position, overflow, width, aspect-ratio
+  //
   let containerStyle: string;
   if (photo.width && photo.height) {
     const naturalCropW = (photo.width * cw) / 100;
@@ -84,15 +100,11 @@ export function croppedPhotoHtml(
       'overflow:hidden',
       `width:${naturalCropW}px`,
       `aspect-ratio:${naturalCropW} / ${naturalCropH}`,
-      'max-width:100%',
-      'max-height:100%',
     ].join(';');
   } else {
     containerStyle = [
       'position:relative',
       'overflow:hidden',
-      'max-width:100%',
-      'max-height:100%',
       `aspect-ratio:${cw} / ${ch}`,
       'width:100%',
     ].join(';');
@@ -112,5 +124,12 @@ export function croppedPhotoHtml(
     'object-fit:fill',
   ].join(';');
 
-  return `<div class="photo-cropped" style="${containerStyle}"><img src="${esc(photo.url)}" alt="${esc(alt)}" style="${imgStyle}" /></div>`;
+  // On ajoute la classe `photo-img` au conteneur pour qu'il hérite des
+  // règles CSS des templates qui ciblent `.photo-img` (notamment les
+  // transforms `translate(--photo-x-offset, --photo-y-offset)` et les
+  // max-width/max-height en mm). Sans ça, les sliders de la sidebar
+  // (taille / position) n'ont plus d'effet sur les photos recadrées.
+  // Les styles inline (width pixel intrinsèque, aspect-ratio, etc.)
+  // gardent priorité via spécificité.
+  return `<div class="photo-cropped photo-img" style="${containerStyle}"><img src="${esc(photo.url)}" alt="${esc(alt)}" style="${imgStyle}" /></div>`;
 }
