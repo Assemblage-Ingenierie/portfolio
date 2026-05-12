@@ -68,9 +68,9 @@ function buildWpEditorialV2(projet: Projet, coverUrl: string | undefined, photoU
   <div style="border-top:2px solid ${ROUGE};border-bottom:1px solid ${GRIS};padding:20px 0;margin-bottom:32px;">
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px 28px;">
       ${champsCles.map(f => `
-        <div style="${f.highlight ? `color:${ROUGE};` : ''}">
-          <div style="font-family:${SANS};font-size:12px;font-weight:400;letter-spacing:0.06em;font-variant:small-caps;color:${f.highlight ? ROUGE : NOIR70};margin-bottom:4px;">${esc(f.label)}</div>
-          <div style="font-family:${SERIF};font-size:15px;font-weight:400;font-variant:small-caps;line-height:1.3;">${esc(f.value!)}</div>
+        <div style="${f.highlight ? `color:${ROUGE};` : ''}font-family:${SANS};font-size:10pt;line-height:1.4;">
+          <div style="font-weight:400;color:${f.highlight ? ROUGE : NOIR70};margin-bottom:4px;">${esc(f.label)}</div>
+          <div style="font-weight:400;color:${f.highlight ? ROUGE : '#000'};">${esc(f.value!)}</div>
         </div>`).join('')}
     </div>
   </div>` : ''}
