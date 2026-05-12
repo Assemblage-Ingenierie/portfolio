@@ -50,15 +50,32 @@ export default function PhotoCropOverlay({
   const [displayHeight, setDisplayHeight] = useState(DEFAULT_DISPLAY_HEIGHT);
   const [showGuide, setShowGuide] = useState(false);
   const [guideY, setGuideY] = useState(0.5); // 0..1 fraction of displayHeight
+  /** Shift maintenu → verrouille le ratio actuel sur tous les ReactCrop. */
+  const [shiftHeld, setShiftHeld] = useState(false);
 
-  // ESC pour fermer
+  // ESC pour fermer + tracking Shift
   useEffect(() => {
     if (!open) return;
-    function onKey(e: KeyboardEvent) {
+    function onKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose();
+      if (e.key === 'Shift') setShiftHeld(true);
     }
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    function onKeyUp(e: KeyboardEvent) {
+      if (e.key === 'Shift') setShiftHeld(false);
+    }
+    function onBlur() {
+      // Si la fenêtre perd le focus pendant que Shift est tenu, on reset
+      // pour éviter d'être bloqué en mode aspect-lock.
+      setShiftHeld(false);
+    }
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+    window.addEventListener('blur', onBlur);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
+      window.removeEventListener('blur', onBlur);
+    };
   }, [open, onClose]);
 
   if (!open) return null;
@@ -142,9 +159,27 @@ export default function PhotoCropOverlay({
               ✂ Recadrer les photos
             </div>
             <div style={{ fontSize: '8.5pt', color: 'var(--ai-noir70)', marginTop: 2 }}>
-              Toutes les photos partagent la même hauteur display — les sélections au même % Y sont alignées au pixel près.
+              Toutes les photos sont affichées à la même hauteur — glissez les sélections pour aligner visuellement leurs bords. Utilisez la règle rouge comme repère. Maintenez <kbd style={{ background: 'var(--ai-gris)', padding: '0 4px', borderRadius: 2, fontFamily: 'monospace', fontSize: '8pt' }}>Shift</kbd> pendant le drag d&apos;un coin pour verrouiller le format actuel.
             </div>
           </div>
+
+          {/* Indicateur Shift maintenu */}
+          {shiftHeld && (
+            <span
+              style={{
+                padding: '4px 10px',
+                borderRadius: 2,
+                background: 'var(--ai-rouge)',
+                color: 'white',
+                fontFamily: 'var(--sans)',
+                fontSize: '8pt',
+                fontWeight: 700,
+                letterSpacing: 0.3,
+              }}
+            >
+              🔒 Format verrouillé
+            </span>
+          )}
 
           {/* Slider hauteur display */}
           <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '8pt', color: 'var(--ai-noir70)' }}>
@@ -324,8 +359,17 @@ export default function PhotoCropOverlay({
                       onChange={(_, p) => handleCropChange(photo, p)}
                       keepSelection
                       ruleOfThirds
-                      // Pas d'aspect lock → 8 poignées (4 coins + 4 milieux des côtés)
-                      // permettant des crops uniquement horizontaux ou verticaux.
+                      // Shift maintenu → on locke l'aspect ratio actuel du
+                      // crop (en tenant compte des dims natives de la photo
+                      // pour que le ratio soit le ratio VISUEL, pas le ratio
+                      // en % d'image). Sinon : pas de lock, 8 poignées
+                      // (4 coins + 4 milieux) pour crops H/V libres.
+                      aspect={
+                        shiftHeld
+                          ? ((photo.width ?? 1) * crop.width) /
+                            ((photo.height ?? 1) * crop.height || 1)
+                          : undefined
+                      }
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
