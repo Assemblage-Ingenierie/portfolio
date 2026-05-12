@@ -134,7 +134,10 @@ export function recordToProjet(record: any, aux?: AuxValues): Projet {
     // construite dans queries.ts → fetchCrmNames().
     architecte: resolveCrm(f['Architecte'], aux?.crmNames),
     mandataire: resolveCrm(f['Mandataire'], aux?.crmNames),
-    betAssocies: f['BET associés'] ?? undefined,
+    // BET associés : linked record vers Sync CRM (comme Architecte / MOA /
+    // Entreprise). En cellFormat=json on reçoit un array de record IDs,
+    // résolution des noms via crmNames.
+    betAssocies: resolveCrm(f['BET associés'], aux?.crmNames),
     entreprise: resolveCrm(f['Entreprise'], aux?.crmNames),
     bailleur: f['Bailleur'] ?? undefined,
     referentAi: f['Référent AI'] ?? undefined,

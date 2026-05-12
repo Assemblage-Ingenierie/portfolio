@@ -290,15 +290,21 @@ export function titleBlockHtml(projet: Projet, h1Size = '32pt'): string {
   </div>`;
 }
 
-export function metaGridHtml(projet: Projet): string {
+export function metaGridHtml(projet: Projet, options?: { isDev?: boolean }): string {
   const items: { label: string; value: string; sub?: string }[] = [];
 
   // Ordre fixe : seuls les champs renseignés apparaissent.
   if (projet.moa)        items.push({ label: "Maître d'ouvrage", value: projet.moa });
   if (projet.architecte) items.push({ label: 'Architecte',       value: projet.architecte });
+  // Dev uniquement : BET associés (linked record Sync CRM) inséré juste
+  // après Architecte pour rester dans la zone "acteurs du projet".
+  if (options?.isDev && projet.betAssocies) items.push({ label: 'BET associés', value: projet.betAssocies });
   if (projet.budgetHT)   items.push({ label: 'Budget',           value: projet.budgetHT });
   if (projet.surface)    items.push({ label: 'Surface',          value: `${projet.surface.toLocaleString('fr-FR')} m²` });
   if (projet.entreprise) items.push({ label: 'Entreprise',       value: projet.entreprise });
+  // Dev uniquement : Bailleur (champ texte simple de la base affaire) après
+  // Entreprise — autre acteur financeur, logique avec le bloc Budget.
+  if (options?.isDev && projet.bailleur) items.push({ label: 'Bailleur', value: projet.bailleur });
   if (projet.missionAi)  items.push({ label: 'Prestation AI',    value: projet.missionAi });
   // Programme : principal en valeur principale, secondaire en sous-titre
   if (projet.programmePrincipal || projet.programmeSecondaire) items.push({

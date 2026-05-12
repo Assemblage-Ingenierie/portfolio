@@ -442,7 +442,7 @@ export function renderDev(projet: Projet, configIn?: ManualConfig): TemplateBund
     <div class="t-bandeau-wrap">
       ${headerHtml(projet)}
       ${titleBlockHtml(projet, '26pt')}
-      ${metaGridHtml(projet)}
+      ${metaGridHtml(projet, { isDev: true })}
     </div>
     ${photosHtml}
     ${textHtml}
