@@ -23,7 +23,7 @@ export function renderTemplate(projet: Projet, options?: RenderOptions): Templat
       return renderDiptyque(projet);
     case 'Triptyque':
       return renderTriptyque(projet);
-    case 'Manuel':
+    case 'Str-Env':
       return renderManuel(projet, options?.manualConfig);
     case 'Dev':
       return renderDev(projet, options?.manualConfig);

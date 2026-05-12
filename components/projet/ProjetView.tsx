@@ -38,7 +38,7 @@ export default function ProjetView({ projet, isPrint }: Props) {
     }
   }
 
-  const isManualLayout = !isPrint && (template === 'Manuel' || template === 'Dev');
+  const isManualLayout = !isPrint && (template === 'Str-Env' || template === 'Dev');
 
   return (
     <>

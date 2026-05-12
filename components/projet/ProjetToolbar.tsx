@@ -65,7 +65,7 @@ export default function ProjetToolbar({ projet, template, manualConfig, bandeauC
 
   async function handleDownloadPdf() {
     const params = new URLSearchParams({ template });
-    if ((template === 'Manuel' || template === 'Dev') && manualConfig) {
+    if ((template === 'Str-Env' || template === 'Dev') && manualConfig) {
       params.set('config', encodeConfig(manualConfig));
     }
     window.open(`/projet/${projet.slug}/print?${params.toString()}`, '_blank');
@@ -99,7 +99,7 @@ export default function ProjetToolbar({ projet, template, manualConfig, bandeauC
         Editer les champs
       </Link>
 
-      {(template === 'Manuel' || template === 'Dev') && (
+      {(template === 'Str-Env' || template === 'Dev') && (
         <button
           onClick={handleSaveLayout}
           disabled={saveState === 'saving'}

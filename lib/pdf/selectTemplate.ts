@@ -13,10 +13,10 @@ export function nbPhotos(projet: Pick<Projet, 'photoCouverture' | 'photosProjet'
 export function autoSelectTemplate(
   _projet: Pick<Projet, 'photoCouverture' | 'photosProjet' | 'description'>
 ): TemplateChoice {
-  return 'Manuel';
+  return 'Str-Env';
 }
 
-const TEMPLATE_VALUES: TemplateChoice[] = ['Solo', 'Diptyque', 'Triptyque', 'Manuel', 'Dev'];
+const TEMPLATE_VALUES: TemplateChoice[] = ['Solo', 'Diptyque', 'Triptyque', 'Str-Env', 'Dev'];
 
 export function isTemplateChoice(v: unknown): v is TemplateChoice {
   return typeof v === 'string' && (TEMPLATE_VALUES as string[]).includes(v);
