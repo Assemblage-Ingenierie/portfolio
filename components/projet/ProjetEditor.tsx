@@ -52,7 +52,9 @@ export default function ProjetEditor({ projet }: Props) {
   const [rehabNeuf, setRehabNeuf] = useState(projet.rehabNeuf ?? '');
   const [statut, setStatut] = useState(projet.statut);
   const [template, setTemplate] = useState<TemplateChoice>(projet.template);
-  const [certifications, setCertifications] = useState(projet.certifications.join('\n'));
+  // Certifications et mots-clés : même format de saisie (séparateur virgule)
+  // pour une UX cohérente — les deux sont des listes plates de tags.
+  const [certifications, setCertifications] = useState(projet.certifications.join(', '));
   const [motsCles, setMotsCles] = useState(projet.motsCles.join(', '));
   const [chiffresClesRaw, setChiffresClesRaw] = useState(
     (projet.chiffresCles ?? []).map(c => `${c.label} | ${c.valeur}`).join('\n')
@@ -112,7 +114,7 @@ export default function ProjetEditor({ projet }: Props) {
           rehabNeuf: rehabNeuf || undefined,
           statut,
           template,
-          certifications: certifications.split('\n').map(s => s.trim()).filter(Boolean),
+          certifications: certifications.split(/[,;]+/).map(s => s.trim()).filter(Boolean),
           motsCles: motsCles.split(/[,;]+/).map(s => s.trim()).filter(Boolean),
         }),
       });
@@ -184,7 +186,7 @@ export default function ProjetEditor({ projet }: Props) {
       rehabNeuf: rehabNeuf || undefined,
       statut,
       chiffresCles: parseChiffres(),
-      certifications: certifications.split('\n').map(s => s.trim()).filter(Boolean),
+      certifications: certifications.split(/[,;]+/).map(s => s.trim()).filter(Boolean),
       motsCles: motsCles.split(',').map(s => s.trim()).filter(Boolean),
     };
     return (
@@ -309,14 +311,14 @@ export default function ProjetEditor({ projet }: Props) {
             <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', marginTop: '4px' }}>Calculé par formule dans Airtable. Modifiable en aperçu uniquement.</p>
           </div>
           <div style={{ marginBottom: '14px' }}>
-            <label style={LABEL}>Certifications</label>
-            <textarea value={certifications} onChange={e => setCertifications(e.target.value)} rows={3} style={TEXTAREA} placeholder={'BDF bronze\nE+C-'} />
-            <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', marginTop: '4px' }}>Une par ligne.</p>
-          </div>
-          <div>
             <label style={LABEL}>Mots-clés</label>
             <input value={motsCles} onChange={e => setMotsCles(e.target.value)} style={INPUT} placeholder="structure bois, réhabilitation, Paris 18e" />
             <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', marginTop: '4px' }}>Séparés par des virgules.</p>
+          </div>
+          <div>
+            <label style={LABEL}>Certifications</label>
+            <input value={certifications} onChange={e => setCertifications(e.target.value)} style={INPUT} placeholder="BDF bronze, E+C-, BBC" />
+            <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', marginTop: '4px' }}>Séparées par des virgules.</p>
           </div>
         </div>
 

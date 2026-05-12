@@ -51,6 +51,14 @@ export interface KeywordsConfig {
 }
 
 /**
+ * Liste flottante de certifications affichée en superposition sur la fiche.
+ * Source : `Projet.certifications` (= champ Airtable "Certification",
+ * field id fldnb9rfM4C3m9Pcu). Comportement strictement identique à
+ * `KeywordsConfig` — même type pour ne pas dupliquer la logique.
+ */
+export type CertificationsConfig = KeywordsConfig;
+
+/**
  * Bloc "Prestation Assemblage" — exclusif au template Dev. Affiche le
  * titre + la valeur (Markdown rich text) du champ Airtable
  * "Prestation Assemblage" (field id flddrMLBDxOc8r4lJ). Position
@@ -83,6 +91,10 @@ export interface ManualConfig {
   mainPhotosExtra?: PhotoConfig[];
   /** Liste flottante de mots-clés (optionnelle, superposition). */
   keywords?: KeywordsConfig;
+  /** Liste flottante de certifications (optionnelle, superposition).
+   *  Fonctionnement strictement identique à `keywords` mais sur le champ
+   *  Airtable "Certification" (field id fldnb9rfM4C3m9Pcu). */
+  certifications?: CertificationsConfig;
   /** Bloc "Prestation Assemblage" (template Dev uniquement). */
   prestationAssemblage?: PrestationAssemblageConfig;
   /** @deprecated Remplacé par `BandeauConfig.titleMetaGap` (rendu shared.ts,

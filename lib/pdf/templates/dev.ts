@@ -172,6 +172,36 @@ const CSS = `
   padding: 0.5mm 2mm;
 }
 
+/* ── Liste flottante de certifications ─────────────────
+   Comportement identique à .dev-keywords ; ancre légèrement plus basse
+   pour éviter le chevauchement par défaut. Sliders X/Y depuis cette ancre. */
+.dev-certifications {
+  position: absolute;
+  top: 95mm;
+  right: 12mm;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  z-index: 100;
+  transform: translate(
+    var(--photo-x-offset, 0%),
+    var(--photo-y-offset, 0mm)
+  );
+}
+.dev-certifications > li {
+  display: block;
+  margin: 0;
+  list-style: none;
+}
+.dev-cert-item {
+  display: inline-block;
+  font-family: var(--sans);
+  font-size: 9pt;
+  line-height: 1.4;
+  color: var(--ai-noir);
+  padding: 0.5mm 2mm;
+}
+
 /* ── Bloc Prestation Assemblage ────────────────────────
    Position absolue, ancrage haut-gauche de la zone utile. Sliders X/Y
    déplacent depuis cet ancrage en mm absolus. Width fixe pour qu'un texte
@@ -410,6 +440,21 @@ export function renderDev(projet: Projet, configIn?: ManualConfig): TemplateBund
     keywordsHtml = `<ul class="dev-keywords" style="--photo-x-offset:${kwXMm}mm; --photo-y-offset:${kwYMm}mm">${items}</ul>`;
   }
 
+  // ── Liste flottante de certifications (même mécanique que les mots-clés) ──
+  let certificationsHtml = '';
+  const cert = cfg.certifications;
+  if (cert?.show && projet.certifications && projet.certifications.length > 0) {
+    const H_RANGE_MM = 200;
+    const cxMm = ((clampPercent(cert.offsetPercent ?? 50) - 50) / 50) * H_RANGE_MM;
+    const cyMm = ((clampPercent(cert.offsetVerticalPercent ?? 50) - 50) / 50) * V_RANGE_MM;
+    const lineSpacingMm = Math.max(0, Math.min(20, cert.lineSpacing ?? 1));
+    const cStyle = styleToCss(cert.style);
+    const items = projet.certifications
+      .map((m) => `<li style="margin-bottom:${lineSpacingMm}mm"><span class="dev-cert-item"${cStyle ? ` style="${cStyle}"` : ''}>${m}</span></li>`)
+      .join('');
+    certificationsHtml = `<ul class="dev-certifications" style="--photo-x-offset:${cxMm}mm; --photo-y-offset:${cyMm}mm">${items}</ul>`;
+  }
+
   // ── Bloc "Prestation Assemblage" (superposition optionnelle) ──
   // Affiche le titre + la valeur Markdown du champ Airtable
   // "Prestation Assemblage" (lu par field ID). Position absolue,
@@ -448,6 +493,7 @@ export function renderDev(projet: Projet, configIn?: ManualConfig): TemplateBund
     ${textHtml}
     ${extraHtml}
     ${keywordsHtml}
+    ${certificationsHtml}
     ${prestaHtml}
     ${footerHtml(projet)}
   </article>`;

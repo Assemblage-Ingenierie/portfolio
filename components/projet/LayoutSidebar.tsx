@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import type { Projet } from '@/types/projet';
 import type {
   ManualConfig, PhotoConfig, PhotoFormat,
-  KeywordsConfig, PrestationAssemblageConfig,
+  KeywordsConfig, CertificationsConfig, PrestationAssemblageConfig,
 } from '@/lib/pdf/manualConfig';
 import { MAX_MAIN_PORTRAIT_PHOTOS } from '@/lib/pdf/manualConfig';
 import type { BandeauConfig, BandeauStyle } from '@/lib/pdf/bandeauConfig';
@@ -16,17 +16,18 @@ import BandeauConfigPanel, { StyleRow } from '@/components/projet/BandeauConfigP
 const STORAGE_KEY = 'portfolio_layout_section';
 const MAX_EXTRA_PHOTOS = 5;
 
-type SectionId = 'typo' | 'main' | 'text' | 'extra' | 'keywords' | 'prestation';
+type SectionId = 'typo' | 'main' | 'text' | 'extra' | 'keywords' | 'certifications' | 'prestation';
 
 interface SectionDef { id: SectionId; label: string; devOnly?: boolean; }
 
 const SECTIONS: SectionDef[] = [
-  { id: 'typo',       label: 'Mise en page typographique' },
-  { id: 'main',       label: 'Photo principale' },
-  { id: 'text',       label: 'Texte description' },
-  { id: 'extra',      label: 'Photos additionnelles' },
-  { id: 'keywords',   label: 'Mots-clés' },
-  { id: 'prestation', label: 'Prestation Assemblage', devOnly: true },
+  { id: 'typo',           label: 'Mise en page typographique' },
+  { id: 'main',           label: 'Photo principale' },
+  { id: 'text',           label: 'Texte description' },
+  { id: 'extra',          label: 'Photos additionnelles' },
+  { id: 'keywords',       label: 'Mots-clés' },
+  { id: 'certifications', label: 'Certifications' },
+  { id: 'prestation',     label: 'Prestation Assemblage', devOnly: true },
 ];
 
 // ─── Styles partagés ─────────────────────────────────────────────────────────
@@ -372,6 +373,60 @@ function KeywordsSection({ projet, config, onChange }: { projet: Projet; config:
   );
 }
 
+// ─── Section : Certifications ────────────────────────────────────────────────
+// Comportement strictement identique à KeywordsSection — copié plutôt que
+// factorisé pour rester lisible (les deux blocs sont conceptuellement
+// indépendants côté UX).
+
+function CertificationsSection({ projet, config, onChange }: { projet: Projet; config: ManualConfig; onChange: (next: ManualConfig) => void }) {
+  const cert = config.certifications ?? { show: false };
+  const hasCertifs = projet.certifications && projet.certifications.length > 0;
+  const update = (patch: Partial<CertificationsConfig>) =>
+    onChange({ ...config, certifications: { ...cert, ...patch } });
+
+  return (
+    <ContentPanel>
+      <div style={ROW}>
+        <button onClick={() => update({ show: !cert.show })} style={radioBtn(!!cert.show)} disabled={!hasCertifs}>
+          {cert.show ? 'Liste activée' : 'Activer la liste'}
+        </button>
+      </div>
+      {!hasCertifs && (
+        <p style={{ fontSize: '8pt', color: 'var(--ai-noir70)', margin: 0 }}>
+          Aucune certification renseignée côté Airtable pour ce projet.
+        </p>
+      )}
+      {hasCertifs && (
+        <p style={{ fontSize: '8pt', color: 'var(--ai-noir70)', margin: '4px 0 0' }}>
+          {projet.certifications.length} certification{projet.certifications.length > 1 ? 's' : ''} : {projet.certifications.join(', ')}
+        </p>
+      )}
+      {cert.show && hasCertifs && (
+        <>
+          <Slider label="Horizontal" value={cert.offsetPercent ?? 50} onChange={v => update({ offsetPercent: v })} min={0} max={100} step={5} />
+          <Slider label="Vertical" value={cert.offsetVerticalPercent ?? 50} onChange={v => update({ offsetVerticalPercent: v })} min={0} max={100} step={5} />
+          <Slider label="Espacement" value={cert.lineSpacing ?? 1} onChange={v => update({ lineSpacing: v })} min={0} max={20} step={1} unit="mm" />
+          <div style={{ marginTop: 6 }}>
+            <label style={{ display: 'block', fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 6 }}>
+              Mise en page (police, taille, B/I/U, couleur texte, surlignage)
+            </label>
+            <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', margin: '0 0 6px' }}>
+              Une virgule dans le champ Airtable « Certification » crée un retour à la ligne.
+            </p>
+            <StyleRow
+              style={(cert.style ?? {}) as BandeauStyle}
+              onChange={st => {
+                const isEmpty = !st.fontFamily && st.fontSize === undefined && !st.bold && !st.italic && !st.underline && !st.color && !st.background;
+                update({ style: isEmpty ? undefined : st });
+              }}
+            />
+          </div>
+        </>
+      )}
+    </ContentPanel>
+  );
+}
+
 // ─── Section : Prestation Assemblage (Dev only) ───────────────────────────────
 
 function PrestationSection({ projet, config, onChange }: { projet: Projet; config: ManualConfig; onChange: (next: ManualConfig) => void }) {
@@ -491,6 +546,7 @@ export default function LayoutSidebar({ projet, config, onChange, bandeauConfig,
       case 'text':     return <TextSection config={config} onChange={onChange} />;
       case 'extra':    return <ExtraPhotosSection projet={projet} config={config} onChange={onChange} />;
       case 'keywords': return <KeywordsSection projet={projet} config={config} onChange={onChange} />;
+      case 'certifications': return <CertificationsSection projet={projet} config={config} onChange={onChange} />;
       case 'prestation': return <PrestationSection projet={projet} config={config} onChange={onChange} />;
       default:         return null;
     }

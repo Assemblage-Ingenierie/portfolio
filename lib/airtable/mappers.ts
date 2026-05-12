@@ -84,10 +84,15 @@ export function recordToProjet(record: any, aux?: AuxValues): Projet {
     ...dimsFrom(a),
   }));
 
-  const rawCertification = f['Certification'] ?? '';
-  const certifications = typeof rawCertification === 'string' && rawCertification
-    ? rawCertification.split(/[\n,]+/).map((s: string) => s.trim()).filter(Boolean)
-    : [];
+  // Champ "Certification" (field id fldnb9rfM4C3m9Pcu) — accepte string
+  // (séparé par \n ou ,) ET array (cas multi-select). Le rendu downstream
+  // traite uniformément un string[].
+  const rawCertification = f['Certification'];
+  const certifications: string[] = Array.isArray(rawCertification)
+    ? rawCertification.map((s) => String(s).trim()).filter(Boolean)
+    : typeof rawCertification === 'string' && rawCertification
+      ? rawCertification.split(/[\n,]+/).map((s: string) => s.trim()).filter(Boolean)
+      : [];
 
   // Champ "Mots-clés" : la virgule est le SEUL séparateur de ligne. Tout
   // ce qui est entre deux virgules reste sur la même ligne (les espaces

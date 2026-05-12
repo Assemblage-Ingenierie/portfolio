@@ -172,6 +172,37 @@ const CSS = `
   color: var(--ai-noir);
   padding: 0.5mm 2mm;
 }
+
+/* ── Liste flottante de certifications ─────────────────
+   Comportement identique à .man-keywords mais positionnée plus bas
+   (top: 95mm) pour ne pas se superposer par défaut. L'utilisateur ajuste
+   ensuite via les sliders X/Y. */
+.man-certifications {
+  position: absolute;
+  top: 95mm;
+  right: 12mm;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  z-index: 100;
+  transform: translate(
+    var(--photo-x-offset, 0%),
+    var(--photo-y-offset, 0mm)
+  );
+}
+.man-certifications > li {
+  display: block;
+  margin: 0;
+  list-style: none;
+}
+.man-cert-item {
+  display: inline-block;
+  font-family: var(--sans);
+  font-size: 9pt;
+  line-height: 1.4;
+  color: var(--ai-noir);
+  padding: 0.5mm 2mm;
+}
 `;
 
 function clampPercent(v: number): number {
@@ -370,6 +401,21 @@ export function renderManuel(projet: Projet, configIn?: ManualConfig): TemplateB
     keywordsHtml = `<ul class="man-keywords" style="--photo-x-offset:${kwXMm}mm; --photo-y-offset:${kwYMm}mm">${items}</ul>`;
   }
 
+  // ── Liste flottante de certifications (même mécanique que les mots-clés) ──
+  let certificationsHtml = '';
+  const cert = cfg.certifications;
+  if (cert?.show && projet.certifications && projet.certifications.length > 0) {
+    const H_RANGE_MM = 200;
+    const cxMm = ((clampPercent(cert.offsetPercent ?? 50) - 50) / 50) * H_RANGE_MM;
+    const cyMm = ((clampPercent(cert.offsetVerticalPercent ?? 50) - 50) / 50) * V_RANGE_MM;
+    const lineSpacingMm = Math.max(0, Math.min(20, cert.lineSpacing ?? 1));
+    const cStyle = styleToCss(cert.style);
+    const items = projet.certifications
+      .map((m) => `<li style="margin-bottom:${lineSpacingMm}mm"><span class="man-cert-item"${cStyle ? ` style="${cStyle}"` : ''}>${m}</span></li>`)
+      .join('');
+    certificationsHtml = `<ul class="man-certifications" style="--photo-x-offset:${cxMm}mm; --photo-y-offset:${cyMm}mm">${items}</ul>`;
+  }
+
   // L'espacement titre ↔ bandeau est désormais géré par `BandeauConfig.titleMetaGap`
   // (cf. shared.ts → metaGridHtml). Champ `bandeauVerticalOffset` obsolète.
   const body = `<article class="page man-page">
@@ -382,6 +428,7 @@ export function renderManuel(projet: Projet, configIn?: ManualConfig): TemplateB
     ${textHtml}
     ${extraHtml}
     ${keywordsHtml}
+    ${certificationsHtml}
     ${footerHtml(projet)}
   </article>`;
 
