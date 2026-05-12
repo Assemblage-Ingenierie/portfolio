@@ -75,6 +75,14 @@ export default async function PortfolioPrintPage({
 
   return (
     <>
+      {/* Google Fonts : mêmes métriques que l'éditeur. Cf. /projet/[slug]/print
+          pour la justification (sans ça, wrap divergent → overlap des blocs
+          position:absolute par-dessus la description). */}
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link
+        href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,300;1,6..72,400;1,6..72,500&family=Open+Sans:wght@400;600;700&display=swap"
+        rel="stylesheet"
+      />
       <style dangerouslySetInnerHTML={{ __html: SHARED_CSS + bundle.css + PRINT_OVERRIDES }} />
       <div id="print-source" dangerouslySetInnerHTML={{ __html: bundle.body }} />
       <PrintRunner />
