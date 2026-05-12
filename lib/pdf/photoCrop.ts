@@ -59,17 +59,6 @@ export function croppedPhotoHtml(
   const imgWidthPct = (100 / cw) * 100;
   const imgHeightPct = (100 / ch) * 100;
 
-  // Aspect ratio du conteneur : on l'exprime à partir des dims natives si on
-  // les a, sinon on tombe sur le ratio du crop pur (qui suffit dans 99 % des
-  // cas pour un crop en %).
-  let aspect: string;
-  if (photo.width && photo.height) {
-    const ratio = (photo.width * cw) / (photo.height * ch);
-    aspect = `${ratio}`;
-  } else {
-    aspect = `${cw} / ${ch}`;
-  }
-
   // Translation : on déplace l'image pour qu'à la position (cx, cy) on voit
   // le coin haut-gauche du conteneur. Comme l'image est scalée à 100/cw, une
   // translation en % de l'image (qui est elle-même 100/cw du conteneur)
@@ -79,14 +68,35 @@ export function croppedPhotoHtml(
   const tx = -((cx * 100) / cw);
   const ty = -((cy * 100) / ch);
 
-  const containerStyle = [
-    'position:relative',
-    'overflow:hidden',
-    'max-width:100%',
-    'max-height:100%',
-    `aspect-ratio:${aspect}`,
-    'width:100%',
-  ].join(';');
+  // Le conteneur DOIT avoir une taille intrinsèque pour que .photo-frame
+  // (qui n'a pas de dimensions fixes — elle s'aligne sur la taille de son
+  // enfant <img>) ne s'effondre pas et pour que max-width / max-height du
+  // slot parent contraignent correctement la taille. Si on a les dimensions
+  // natives Airtable, on calcule la taille pixel de la région cropée → le
+  // conteneur se comporte exactement comme l'<img> qu'il remplace. Sans dims
+  // natives, fallback en width:100% (peut déborder sur grands slots).
+  let containerStyle: string;
+  if (photo.width && photo.height) {
+    const naturalCropW = (photo.width * cw) / 100;
+    const naturalCropH = (photo.height * ch) / 100;
+    containerStyle = [
+      'position:relative',
+      'overflow:hidden',
+      `width:${naturalCropW}px`,
+      `aspect-ratio:${naturalCropW} / ${naturalCropH}`,
+      'max-width:100%',
+      'max-height:100%',
+    ].join(';');
+  } else {
+    containerStyle = [
+      'position:relative',
+      'overflow:hidden',
+      'max-width:100%',
+      'max-height:100%',
+      `aspect-ratio:${cw} / ${ch}`,
+      'width:100%',
+    ].join(';');
+  }
 
   const imgStyle = [
     'position:absolute',
