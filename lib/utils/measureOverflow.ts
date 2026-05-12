@@ -124,6 +124,15 @@ export function measureOverflow(doc: Document | null | undefined): OverflowMeasu
   let leftOverflow = 0;
 
   const SVG_NS = 'http://www.w3.org/2000/svg';
+  // Debug temporaire : trace l'élément qui contribue le plus à chaque bord.
+  // À retirer une fois la cause du faux positif identifiée.
+  const debug = true;
+  const culprits: Record<'top' | 'bottom' | 'left' | 'right', { el?: Element; delta: number }> = {
+    top: { delta: 0 },
+    bottom: { delta: 0 },
+    left: { delta: 0 },
+    right: { delta: 0 },
+  };
   const all = page.querySelectorAll<HTMLElement>('*');
   all.forEach((el) => {
     if (!isVisible(el, win)) return;
@@ -180,11 +189,25 @@ export function measureOverflow(doc: Document | null | undefined): OverflowMeasu
     const topDelta = pageRect.top - r.top;
     const rightDelta = r.right - pageRect.right;
     const leftDelta = pageRect.left - r.left;
-    if (bottomDelta > bottomOverflow) bottomOverflow = bottomDelta;
-    if (topDelta > topOverflow) topOverflow = topDelta;
-    if (rightDelta > rightOverflow) rightOverflow = rightDelta;
-    if (leftDelta > leftOverflow) leftOverflow = leftDelta;
+    if (bottomDelta > bottomOverflow) { bottomOverflow = bottomDelta; if (debug) culprits.bottom = { el, delta: bottomDelta }; }
+    if (topDelta > topOverflow) { topOverflow = topDelta; if (debug) culprits.top = { el, delta: topDelta }; }
+    if (rightDelta > rightOverflow) { rightOverflow = rightDelta; if (debug) culprits.right = { el, delta: rightDelta }; }
+    if (leftDelta > leftOverflow) { leftOverflow = leftDelta; if (debug) culprits.left = { el, delta: leftDelta }; }
   });
+
+  if (debug) {
+    /* eslint-disable no-console */
+    console.group('[measureOverflow] debug');
+    console.log('pageRect:', pageRect, 'clientW:', pageWidthPx, 'scrollW:', page.scrollWidth);
+    console.log('flowOverflowH:', flowOverflowH, 'flowOverflowV:', flowOverflowV);
+    Object.entries(culprits).forEach(([edge, c]) => {
+      if (c.delta > 0 && c.el) {
+        console.log(`${edge}: Δ=${c.delta.toFixed(1)}px`, c.el, 'rect:', c.el.getBoundingClientRect());
+      }
+    });
+    console.groupEnd();
+    /* eslint-enable no-console */
+  }
 
   // Tolérance : 1px en vertical, 3px en horizontal (le letterboxing
   // object-fit:contain a un arrondi sub-pixel plus marqué que les flux

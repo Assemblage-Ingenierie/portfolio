@@ -73,7 +73,7 @@ export function croppedPhotoHtml(
     const vbW = (cw * photo.width) / 100;
     const vbH = (ch * photo.height) / 100;
 
-    return `<svg class="photo-cropped photo-img" viewBox="${vbX} ${vbY} ${vbW} ${vbH}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${esc(alt)}"><image href="${esc(photo.url)}" x="0" y="0" width="${photo.width}" height="${photo.height}" /></svg>`;
+    return `<svg class="photo-cropped photo-img" viewBox="${vbX} ${vbY} ${vbW} ${vbH}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" overflow="hidden" role="img" aria-label="${esc(alt)}" style="overflow:hidden"><image href="${esc(photo.url)}" x="0" y="0" width="${photo.width}" height="${photo.height}" /></svg>`;
   }
 
   // Fallback : pas de dims natives → on utilise un viewBox arbitraire et
