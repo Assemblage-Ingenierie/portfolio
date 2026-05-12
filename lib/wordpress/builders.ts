@@ -216,11 +216,19 @@ function buildWpEditorial(projet: Projet, coverUrl: string | undefined, photoUrl
   return `
 <article style="font-family:${SANS};color:#000;line-height:1.6;">
 
-  ${pitch ? `
-  <!-- Pitch (le titre est déjà rendu par le thème WP depuis post.title) -->
+  <!-- Titre du projet (Open Sans 14pt) + pitch.
+       Note : le thème WP rend aussi post.title — si doublon visible, masquer
+       le titre du thème côté WP plutôt que de retirer ce <h1>. -->
   <header style="margin:0 0 40px;">
-    <p style="font-family:${SERIF};font-size:20px;font-style:italic;line-height:1.4;color:${VIOLET};margin:0;max-width:780px;">${pitch}</p>
-  </header>` : ''}
+    <h1 style="font-family:${SANS};font-size:14pt;font-weight:700;line-height:1.2;color:#000;margin:0 0 12px;">${esc(projet.nom)}</h1>
+    ${chiffresCles.length > 0 ? `
+      <div style="display:flex;flex-wrap:wrap;gap:24px;font-family:${SANS};font-size:10pt;line-height:1.4;color:#000;margin:0 0 16px;">
+        ${chiffresCles.map(c => `
+          <div><strong style="font-weight:700;">${esc(c.valeur)}</strong> ${esc(c.label)}</div>
+        `).join('')}
+      </div>` : ''}
+    ${pitch ? `<p style="font-family:${SERIF};font-size:20px;font-style:italic;line-height:1.4;color:${VIOLET};margin:0;max-width:780px;">${pitch}</p>` : ''}
+  </header>
 
   <!-- Photo couverture (gauche) + champs clés (droite) -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start;margin-bottom:48px;">
@@ -231,10 +239,10 @@ function buildWpEditorial(projet: Projet, coverUrl: string | undefined, photoUrl
           </figure>`
         : ''}
     </div>
-    <ul style="list-style:none;margin:0;padding:0;font-family:${SANS};font-size:16px;line-height:1.6;color:#000;">
+    <ul style="list-style:none;margin:0;padding:0;font-family:${SANS};font-size:10pt;line-height:1.5;color:#000;">
       ${champsCles.map(f => `
-        <li style="padding:6px 0;${f.highlight ? `color:${ROUGE};` : ''}font-variant:small-caps;font-weight:400;">
-          <span style="letter-spacing:0.04em;">${esc(f.label)} :</span> ${esc(f.value!)}
+        <li style="padding:6px 0;${f.highlight ? `color:${ROUGE};` : ''}font-weight:400;">
+          <span>${esc(f.label)} :</span> ${esc(f.value!)}
         </li>`).join('')}
     </ul>
   </div>
@@ -243,18 +251,6 @@ function buildWpEditorial(projet: Projet, coverUrl: string | undefined, photoUrl
   <div class="ai-md" style="border-top:1px dotted ${ROUGE};padding-top:32px;margin-bottom:48px;font-family:${SANS};font-size:16px;line-height:1.7;color:#1a1a1a;">
     ${renderMarkdown(description)}
   </div>
-
-  ${chiffresCles.length > 0 ? `
-    <div style="border-top:2px solid ${ROUGE};padding-top:24px;margin-bottom:48px;">
-      <div style="font-family:${SANS};font-size:11px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:${ROUGE};margin-bottom:20px;">Chiffres clés</div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:24px;">
-        ${chiffresCles.map(c => `
-          <div>
-            <div style="font-family:${SERIF};font-size:36px;font-weight:600;line-height:1;color:${VIOLET};letter-spacing:-0.02em;">${esc(c.valeur)}</div>
-            <div style="font-family:${SANS};font-size:12px;font-weight:600;color:${NOIR70};letter-spacing:0.05em;text-transform:uppercase;margin-top:8px;">${esc(c.label)}</div>
-          </div>`).join('')}
-      </div>
-    </div>` : ''}
 
   <!-- Galerie des photos restantes (cover déjà affichée en haut, idx 0) -->
   ${imageGallery(photoUrls, projet.nom, 1)}

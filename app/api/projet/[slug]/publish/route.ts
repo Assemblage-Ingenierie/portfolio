@@ -68,7 +68,7 @@ export async function POST(
 
     // 4. Create or update post
     const existingId = projet.urlWordpress ? extractWpPostId(projet.urlWordpress) : undefined;
-    const { id, url } = await createOrUpdatePost(
+    const { id, url, status, type, author } = await createOrUpdatePost(
       {
         title: projet.nom,
         slug: projet.slug,
@@ -79,6 +79,7 @@ export async function POST(
       },
       existingId
     );
+    console.log('[WP-PUBLISH]', { id, status, type, author, url, existingId });
 
     // 5. Write back URL to Airtable (non-blocking)
     let airtableWarning: string | undefined;
@@ -89,7 +90,7 @@ export async function POST(
       airtableWarning = 'URL non sauvegardée dans Airtable';
     }
 
-    return NextResponse.json({ id, url, warning: airtableWarning });
+    return NextResponse.json({ id, url, status, type, author, warning: airtableWarning });
   } catch (err) {
     console.error('Publish error:', err);
     return NextResponse.json(
