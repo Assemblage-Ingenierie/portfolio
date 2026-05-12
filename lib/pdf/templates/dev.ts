@@ -207,8 +207,8 @@ const CSS = `
    IN-FLOW (flex item de .dev-page) — apparaît systématiquement après le
    bloc texte / photos additionnelles, jamais de superposition avec la
    description, quelles que soient les métriques de wrap (fonts, hyphens,
-   justification…). Les sliders X/Y restent fonctionnels via
-   `transform: translate` qui déplace visuellement sans casser le flux. */
+   justification...). Les sliders X/Y restent fonctionnels via
+   transform:translate qui déplace visuellement sans casser le flux. */
 .dev-presta {
   width: 100%;
   flex: 0 0 auto;
