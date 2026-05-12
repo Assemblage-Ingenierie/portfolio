@@ -6,15 +6,17 @@ import type { Projet, TemplateChoice } from '@/types/projet';
 import { TEMPLATE_OPTIONS } from '@/types/projet';
 import { authedFetch } from '@/lib/supabase/authHeaders';
 import { encodeConfig, ManualConfig } from '@/lib/pdf/manualConfig';
+import type { BandeauConfig } from '@/lib/pdf/bandeauConfig';
 
 interface Props {
   projet: Projet;
   template: TemplateChoice;
   manualConfig?: ManualConfig;
+  bandeauConfig?: BandeauConfig;
   onTemplateChange: (template: TemplateChoice) => void;
 }
 
-export default function ProjetToolbar({ projet, template, manualConfig, onTemplateChange }: Props) {
+export default function ProjetToolbar({ projet, template, manualConfig, bandeauConfig, onTemplateChange }: Props) {
   const [publishing, setPublishing] = useState(false);
   const [result, setResult] = useState<{ url?: string; error?: string; warning?: string } | null>(null);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -41,13 +43,15 @@ export default function ProjetToolbar({ projet, template, manualConfig, onTempla
   }
 
   async function handleSaveLayout() {
-    if (!manualConfig) return;
     setSaveState('saving');
     try {
       const res = await authedFetch(`/api/projet/${projet.slug}/fields`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ savedManualConfig: manualConfig }),
+        body: JSON.stringify({
+          ...(manualConfig ? { savedManualConfig: manualConfig } : {}),
+          ...(bandeauConfig ? { bandeauConfig } : {}),
+        }),
       });
       if (!res.ok) throw new Error('Erreur serveur');
       setSaveState('saved');
@@ -92,17 +96,24 @@ export default function ProjetToolbar({ projet, template, manualConfig, onTempla
         href={`/projet/${projet.slug}/edit`}
         style={{ ...btn, background: 'transparent', border: '1px solid var(--ai-gris)', color: 'white', textDecoration: 'none' }}
       >
-        Modifier
+        Editer les champs
       </Link>
+
       {(template === 'Manuel' || template === 'Dev') && (
         <button
           onClick={handleSaveLayout}
-          disabled={saveState === 'saving' || !manualConfig}
-          style={{ ...btn, background: saveState === 'saved' ? '#4caf50' : saveState === 'error' ? '#e53935' : 'white', color: saveState === 'idle' ? 'var(--ai-violet)' : 'white', border: 'none' }}
+          disabled={saveState === 'saving'}
+          style={{
+            ...btn,
+            background: saveState === 'saved' ? '#4caf50' : saveState === 'error' ? '#e53935' : 'white',
+            color: saveState === 'idle' ? 'var(--ai-violet)' : 'white',
+            border: 'none',
+          }}
         >
           {saveState === 'saving' ? 'Sauvegarde…' : saveState === 'saved' ? '✓ Mise en page sauvegardée' : saveState === 'error' ? '✗ Erreur' : 'Sauvegarder la mise en page'}
         </button>
       )}
+
       <button
         onClick={handleDownloadPdf}
         style={{ ...btn, background: 'var(--ai-rouge)', color: 'white', border: 'none' }}

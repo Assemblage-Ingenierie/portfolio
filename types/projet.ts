@@ -11,7 +11,7 @@ export type Statut =
 
 export type TemplateChoice = 'Solo' | 'Diptyque' | 'Triptyque' | 'Manuel' | 'Dev';
 
-export const TEMPLATE_OPTIONS: TemplateChoice[] = ['Solo', 'Diptyque', 'Triptyque', 'Manuel', 'Dev'];
+export const TEMPLATE_OPTIONS: TemplateChoice[] = ['Manuel', 'Dev'];
 
 export interface Projet {
   affaire: string;
