@@ -182,6 +182,7 @@ export function recordToProjet(record: any, aux?: AuxValues): Projet {
       return {
         savedManualConfig: cfg?.manuel ?? undefined,
         bandeauConfig: cfg?.bandeau ?? undefined,
+        photoCrops: cfg?.photoCrops ?? undefined,
       };
     })(),
   };

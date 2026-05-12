@@ -1,5 +1,6 @@
 import type { BandeauConfig } from './bandeauConfig';
 import type { ManualConfig } from './manualConfig';
+import type { CropData } from './photoCrop';
 
 /**
  * Configuration unifiée d'une fiche projet, stockée en JSON dans le champ
@@ -21,6 +22,9 @@ import type { ManualConfig } from './manualConfig';
 export interface ProjectConfig {
   bandeau?: BandeauConfig;
   manuel?: ManualConfig;
+  /** Crops non-destructifs par photo (clé = filename de l'attachment).
+   *  Appliqué au rendu via CSS dans les templates PDF. */
+  photoCrops?: Record<string, CropData>;
 }
 
 export const PROJECT_CONFIG_FIELD = 'Config template manuel';

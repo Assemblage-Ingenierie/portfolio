@@ -57,7 +57,7 @@ export function renderSolo(projet: Projet): TemplateBundle {
       ${descriptionHtml(projet, 1, true)}
     </div>
 
-    ${cover ? `<div class="solo-hero photo-frame">${photoImg(cover, projet.nom)}</div>` : ''}
+    ${cover ? `<div class="solo-hero photo-frame">${photoImg(cover, projet.nom, projet)}</div>` : ''}
 
     ${footerHtml(projet)}
   </article>`;

@@ -313,17 +313,17 @@ export function renderDev(projet: Projet, configIn?: ManualConfig): TemplateBund
     const xPct = clampPercent(pc.offsetPercent ?? 50) - 50;
     const yMm = ((clampPercent(pc.offsetVerticalPercent ?? 50) - 50) / 50) * V_RANGE_MM;
     const style = `--photo-x-offset:${xPct}%; --photo-y-offset:${yMm}mm; --cell-max:${maxMm}mm`;
-    return `<div class="photo-frame" style="${style}">${photoImg(ph, fallbackName)}</div>`;
+    return `<div class="photo-frame" style="${style}">${photoImg(ph, fallbackName, projet)}</div>`;
   }
 
   let photosHtml = '';
   if (cfg.mainPhotoFormat === 'paysage' && main1) {
     photosHtml = `<div class="dev-photos dev-photos--paysage" style="--main-photo-max:${main1MaxMm}mm">
-      <div class="photo-frame" style="${main1FrameStyle}">${photoImg(main1, projet.nom)}</div>
+      <div class="photo-frame" style="${main1FrameStyle}">${photoImg(main1, projet.nom, projet)}</div>
     </div>`;
   } else if (cfg.mainPhotoFormat === 'portrait') {
     const frames: string[] = [];
-    if (main1) frames.push(`<div class="photo-frame" style="${main1FrameStyle}">${photoImg(main1, projet.nom)}</div>`);
+    if (main1) frames.push(`<div class="photo-frame" style="${main1FrameStyle}">${photoImg(main1, projet.nom, projet)}</div>`);
     else if (portraitExtras.length > 0) frames.push('<div></div>');
     for (const pc of portraitExtras) {
       const html = frameForCfg(pc, projet.nom);
@@ -381,7 +381,7 @@ export function renderDev(projet: Projet, configIn?: ManualConfig): TemplateBund
       // 50  = position neutre (sous le texte, comportement historique)
       // 100 = photo descendue de V_RANGE_MM (bas de la page utile)
       const yMm = ((clampPercent(e.offsetVerticalPercent ?? 50) - 50) / 50) * V_RANGE_MM;
-      return `<div class="photo-frame" style="--extra-cell-max:${maxMm}mm; --photo-x-offset:${xPct}%; --photo-y-offset:${yMm}mm">${photoImg(ph, projet.nom)}</div>`;
+      return `<div class="photo-frame" style="--extra-cell-max:${maxMm}mm; --photo-x-offset:${xPct}%; --photo-y-offset:${yMm}mm">${photoImg(ph, projet.nom, projet)}</div>`;
     }).join('');
     extraHtml = `<div class="dev-extra-grid" style="grid-template-columns:repeat(${extraPhotos.length},1fr);">${cells}</div>`;
   }

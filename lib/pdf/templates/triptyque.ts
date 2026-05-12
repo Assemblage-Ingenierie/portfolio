@@ -185,12 +185,12 @@ export function renderTriptyque(projet: Projet): TemplateBundle {
   let photosHtml = '';
   if (isPaysage && p1) {
     photosHtml = `<div class="tri-photos tri-photos--single">
-      <div class="photo-frame">${photoImg(p1, projet.nom)}</div>
+      <div class="photo-frame">${photoImg(p1, projet.nom, projet)}</div>
     </div>`;
   } else if (p1 || p2) {
     photosHtml = `<div class="tri-photos tri-photos--duo">
-      ${p1 ? `<div class="photo-frame">${photoImg(p1, projet.nom)}</div>` : '<div></div>'}
-      ${p2 ? `<div class="photo-frame">${photoImg(p2, projet.nom)}</div>` : '<div></div>'}
+      ${p1 ? `<div class="photo-frame">${photoImg(p1, projet.nom, projet)}</div>` : '<div></div>'}
+      ${p2 ? `<div class="photo-frame">${photoImg(p2, projet.nom, projet)}</div>` : '<div></div>'}
     </div>`;
   }
 
@@ -217,7 +217,7 @@ export function renderTriptyque(projet: Projet): TemplateBundle {
   const textHtml = description || extraPhoto
     ? `<div class="tri-text t-texte-md"${descStyle ? ` style="${descStyle}"` : ''}>
         ${renderMarkdown(description)}
-        ${extraPhoto ? `<div class="tri-extra-photo photo-frame" style="--extra-photo-max:${extraPhotoMaxHeight}mm">${photoImg(extraPhoto, projet.nom)}</div>` : ''}
+        ${extraPhoto ? `<div class="tri-extra-photo photo-frame" style="--extra-photo-max:${extraPhotoMaxHeight}mm">${photoImg(extraPhoto, projet.nom, projet)}</div>` : ''}
       </div>`
     : '';
 

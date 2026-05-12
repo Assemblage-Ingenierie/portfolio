@@ -7,17 +7,31 @@ import { TEMPLATE_OPTIONS } from '@/types/projet';
 import { authedFetch } from '@/lib/supabase/authHeaders';
 import { encodeConfig, ManualConfig } from '@/lib/pdf/manualConfig';
 import type { BandeauConfig } from '@/lib/pdf/bandeauConfig';
+import type { CropData } from '@/lib/pdf/photoCrop';
 
 interface Props {
   projet: Projet;
   template: TemplateChoice;
   manualConfig?: ManualConfig;
   bandeauConfig?: BandeauConfig;
+  photoCrops?: Record<string, CropData>;
+  cropEditMode?: boolean;
+  onCropEditModeChange?: (next: boolean) => void;
   onTemplateChange: (template: TemplateChoice) => void;
   onSave?: () => void;
 }
 
-export default function ProjetToolbar({ projet, template, manualConfig, bandeauConfig, onTemplateChange, onSave }: Props) {
+export default function ProjetToolbar({
+  projet,
+  template,
+  manualConfig,
+  bandeauConfig,
+  photoCrops,
+  cropEditMode,
+  onCropEditModeChange,
+  onTemplateChange,
+  onSave,
+}: Props) {
   const [publishing, setPublishing] = useState(false);
   const [result, setResult] = useState<{ url?: string; error?: string; warning?: string } | null>(null);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -52,6 +66,7 @@ export default function ProjetToolbar({ projet, template, manualConfig, bandeauC
         body: JSON.stringify({
           ...(manualConfig ? { savedManualConfig: manualConfig } : {}),
           ...(bandeauConfig ? { bandeauConfig } : {}),
+          ...(photoCrops !== undefined ? { photoCrops } : {}),
         }),
       });
       if (!res.ok) throw new Error('Erreur serveur');
@@ -100,6 +115,21 @@ export default function ProjetToolbar({ projet, template, manualConfig, bandeauC
       >
         Editer les champs
       </Link>
+
+      {(template === 'Str-Env' || template === 'Dev') && onCropEditModeChange && (
+        <button
+          onClick={() => onCropEditModeChange(!cropEditMode)}
+          style={{
+            ...btn,
+            background: cropEditMode ? 'var(--ai-rouge)' : 'white',
+            color: cropEditMode ? 'white' : 'var(--ai-violet)',
+            border: 'none',
+          }}
+          title="Aligner les bords horizontaux des photos en recadrant non-destructivement"
+        >
+          {cropEditMode ? '✓ Terminer le recadrage' : '✂ Recadrer les photos'}
+        </button>
+      )}
 
       {(template === 'Str-Env' || template === 'Dev') && (
         <button

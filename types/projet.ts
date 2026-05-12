@@ -1,5 +1,6 @@
 import type { ManualConfig } from '@/lib/pdf/manualConfig';
 import type { BandeauConfig } from '@/lib/pdf/bandeauConfig';
+import type { CropData } from '@/lib/pdf/photoCrop';
 
 export type Statut =
   | 'En étude'
@@ -71,4 +72,8 @@ export interface Projet {
   /** Configuration typographique du bandeau (header + meta grid).
    *  Stocké dans le champ Airtable "Config bandeau" (Long text JSON). */
   bandeauConfig?: BandeauConfig;
+
+  /** Crops non-destructifs par photo (clé = filename). Stocké dans le
+   *  ProjectConfig unifié (champ Airtable "Config template manuel"). */
+  photoCrops?: Record<string, CropData>;
 }

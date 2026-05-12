@@ -52,8 +52,8 @@ export function renderDiptyque(projet: Projet): TemplateBundle {
     <div class="dip-text">${descriptionHtml(projet, 2)}</div>
 
     ${(p1 || p2) ? `<div class="dip-photos">
-      ${p1 ? `<div class="photo-frame">${photoImg(p1, projet.nom)}</div>` : '<div></div>'}
-      ${p2 ? `<div class="photo-frame">${photoImg(p2, projet.nom)}</div>` : '<div></div>'}
+      ${p1 ? `<div class="photo-frame">${photoImg(p1, projet.nom, projet)}</div>` : '<div></div>'}
+      ${p2 ? `<div class="photo-frame">${photoImg(p2, projet.nom, projet)}</div>` : '<div></div>'}
     </div>` : ''}
 
     ${footerHtml(projet)}

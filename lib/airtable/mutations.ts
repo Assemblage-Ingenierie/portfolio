@@ -1,6 +1,7 @@
 import { base, TABLE } from './client';
 import type { ManualConfig } from '@/lib/pdf/manualConfig';
 import type { BandeauConfig } from '@/lib/pdf/bandeauConfig';
+import type { CropData } from '@/lib/pdf/photoCrop';
 import {
   PROJECT_CONFIG_FIELD,
   deserializeProjectConfig,
@@ -34,6 +35,7 @@ export interface ProjetEditableFields {
   prestationAssemblage?: string;
   savedManualConfig?: ManualConfig;
   bandeauConfig?: BandeauConfig;
+  photoCrops?: Record<string, CropData>;
 }
 
 export async function updateProjetFields(slug: string, fields: ProjetEditableFields): Promise<{ slug: string }> {
@@ -71,12 +73,17 @@ export async function updateProjetFields(slug: string, fields: ProjetEditableFie
   // Config unifiée (bandeau + manuel) dans le même champ Airtable. On lit
   // l'existant pour merger correctement quand l'API ne reçoit qu'une des
   // deux sous-configs (ex. update bandeau seul ne doit pas effacer manuel).
-  if (fields.savedManualConfig !== undefined || fields.bandeauConfig !== undefined) {
+  if (
+    fields.savedManualConfig !== undefined ||
+    fields.bandeauConfig !== undefined ||
+    fields.photoCrops !== undefined
+  ) {
     const existing = deserializeProjectConfig(records[0].fields[PROJECT_CONFIG_FIELD]) ?? {};
     const merged: ProjectConfig = {
       ...existing,
       ...(fields.bandeauConfig !== undefined ? { bandeau: fields.bandeauConfig } : {}),
       ...(fields.savedManualConfig !== undefined ? { manuel: fields.savedManualConfig } : {}),
+      ...(fields.photoCrops !== undefined ? { photoCrops: fields.photoCrops } : {}),
     };
     update[PROJECT_CONFIG_FIELD] = serializeProjectConfig(merged);
   }

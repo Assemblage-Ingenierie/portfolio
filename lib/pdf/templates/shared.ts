@@ -1,6 +1,7 @@
 import type { Projet } from '@/types/projet';
 import { renderMarkdown } from '@/lib/utils/markdown';
 import { styleToCss, linesToCss, titleMetaGapCss } from '@/lib/pdf/bandeauConfig';
+import { croppedPhotoHtml, isMeaningfulCrop, photoCropKey } from '@/lib/pdf/photoCrop';
 
 export function esc(v: unknown): string {
   return String(v ?? '')
@@ -365,7 +366,13 @@ export function descriptionHtml(projet: Projet, columns: 1 | 2 = 1, singleParagr
   return `<div class="${cls}"${styleAttr}>${renderMarkdown(text)}</div>`;
 }
 
-export function photoImg(photo: { url: string; filename?: string }, alt = ''): string {
+export function photoImg(
+  photo: { url: string; filename?: string; width?: number; height?: number },
+  alt = '',
+  projet?: Projet,
+): string {
+  const crop = projet?.photoCrops?.[photoCropKey(photo)];
+  if (isMeaningfulCrop(crop)) return croppedPhotoHtml(photo, alt, crop);
   return `<img class="photo-img" src="${esc(photo.url)}" alt="${esc(alt)}" />`;
 }
 
