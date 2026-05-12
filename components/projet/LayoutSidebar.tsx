@@ -433,13 +433,40 @@ interface Props {
   isDev?: boolean;
 }
 
+const PANEL_WIDTH_KEY = 'portfolio_layout_panel_width';
+const PANEL_WIDTH_MIN = 180;
+const PANEL_WIDTH_MAX = 600;
+
 export default function LayoutSidebar({ projet, config, onChange, bandeauConfig, onBandeauChange, isDev }: Props) {
   const [active, setActive] = useState<SectionId | null>(null);
+  const [panelWidth, setPanelWidth] = useState(280);
 
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY) as SectionId | null;
     if (saved) setActive(saved);
+    const savedWidth = localStorage.getItem(PANEL_WIDTH_KEY);
+    if (savedWidth) setPanelWidth(Math.max(PANEL_WIDTH_MIN, Math.min(PANEL_WIDTH_MAX, Number(savedWidth))));
   }, []);
+
+  function startResize(e: React.MouseEvent) {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = panelWidth;
+
+    function onMove(ev: MouseEvent) {
+      const next = Math.max(PANEL_WIDTH_MIN, Math.min(PANEL_WIDTH_MAX, startW + ev.clientX - startX));
+      setPanelWidth(next);
+    }
+    function onUp(ev: MouseEvent) {
+      const next = Math.max(PANEL_WIDTH_MIN, Math.min(PANEL_WIDTH_MAX, startW + ev.clientX - startX));
+      setPanelWidth(next);
+      localStorage.setItem(PANEL_WIDTH_KEY, String(next));
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    }
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }
 
   function toggle(id: SectionId) {
     setActive(prev => {
@@ -495,13 +522,27 @@ export default function LayoutSidebar({ projet, config, onChange, bandeauConfig,
         ))}
       </nav>
 
-      {/* Panneau de contenu */}
+      {/* Panneau de contenu + handle de resize */}
       {active && (
-        <div style={{
-          width: 280, background: 'white', borderRight: '1px solid #DFE4E8',
-          overflowY: 'auto', maxHeight: 'calc(100vh - 48px)',
-        }}>
-          {renderContent()}
+        <div style={{ display: 'flex', position: 'relative' }}>
+          <div style={{
+            width: panelWidth, background: 'white',
+            overflowY: 'auto', maxHeight: 'calc(100vh - 48px)',
+          }}>
+            {renderContent()}
+          </div>
+          {/* Handle de resize */}
+          <div
+            onMouseDown={startResize}
+            style={{
+              width: 5, flexShrink: 0, cursor: 'col-resize',
+              background: '#DFE4E8',
+              transition: 'background 0.15s',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'var(--ai-rouge)')}
+            onMouseLeave={e => (e.currentTarget.style.background = '#DFE4E8')}
+            title="Étirer le panneau"
+          />
         </div>
       )}
     </div>
