@@ -14,9 +14,10 @@ interface Props {
   manualConfig?: ManualConfig;
   bandeauConfig?: BandeauConfig;
   onTemplateChange: (template: TemplateChoice) => void;
+  onSave?: () => void;
 }
 
-export default function ProjetToolbar({ projet, template, manualConfig, bandeauConfig, onTemplateChange }: Props) {
+export default function ProjetToolbar({ projet, template, manualConfig, bandeauConfig, onTemplateChange, onSave }: Props) {
   const [publishing, setPublishing] = useState(false);
   const [result, setResult] = useState<{ url?: string; error?: string; warning?: string } | null>(null);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -55,6 +56,7 @@ export default function ProjetToolbar({ projet, template, manualConfig, bandeauC
       });
       if (!res.ok) throw new Error('Erreur serveur');
       setSaveState('saved');
+      onSave?.();
       setTimeout(() => setSaveState('idle'), 3000);
     } catch (err) {
       console.error('[saveLayout]', err);

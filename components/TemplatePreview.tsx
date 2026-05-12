@@ -20,9 +20,13 @@ import { measureOverflow, type OverflowMeasure } from '@/lib/utils/measureOverfl
 export default function TemplatePreview({
   projet,
   manualConfig,
+  measureTrigger = 0,
 }: {
   projet: Projet;
   manualConfig?: ManualConfig;
+  /** Incrémenter cette valeur force une re-mesure immédiate de l'overflow
+   *  sur le contenu déjà chargé (ex : après "Sauvegarder la mise en page"). */
+  measureTrigger?: number;
 }) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [overflow, setOverflow] = useState<OverflowMeasure | null>(null);
@@ -84,7 +88,11 @@ export default function TemplatePreview({
       if (raf !== undefined) cancelAnimationFrame(raf);
       iframe.removeEventListener('load', onLoad);
     };
-  }, [html]);
+  // measureTrigger dans les deps : quand il s'incrémente sans changement de
+  // html (ex. save sans modification), le contenu de l'iframe est déjà à jour
+  // et measure() lit directement le layout final.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [html, measureTrigger]);
 
   const overflowing = overflow !== null && overflow.overflowMm > 0;
 

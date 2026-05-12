@@ -22,6 +22,7 @@ export default function ProjetView({ projet, isPrint }: Props) {
   const [bandeauConfig, setBandeauConfig] = useState<BandeauConfig>(
     projet.bandeauConfig ?? {}
   );
+  const [measureTrigger, setMeasureTrigger] = useState(0);
 
   async function handleTemplateChange(newTemplate: TemplateChoice) {
     setTemplate(newTemplate);
@@ -49,6 +50,7 @@ export default function ProjetView({ projet, isPrint }: Props) {
           manualConfig={manualConfig}
           bandeauConfig={bandeauConfig}
           onTemplateChange={handleTemplateChange}
+          onSave={() => setMeasureTrigger(t => t + 1)}
         />
       )}
       {isManualLayout ? (
@@ -65,6 +67,7 @@ export default function ProjetView({ projet, isPrint }: Props) {
             <TemplatePreview
               projet={{ ...projet, template, bandeauConfig }}
               manualConfig={manualConfig}
+              measureTrigger={measureTrigger}
             />
           </main>
         </div>
