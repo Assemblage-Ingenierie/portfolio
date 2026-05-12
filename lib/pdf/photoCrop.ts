@@ -37,99 +37,48 @@ function esc(v: unknown): string {
 }
 
 /**
- * Rendu HTML d'une image avec crop CSS pur (non destructif).
+ * Rendu HTML d'une image avec crop non destructif via SVG + viewBox.
  *
- * Principe : on construit un conteneur `aspect-ratio` égal au ratio du crop,
- * dans lequel l'image originale est agrandie à `100/cropW%` puis translatée
- * pour faire apparaître la zone voulue. Pas de canvas, pas de re-encodage.
+ * Pourquoi SVG plutôt qu'un div avec aspect-ratio + transform ?
+ * — Le slider Taille de la sidebar applique `max-height: var(--cell-max)`
+ *   sur `.photo-img`. Avec une `<div>` + `aspect-ratio`, quand max-height
+ *   clamp la hauteur, la width ne shrink PAS proportionnellement (la spec
+ *   CSS ne le garantit pas), donc la box devient mal proportionnée et
+ *   l'image est aplatie.
+ * — L'`<img>` original évitait ça via `object-fit: contain` qui letterbox
+ *   l'image dans la box (même mal proportionnée) en gardant son aspect.
+ * — SVG est l'équivalent sémantique exact : `viewBox` définit la zone
+ *   visible, `preserveAspectRatio="xMidYMid meet"` = `object-fit: contain`
+ *   natif. Quel que soit le shape de la box (clamp max-width et/ou
+ *   max-height), le contenu garde son aspect, letterboxé si besoin.
+ *
+ * On garde la classe `photo-img` pour que les règles CSS des templates
+ * (transforms, max-height variables, etc.) continuent de s'appliquer.
  */
 export function croppedPhotoHtml(
   photo: { url: string; filename?: string; width?: number; height?: number },
   alt: string,
   crop: CropData,
 ): string {
-  // Sécurités numériques
   const cw = Math.max(0.01, crop.width);
   const ch = Math.max(0.01, crop.height);
   const cx = Math.max(0, crop.x);
   const cy = Math.max(0, crop.y);
 
-  // Échelle interne : l'image devient (100 / cropWidth) × sa taille naturelle.
-  // À 100 % la largeur du conteneur = la largeur du crop dans l'image scalée.
-  const imgWidthPct = (100 / cw) * 100;
-  const imgHeightPct = (100 / ch) * 100;
-
-  // Translation : on déplace l'image pour qu'à la position (cx, cy) on voit
-  // le coin haut-gauche du conteneur. Comme l'image est scalée à 100/cw, une
-  // translation en % de l'image (qui est elle-même 100/cw du conteneur)
-  // équivaut à (cx · 100/cw)% du conteneur — mais translate(...%) sur l'img
-  // utilise sa propre dimension : donc -cx% sur img = -(cx · 100/cw)%
-  // visuel. C'est exactement ce qu'on veut.
-  const tx = -((cx * 100) / cw);
-  const ty = -((cy * 100) / ch);
-
-  // Le conteneur DOIT avoir une taille intrinsèque pour que .photo-frame
-  // (qui n'a pas de dimensions fixes — elle s'aligne sur la taille de son
-  // enfant <img>) ne s'effondre pas et pour que max-width / max-height du
-  // slot parent contraignent correctement la taille. Si on a les dimensions
-  // natives Airtable, on calcule la taille pixel de la région cropée → le
-  // conteneur se comporte exactement comme l'<img> qu'il remplace. Sans dims
-  // natives, fallback en width:100% (peut déborder sur grands slots).
-  //
-  // Note importante sur le cascade CSS :
-  //
-  //   On NE déclare PAS max-width / max-height en inline ici. Les templates
-  //   définissent ces contraintes via leurs propres règles ciblant
-  //   `.photo-img` (ex. `.man-photos--paysage .photo-img { max-height:
-  //   var(--main-photo-max) }`). Comme l'inline a la spécificité la plus
-  //   forte, le déclarer ici écraserait ces overrides et casserait les
-  //   sliders de taille / position. La cascade ci-dessous fonctionne :
-  //
-  //   1. shared.ts `.photo-img { max-width:100%; max-height:100% }` →
-  //      fallback générique
-  //   2. template-specific `.man-photos--paysage .photo-img { max-height:
-  //      var(--main-photo-max) }` → override
-  //   3. notre inline : seulement position, overflow, width, aspect-ratio
-  //
-  let containerStyle: string;
+  // Cas standard : on connaît les dimensions natives Airtable → on peut
+  // construire un viewBox en pixels image, sémantiquement parfait.
   if (photo.width && photo.height) {
-    const naturalCropW = (photo.width * cw) / 100;
-    const naturalCropH = (photo.height * ch) / 100;
-    containerStyle = [
-      'position:relative',
-      'overflow:hidden',
-      `width:${naturalCropW}px`,
-      `aspect-ratio:${naturalCropW} / ${naturalCropH}`,
-    ].join(';');
-  } else {
-    containerStyle = [
-      'position:relative',
-      'overflow:hidden',
-      `aspect-ratio:${cw} / ${ch}`,
-      'width:100%',
-    ].join(';');
+    const vbX = (cx * photo.width) / 100;
+    const vbY = (cy * photo.height) / 100;
+    const vbW = (cw * photo.width) / 100;
+    const vbH = (ch * photo.height) / 100;
+
+    return `<svg class="photo-cropped photo-img" viewBox="${vbX} ${vbY} ${vbW} ${vbH}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${esc(alt)}"><image href="${esc(photo.url)}" x="0" y="0" width="${photo.width}" height="${photo.height}" /></svg>`;
   }
 
-  const imgStyle = [
-    'position:absolute',
-    'top:0',
-    'left:0',
-    `width:${imgWidthPct}%`,
-    `height:${imgHeightPct}%`,
-    'max-width:none',
-    'max-height:none',
-    `transform:translate(${tx}%, ${ty}%)`,
-    'transform-origin:top left',
-    'display:block',
-    'object-fit:fill',
-  ].join(';');
-
-  // On ajoute la classe `photo-img` au conteneur pour qu'il hérite des
-  // règles CSS des templates qui ciblent `.photo-img` (notamment les
-  // transforms `translate(--photo-x-offset, --photo-y-offset)` et les
-  // max-width/max-height en mm). Sans ça, les sliders de la sidebar
-  // (taille / position) n'ont plus d'effet sur les photos recadrées.
-  // Les styles inline (width pixel intrinsèque, aspect-ratio, etc.)
-  // gardent priorité via spécificité.
-  return `<div class="photo-cropped photo-img" style="${containerStyle}"><img src="${esc(photo.url)}" alt="${esc(alt)}" style="${imgStyle}" /></div>`;
+  // Fallback : pas de dims natives → on utilise un viewBox arbitraire et
+  // l'image SVG remplit ce viewBox via preserveAspectRatio="none" (l'image
+  // intrinsèque a la même aspect que la zone cropée, donc pas de distorsion
+  // visuelle). Moins propre que le cas standard mais reste robuste.
+  return `<svg class="photo-cropped photo-img" viewBox="${cx} ${cy} ${cw} ${ch}" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="${esc(alt)}"><image href="${esc(photo.url)}" x="0" y="0" width="100" height="100" preserveAspectRatio="none" /></svg>`;
 }
