@@ -216,11 +216,8 @@ function buildWpEditorial(projet: Projet, coverUrl: string | undefined, photoUrl
   return `
 <article style="font-family:${SANS};color:#000;line-height:1.6;">
 
-  <!-- Titre du projet (Open Sans 14pt) + pitch.
-       Note : le thème WP rend aussi post.title — si doublon visible, masquer
-       le titre du thème côté WP plutôt que de retirer ce <h1>. -->
+  <!-- Le titre est rendu par le thème WP depuis post.title (ne pas dupliquer ici). -->
   <header style="margin:0 0 40px;">
-    <h1 style="font-family:${SANS};font-size:14pt;font-weight:700;line-height:1.2;color:#000;margin:0 0 12px;">${esc(projet.nom)}</h1>
     ${chiffresCles.length > 0 ? `
       <div style="display:flex;flex-wrap:wrap;gap:24px;font-family:${SANS};font-size:10pt;line-height:1.4;color:#000;margin:0 0 16px;">
         ${chiffresCles.map(c => `
