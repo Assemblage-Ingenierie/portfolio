@@ -249,6 +249,13 @@ function buildWpEditorial(projet: Projet, coverUrl: string | undefined, photoUrl
     ${renderMarkdown(description)}
   </div>
 
+  ${projet.template === 'Dev' && (projet.prestationAssemblage ?? '').trim() ? `
+  <!-- Bloc Prestation Assemblage (template Dev uniquement) -->
+  <section class="ai-md" style="margin:0 0 48px;font-family:${SANS};font-size:16px;line-height:1.7;color:#1a1a1a;">
+    <h2 style="font-family:${SERIF};font-size:22px;font-weight:500;line-height:1.2;color:${VIOLET};margin:0 0 16px;letter-spacing:-0.01em;">Prestation Assemblage</h2>
+    ${renderMarkdown(projet.prestationAssemblage!)}
+  </section>` : ''}
+
   <!-- Galerie des photos restantes (cover déjà affichée en haut, idx 0) -->
   ${imageGallery(photoUrls, projet.nom, 1)}
 
