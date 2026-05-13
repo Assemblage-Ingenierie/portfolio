@@ -29,8 +29,8 @@ const CSS = `
   display: block;
 }
 .cover-title {
-  font-family: var(--serif);
-  font-size: 36pt;
+  font-family: var(--sans);
+  font-size: 24pt;
   font-weight: 500;
   color: var(--ai-noir);
   letter-spacing: -0.01em;

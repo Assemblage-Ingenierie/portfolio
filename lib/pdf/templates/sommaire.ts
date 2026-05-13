@@ -13,8 +13,8 @@ const CSS = `
   padding-bottom: 4mm;
 }
 .toc-title {
-  font-family: var(--serif);
-  font-size: 30pt;
+  font-family: var(--sans);
+  font-size: 24pt;
   font-weight: 500;
   color: var(--ai-noir);
   letter-spacing: -0.01em;
