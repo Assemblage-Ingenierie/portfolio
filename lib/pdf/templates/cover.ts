@@ -24,15 +24,13 @@ const CSS = `
   gap: 8mm;
 }
 .cover-sigle {
-  font-family: var(--serif);
-  font-size: 96pt;
-  font-weight: 700;
-  color: var(--ai-rouge);
-  line-height: 1;
+  width: 60mm;
+  height: auto;
+  display: block;
 }
 .cover-title {
-  font-family: var(--serif);
-  font-size: 36pt;
+  font-family: var(--sans);
+  font-size: 24pt;
   font-weight: 500;
   color: var(--ai-noir);
   letter-spacing: -0.01em;
@@ -81,7 +79,7 @@ export function renderCover(params: CoverParams = {}): TemplateBundle {
     <div class="cover-top">Assemblage ingénierie · Bureau d'études techniques</div>
 
     <div class="cover-center">
-      <div class="cover-sigle">.A</div>
+      <img class="cover-sigle" src="https://hhkofvbptnrtwbazftlm.supabase.co/storage/v1/object/public/Branding/logo/sigle_Ai_rouge.svg" alt=".A" />
       <div class="cover-rule"></div>
       <h1 class="cover-title">${escape(title)}</h1>
       ${countLine ? `<div class="cover-subtitle">${countLine}</div>` : ''}

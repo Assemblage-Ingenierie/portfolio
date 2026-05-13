@@ -142,7 +142,7 @@ export default function PortfolioBuilder({ projets }: Props) {
             ← Retour au portfolio
           </Link>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 8 }}>
-            <h1 style={{ fontFamily: 'var(--serif)', fontSize: '28pt', fontWeight: 500, color: 'var(--ai-violet)' }}>
+            <h1 style={{ fontFamily: 'var(--sans)', fontSize: '16pt', fontWeight: 500, color: 'var(--ai-violet)' }}>
               Constituer le portfolio
             </h1>
             <span style={{ fontSize: '9pt', color: 'var(--ai-noir70)', fontWeight: 600 }}>

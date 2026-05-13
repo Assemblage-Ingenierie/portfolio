@@ -1,5 +1,5 @@
 import type { Projet } from '@/types/projet';
-import { TemplateBundle, esc, headerHtml, footerHtml } from './shared';
+import { TemplateBundle, esc, footerHtml } from './shared';
 
 const CSS = `
 .toc-page {
@@ -13,8 +13,8 @@ const CSS = `
   padding-bottom: 4mm;
 }
 .toc-title {
-  font-family: var(--serif);
-  font-size: 30pt;
+  font-family: var(--sans);
+  font-size: 24pt;
   font-weight: 500;
   color: var(--ai-noir);
   letter-spacing: -0.01em;
@@ -85,8 +85,6 @@ export function renderSommaire(projet: Pick<Projet, 'statut' | 'affaire'> | null
   };
 
   const body = `<article class="page toc-page">
-    ${headerHtml(fakeProjet as never)}
-
     <div class="toc-title-block">
       <h1 class="toc-title">Sommaire</h1>
       <div class="toc-subtitle">${entries.length} référence${entries.length > 1 ? 's' : ''}</div>
