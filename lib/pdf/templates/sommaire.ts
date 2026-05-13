@@ -1,5 +1,5 @@
 import type { Projet } from '@/types/projet';
-import { TemplateBundle, esc, headerHtml, footerHtml } from './shared';
+import { TemplateBundle, esc, footerHtml } from './shared';
 
 const CSS = `
 .toc-page {
@@ -85,8 +85,6 @@ export function renderSommaire(projet: Pick<Projet, 'statut' | 'affaire'> | null
   };
 
   const body = `<article class="page toc-page">
-    ${headerHtml(fakeProjet as never)}
-
     <div class="toc-title-block">
       <h1 class="toc-title">Sommaire</h1>
       <div class="toc-subtitle">${entries.length} référence${entries.length > 1 ? 's' : ''}</div>
