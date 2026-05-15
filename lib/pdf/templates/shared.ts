@@ -174,10 +174,9 @@ html, body { background: white; }
 }
 .t-meta-item {
   padding: 0 3mm;
-  border-right: 1px solid var(--ai-gris);
 }
 .t-meta-item:first-child { padding-left: 0; }
-.t-meta-item:last-child { padding-right: 0; border-right: none; }
+.t-meta-item:last-child { padding-right: 0; }
 .t-meta-label {
   font-family: var(--sans); font-size: 8.5pt; font-weight: 400;
   letter-spacing: 0.06em;
