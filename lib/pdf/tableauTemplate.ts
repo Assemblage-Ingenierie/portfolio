@@ -107,6 +107,7 @@ export function renderTableau({
   const html = `<article class="page tab-page" data-height-mm="${pageHeightMm}">
     ${titleHtml}
     <table class="tab-grid">${head}${body}</table>
+    <div class="tab-spacer"></div>
     <footer class="tab-footer">
       <img class="tab-footer-logo" src="${LOGO_URL}" alt="Assemblage ingénierie" />
       <span>${projets.length} référence${projets.length > 1 ? 's' : ''}</span>
@@ -152,7 +153,12 @@ export function renderTableau({
       font-size: 9pt;
       line-height: 1.35;
       color: var(--ai-noir);
-      flex: 1 1 auto;
+      /* Pas de flex: 1 1 auto — les lignes gardent leur hauteur naturelle
+         (compactes), et le footer "flotte" via le spacer .tab-spacer. */
+      flex: 0 0 auto;
+      /* Bordure extérieure noire visible (1pt). Le collapse + les bordures
+         internes ci-dessous donnent un tableau encadré net. */
+      border: 1pt solid var(--ai-noir);
     }
     .tab-grid thead th {
       font-size: 9pt;
@@ -160,20 +166,27 @@ export function renderTableau({
       letter-spacing: 0.02em;
       color: var(--ai-rouge);
       text-align: left;
-      padding: 2.5mm 3mm;
-      border-bottom: 1.2pt solid var(--ai-noir);
+      padding: 1.6mm 3mm;
+      border-bottom: 1pt solid var(--ai-noir);
       background: white;
       vertical-align: bottom;
     }
     .tab-grid tbody td {
-      padding: 2.2mm 3mm;
-      border-bottom: 0.5pt solid var(--ai-gris);
+      padding: 1.4mm 3mm;
+      border-bottom: 0.4pt solid var(--ai-gris);
       vertical-align: top;
       word-wrap: break-word;
+    }
+    .tab-grid tbody tr:last-child td {
+      /* Évite le double-trait avec la bordure extérieure noire en bas. */
+      border-bottom: none;
     }
     .tab-grid tbody tr:nth-child(even) td {
       background: var(--ai-gris-tres-clair);
     }
+    /* Spacer flex pour pousser le footer en bas de la page A4 sans étirer
+       les lignes du tableau. */
+    .tab-spacer { flex: 1 1 auto; }
     .tab-empty {
       color: var(--ai-gris);
       font-style: italic;
