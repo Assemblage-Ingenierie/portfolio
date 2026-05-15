@@ -29,6 +29,13 @@ export default function PortfolioBuilder({ projets }: Props) {
   // ----- État de sélection -----
   // Map slug → template choisi pour cette fiche
   const [selection, setSelection] = useState<Map<string, TemplateChoice>>(new Map());
+  // Étape du workflow : 'select' = filtrage + cases à cocher, 'order' = ordre
+  // de la mise en page. On bascule via le bouton "Suivant →" de la barre
+  // sticky. Retour possible via "← Modifier la sélection" depuis l'étape 2.
+  const [step, setStep] = useState<'select' | 'order'>('select');
+  // Ordre de mise en page (slugs). Initialisé en entrant dans l'étape 'order'.
+  // Les flèches haut/bas réorganisent ce tableau ; l'export l'utilise tel quel.
+  const [orderedSlugs, setOrderedSlugs] = useState<string[]>([]);
 
   // ----- Filtres (mêmes que la grille principale) -----
   const years = useMemo(() => {
@@ -111,17 +118,55 @@ export default function PortfolioBuilder({ projets }: Props) {
 
   function clearSelection() { setSelection(new Map()); }
 
+  // ----- Étapes -----
+  function goToOrderStep() {
+    if (selection.size === 0) return;
+    // Ordre initial : ordre d'affichage filtré (plus intuitif que l'ordre des
+    // clics). On ne garde que les slugs sélectionnés. Les fiches qui auraient
+    // pu sortir du filtre courant mais restent sélectionnées sont appendées.
+    const filteredSelected = filtered
+      .filter(p => selection.has(p.slug))
+      .map(p => p.slug);
+    const remaining = [...selection.keys()].filter(s => !filteredSelected.includes(s));
+    setOrderedSlugs([...filteredSelected, ...remaining]);
+    setStep('order');
+  }
+
+  function moveItem(slug: string, dir: -1 | 1) {
+    setOrderedSlugs(prev => {
+      const i = prev.indexOf(slug);
+      const j = i + dir;
+      if (i < 0 || j < 0 || j >= prev.length) return prev;
+      const next = prev.slice();
+      [next[i], next[j]] = [next[j], next[i]];
+      return next;
+    });
+  }
+
+  function removeFromOrder(slug: string) {
+    setOrderedSlugs(prev => prev.filter(s => s !== slug));
+    setSelection(prev => {
+      const next = new Map(prev);
+      next.delete(slug);
+      return next;
+    });
+  }
+
   // ----- Export -----
   function handleExport() {
-    if (selection.size === 0) return;
-    // Ordre : on respecte l'ordre des projets filtrés/affichés (plutôt que l'ordre d'ajout
-    // qui dépendrait des clics, ce qui serait moins intuitif pour le sommaire).
-    const ordered = filtered
-      .filter(p => selection.has(p.slug))
-      .map(p => `${p.slug}:${selection.get(p.slug)}`);
+    if (orderedSlugs.length === 0) return;
+    const ordered = orderedSlugs
+      .filter(s => selection.has(s))
+      .map(s => `${s}:${selection.get(s)}`);
     const url = `/portfolio/print?items=${encodeURIComponent(ordered.join(','))}`;
     window.open(url, '_blank');
   }
+
+  const projetsBySlug = useMemo(() => {
+    const m = new Map<string, Projet>();
+    projets.forEach(p => m.set(p.slug, p));
+    return m;
+  }, [projets]);
 
   // ----- Styles -----
   const btn = (active: boolean): React.CSSProperties => ({
@@ -150,10 +195,14 @@ export default function PortfolioBuilder({ projets }: Props) {
             </span>
           </div>
           <p style={{ fontSize: '9pt', color: 'var(--ai-noir70)', marginTop: 4 }}>
-            Filtre les références, sélectionne celles à inclure et choisis leur template d&apos;impression.
+            {step === 'select'
+              ? 'Étape 1/2 — Filtre les références, sélectionne celles à inclure et choisis leur template d’impression.'
+              : 'Étape 2/2 — Réorganise l’ordre d’apparition dans le portfolio.'}
           </p>
         </header>
 
+        {step === 'select' && (
+        <>
         {/* Recherche */}
         <input
           type="search"
@@ -279,6 +328,95 @@ export default function PortfolioBuilder({ projets }: Props) {
             Aucun projet ne correspond aux filtres.
           </div>
         )}
+        </>
+        )}
+
+        {step === 'order' && (
+          <div style={{ background: 'white', borderRadius: '2px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+            {orderedSlugs.map((slug, i) => {
+              const projet = projetsBySlug.get(slug);
+              if (!projet) return null;
+              const isFirst = i === 0;
+              const isLast = i === orderedSlugs.length - 1;
+              const tmpl = selection.get(slug);
+              return (
+                <div key={slug} style={{
+                  display: 'grid',
+                  gridTemplateColumns: '36px 28px 56px 1fr 100px 80px 130px 28px',
+                  gap: 12, alignItems: 'center', padding: '10px 16px',
+                  borderBottom: i < orderedSlugs.length - 1 ? '1px solid #DFE4E8' : 'none',
+                  background: 'white',
+                }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <button
+                      onClick={() => moveItem(slug, -1)}
+                      disabled={isFirst}
+                      aria-label="Monter"
+                      style={{
+                        padding: '2px 6px', fontSize: '10pt', lineHeight: 1,
+                        border: '1px solid #DFE4E8', borderRadius: 2,
+                        background: 'white',
+                        color: isFirst ? '#CCC' : 'var(--ai-noir70)',
+                        cursor: isFirst ? 'not-allowed' : 'pointer',
+                      }}
+                    >▲</button>
+                    <button
+                      onClick={() => moveItem(slug, 1)}
+                      disabled={isLast}
+                      aria-label="Descendre"
+                      style={{
+                        padding: '2px 6px', fontSize: '10pt', lineHeight: 1,
+                        border: '1px solid #DFE4E8', borderRadius: 2,
+                        background: 'white',
+                        color: isLast ? '#CCC' : 'var(--ai-noir70)',
+                        cursor: isLast ? 'not-allowed' : 'pointer',
+                      }}
+                    >▼</button>
+                  </div>
+                  <div style={{ fontFamily: 'var(--sans)', fontSize: '11pt', fontWeight: 700, color: 'var(--ai-rouge)', textAlign: 'center' }}>{i + 1}</div>
+                  {projet.photoCouverture
+                    ? <div style={{ width: 56, height: 40, backgroundImage: `url(${projet.photoCouverture.url})`, backgroundSize: 'cover', backgroundPosition: 'center', borderRadius: 1 }} />
+                    : <div style={{ width: 56, height: 40, background: 'var(--ai-gris)', borderRadius: 1 }} />
+                  }
+                  <div>
+                    <div style={{ fontFamily: 'var(--serif)', fontSize: '10.5pt', fontWeight: 500, color: 'var(--ai-noir)', lineHeight: 1.2 }}>{projet.nom}</div>
+                    {projet.moa && <div style={{ fontSize: '8pt', color: 'var(--ai-noir70)', marginTop: 2 }}>{projet.moa} · {projet.affaire}</div>}
+                  </div>
+                  <div style={{ fontSize: '7.5pt', color: 'var(--ai-noir70)' }}>{projet.programme ?? '—'}</div>
+                  <div style={{ fontSize: '8pt', color: 'var(--ai-rouge)', fontWeight: 600 }}>{projet.anneeLivraison ?? '—'}</div>
+                  <select
+                    value={tmpl ?? ''}
+                    onChange={e => setItemTemplate(slug, e.target.value as TemplateChoice)}
+                    style={{
+                      padding: '4px 6px', fontSize: '8pt', fontFamily: 'var(--sans)',
+                      border: '1px solid #DFE4E8', borderRadius: 2,
+                      background: 'white', color: 'var(--ai-noir)', cursor: 'pointer',
+                    }}
+                  >
+                    {TEMPLATE_OPTIONS.map(t => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() => removeFromOrder(slug)}
+                    aria-label="Retirer"
+                    title="Retirer du portfolio"
+                    style={{
+                      padding: '4px 6px', fontSize: '10pt', lineHeight: 1,
+                      border: '1px solid #DFE4E8', borderRadius: 2,
+                      background: 'white', color: 'var(--ai-noir70)', cursor: 'pointer',
+                    }}
+                  >✕</button>
+                </div>
+              );
+            })}
+            {orderedSlugs.length === 0 && (
+              <div style={{ textAlign: 'center', padding: 32, color: 'var(--ai-noir70)', fontSize: '10pt' }}>
+                Aucune référence à ordonner. Retour à l’étape 1 pour en sélectionner.
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Barre d'export sticky */}
@@ -294,20 +432,51 @@ export default function PortfolioBuilder({ projets }: Props) {
           <strong style={{ fontSize: '14pt', color: 'var(--ai-rouge)' }}>{selection.size}</strong> référence{selection.size > 1 ? 's' : ''} sélectionnée{selection.size > 1 ? 's' : ''}
         </div>
         <div style={{ flex: 1 }} />
-        <button
-          onClick={handleExport}
-          disabled={selection.size === 0}
-          style={{
-            padding: '10px 20px',
-            background: selection.size === 0 ? '#666' : 'var(--ai-rouge)',
-            color: 'white', border: 'none', borderRadius: 2,
-            fontFamily: 'var(--sans)', fontSize: '10pt', fontWeight: 700,
-            cursor: selection.size === 0 ? 'not-allowed' : 'pointer',
-            letterSpacing: '0.05em',
-          }}
-        >
-          Exporter le portfolio →
-        </button>
+        {step === 'order' && (
+          <button
+            onClick={() => setStep('select')}
+            style={{
+              padding: '10px 16px',
+              background: 'transparent',
+              color: 'white', border: '1px solid rgba(255,255,255,0.4)', borderRadius: 2,
+              fontFamily: 'var(--sans)', fontSize: '10pt', fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            ← Modifier la sélection
+          </button>
+        )}
+        {step === 'select' ? (
+          <button
+            onClick={goToOrderStep}
+            disabled={selection.size === 0}
+            style={{
+              padding: '10px 20px',
+              background: selection.size === 0 ? '#666' : 'var(--ai-rouge)',
+              color: 'white', border: 'none', borderRadius: 2,
+              fontFamily: 'var(--sans)', fontSize: '10pt', fontWeight: 700,
+              cursor: selection.size === 0 ? 'not-allowed' : 'pointer',
+              letterSpacing: '0.05em',
+            }}
+          >
+            Suivant : ordonner →
+          </button>
+        ) : (
+          <button
+            onClick={handleExport}
+            disabled={orderedSlugs.length === 0}
+            style={{
+              padding: '10px 20px',
+              background: orderedSlugs.length === 0 ? '#666' : 'var(--ai-rouge)',
+              color: 'white', border: 'none', borderRadius: 2,
+              fontFamily: 'var(--sans)', fontSize: '10pt', fontWeight: 700,
+              cursor: orderedSlugs.length === 0 ? 'not-allowed' : 'pointer',
+              letterSpacing: '0.05em',
+            }}
+          >
+            Exporter le PDF →
+          </button>
+        )}
       </div>
     </div>
   );

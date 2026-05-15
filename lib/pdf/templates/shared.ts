@@ -130,6 +130,7 @@ html, body { background: white; }
   display: inline-flex;
   flex-direction: column;
   justify-content: center;
+  gap: 2.2mm;
 }
 .t-header-meta {
   font-size: 9pt; font-weight: 400;
@@ -287,7 +288,7 @@ export function headerHtml(projet: Projet): string {
   if (hasRehab) rnKeys.push('rehab');
   const rehabNeufHtml = rnKeys.length > 0
     ? `${rnKeys.map((k) => `<img class="t-header-vignette" src="${REHAB_NEUF_VIGNETTE[k].url}" alt="${REHAB_NEUF_VIGNETTE[k].label}" />`).join('')}
-       <span class="t-header-rn-label${rnKeys.length > 1 ? ' t-header-rn-label--stacked' : ''}">${rnKeys.map((k) => esc(REHAB_NEUF_VIGNETTE[k].label)).join('<br />')}</span>`
+       <span class="t-header-rn-label${rnKeys.length > 1 ? ' t-header-rn-label--stacked' : ''}">${rnKeys.map((k) => `<span>${esc(REHAB_NEUF_VIGNETTE[k].label)}</span>`).join('')}</span>`
     : '';
 
   const statusStyle = styleToCss(projet.bandeauConfig?.status);
