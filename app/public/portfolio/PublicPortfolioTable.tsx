@@ -157,13 +157,19 @@ export default function PublicPortfolioTable() {
     else { setSortKey(key); setSortDir(key === 'anneeLivraison' ? 'desc' : 'asc'); }
   }
 
-  // Récap : split la sélection par mode pour rendre deux tableaux si nécessaire.
+  // Récap : la répartition entre tableau "MOE" et "Développement" est dictée
+  // par le champ Airtable "Vignette pôle" du projet, pas par le mode de
+  // colonnes au moment de la sélection.
+  // - Vignette pôle contient DEV → tableau "Références du pôle Développement"
+  // - Sinon                       → tableau "Références MOE"
+  const isDev = (p: PublicProjet) =>
+    (p.vignettePoles ?? []).map((v) => v.toUpperCase()).includes('DEV');
   const recapStd = useMemo(
-    () => (items ?? []).filter((p) => selection.get(p.slug) === 'std'),
+    () => (items ?? []).filter((p) => selection.has(p.slug) && !isDev(p)),
     [items, selection]
   );
   const recapDev = useMemo(
-    () => (items ?? []).filter((p) => selection.get(p.slug) === 'dev'),
+    () => (items ?? []).filter((p) => selection.has(p.slug) && isDev(p)),
     [items, selection]
   );
 
