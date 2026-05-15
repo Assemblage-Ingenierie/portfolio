@@ -178,16 +178,17 @@ export default function PublicPortfolioTable() {
   return (
     <div style={{ minHeight: '100vh', background: '#FAFAFA', paddingBottom: 100 }}>
       <div style={{ maxWidth: 1280, margin: '0 auto', padding: '32px 24px', fontFamily: 'var(--sans)' }}>
-        <header style={{ marginBottom: 20, borderBottom: '2px solid var(--ai-rouge)', paddingBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 16, flexWrap: 'wrap' }}>
-          <div>
+        <header style={{ marginBottom: 20, borderBottom: '2px solid var(--ai-rouge)', paddingBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="https://hhkofvbptnrtwbazftlm.supabase.co/storage/v1/object/public/Branding/logo/logo_Ai_rouge.svg"
+              alt="Assemblage ingénierie"
+              style={{ height: 36, width: 'auto', display: 'block' }}
+            />
             <h1 style={{ fontFamily: 'var(--sans)', fontSize: '18pt', fontWeight: 500, color: 'var(--ai-violet)', margin: 0 }}>
-              Références — Assemblage ingénierie
+              Tableau de références
             </h1>
-            <p style={{ fontSize: '9pt', color: 'var(--ai-noir70)', marginTop: 6 }}>
-              {view === 'recap'
-                ? `${selection.size} référence${selection.size > 1 ? 's' : ''} sélectionnée${selection.size > 1 ? 's' : ''}`
-                : items === null ? 'Chargement…' : `${filtered.length} référence${filtered.length > 1 ? 's' : ''} · mode colonnes : ${currentMode === 'dev' ? 'DEV' : 'Standard'}`}
-            </p>
           </div>
           {view === 'recap' && (
             <button onClick={() => setView('browse')} style={ghostBtn}>← Retour au tableau</button>
