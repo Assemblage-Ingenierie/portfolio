@@ -15,6 +15,7 @@ import { esc } from './templates/shared';
  */
 
 export type TableauOrientation = 'portrait' | 'paysage';
+export type TableauMode = 'Str-Env' | 'Dev';
 
 export interface TableauFieldDef {
   key: string;
@@ -22,34 +23,49 @@ export interface TableauFieldDef {
   getValue: (p: Projet) => string | undefined;
 }
 
-/** Catalogue complet des colonnes possibles. L'utilisateur en choisit un
- *  sous-ensemble depuis l'UI. L'ordre déclaré ici sert d'ordre d'affichage
- *  par défaut. */
+/** Catalogue complet des colonnes disponibles (toutes modes confondues). */
 export const TABLEAU_FIELDS: TableauFieldDef[] = [
-  { key: 'nom',          label: 'Nom du projet',     getValue: (p) => p.nom },
+  { key: 'nom',          label: 'Projet',            getValue: (p) => p.nom },
   { key: 'lieu',         label: 'Lieu',              getValue: (p) => p.lieu },
   { key: 'annee',        label: 'Année',             getValue: (p) => p.anneeLivraison ? String(p.anneeLivraison) : undefined },
-  { key: 'moa',          label: "Maître d'ouvrage",  getValue: (p) => p.moa },
+  { key: 'moa',          label: 'MOA',               getValue: (p) => p.moa },
   { key: 'architecte',   label: 'Architecte',        getValue: (p) => p.architecte },
   { key: 'bet',          label: 'BET associés',      getValue: (p) => p.betAssocies },
   { key: 'bailleur',     label: 'Bailleur',          getValue: (p) => p.bailleur },
-  { key: 'entreprise',   label: 'Entreprise',        getValue: (p) => p.entreprise },
   { key: 'mission',      label: 'Mission AI',        getValue: (p) => p.missionAi },
   { key: 'programme',    label: 'Programme',         getValue: (p) => p.programmePrincipal ?? p.programmeSecondaire },
   { key: 'surface',      label: 'Surface',           getValue: (p) => p.surface ? `${p.surface.toLocaleString('fr-FR')} m²` : undefined },
   { key: 'budget',       label: 'Budget',            getValue: (p) => p.budgetHT },
-  { key: 'statut',       label: 'Statut',            getValue: (p) => p.statut },
 ];
 
 export const TABLEAU_FIELD_KEYS = TABLEAU_FIELDS.map((f) => f.key);
 
-/** Sélection de colonnes par défaut quand aucune n'est précisée par l'URL. */
-export const TABLEAU_DEFAULT_FIELDS = ['nom', 'moa', 'architecte', 'annee', 'programme'];
+/** Ordres canoniques par mode. Le rendu trie les clés sélectionnées dans
+ *  cet ordre — d'où le placement de "Lieu" juste avant "Année" même si
+ *  l'utilisateur l'active dans un second temps. */
+export const TABLEAU_ORDER_BY_MODE: Record<TableauMode, string[]> = {
+  'Str-Env': ['nom', 'architecte', 'moa', 'mission', 'programme', 'budget', 'surface', 'lieu', 'annee'],
+  'Dev':     ['nom', 'moa', 'bailleur', 'architecte', 'programme', 'mission', 'budget', 'bet', 'lieu', 'annee'],
+};
+
+/** Colonnes activées par défaut pour chaque mode. "Lieu" est dans le
+ *  catalogue mais désactivé par défaut sur les deux modes. */
+export const TABLEAU_DEFAULTS_BY_MODE: Record<TableauMode, string[]> = {
+  'Str-Env': ['nom', 'architecte', 'moa', 'mission', 'programme', 'budget', 'surface', 'annee'],
+  'Dev':     ['nom', 'moa', 'bailleur', 'architecte', 'programme', 'mission', 'budget', 'bet', 'annee'],
+};
+
+/** Sélection par défaut quand aucune n'est précisée par l'URL (fallback Str-Env). */
+export const TABLEAU_DEFAULT_FIELDS = TABLEAU_DEFAULTS_BY_MODE['Str-Env'];
+
+/** URL du logo Assemblage (rouge) — bucket Branding Supabase. */
+const LOGO_URL = 'https://hhkofvbptnrtwbazftlm.supabase.co/storage/v1/object/public/Branding/logo/logo_Ai_rouge.svg';
 
 export interface RenderTableauOptions {
   projets: Projet[];
   fieldKeys: string[];
   orientation: TableauOrientation;
+  mode?: TableauMode;
   title?: string;
 }
 
@@ -57,16 +73,20 @@ export function renderTableau({
   projets,
   fieldKeys,
   orientation,
-  title,
+  mode = 'Str-Env',
+  title = 'Tableau de références',
 }: RenderTableauOptions): { body: string; css: string } {
   // Largeur / hauteur de la page en mm selon orientation.
   const pageWidthMm = orientation === 'paysage' ? 297 : 210;
   const pageHeightMm = orientation === 'paysage' ? 210 : 297;
 
-  // Filtre + ordonne les colonnes selon TABLEAU_FIELDS, conserve l'ordre
-  // souhaité par l'utilisateur si fieldKeys vient dans un ordre custom.
+  // Tri des colonnes selon l'ordre canonique du mode — "Lieu" se retrouve
+  // toujours juste avant "Année" même s'il est activé après-coup.
+  const order = TABLEAU_ORDER_BY_MODE[mode];
+  const selected = new Set(fieldKeys);
   const fieldByKey = new Map(TABLEAU_FIELDS.map((f) => [f.key, f]));
-  const fields = fieldKeys
+  const fields = order
+    .filter((k) => selected.has(k))
     .map((k) => fieldByKey.get(k))
     .filter((f): f is TableauFieldDef => Boolean(f));
 
@@ -88,7 +108,7 @@ export function renderTableau({
     ${titleHtml}
     <table class="tab-grid">${head}${body}</table>
     <footer class="tab-footer">
-      <span>Assemblage ingénierie</span>
+      <img class="tab-footer-logo" src="${LOGO_URL}" alt="Assemblage ingénierie" />
       <span>${projets.length} référence${projets.length > 1 ? 's' : ''}</span>
     </footer>
   </article>`;
@@ -135,10 +155,9 @@ export function renderTableau({
       flex: 1 1 auto;
     }
     .tab-grid thead th {
-      font-size: 8pt;
+      font-size: 9pt;
       font-weight: 700;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
+      letter-spacing: 0.02em;
       color: var(--ai-rouge);
       text-align: left;
       padding: 2.5mm 3mm;
@@ -163,12 +182,18 @@ export function renderTableau({
     .tab-footer {
       display: flex;
       justify-content: space-between;
+      align-items: center;
       font-family: var(--sans);
       font-size: 8pt;
       color: var(--ai-noir70);
       border-top: 1px solid var(--ai-gris);
-      padding-top: 2mm;
+      padding-top: 3mm;
       flex: 0 0 auto;
+    }
+    .tab-footer-logo {
+      height: 12mm;
+      width: auto;
+      display: block;
     }
   `;
 

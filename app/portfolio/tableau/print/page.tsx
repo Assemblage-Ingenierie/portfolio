@@ -1,7 +1,7 @@
 import { getProjet } from '@/lib/airtable';
 import { notFound } from 'next/navigation';
 import { SHARED_CSS } from '@/lib/pdf/templates/shared';
-import { renderTableau, TABLEAU_DEFAULT_FIELDS, TABLEAU_FIELD_KEYS, type TableauOrientation } from '@/lib/pdf/tableauTemplate';
+import { renderTableau, TABLEAU_DEFAULTS_BY_MODE, TABLEAU_FIELD_KEYS, type TableauOrientation, type TableauMode } from '@/lib/pdf/tableauTemplate';
 import PrintRunner from '@/components/PrintRunner';
 import type { Projet } from '@/types/projet';
 
@@ -15,9 +15,9 @@ import type { Projet } from '@/types/projet';
 export default async function TableauPrintPage({
   searchParams,
 }: {
-  searchParams: Promise<{ items?: string; fields?: string; orient?: string }>;
+  searchParams: Promise<{ items?: string; fields?: string; orient?: string; mode?: string }>;
 }) {
-  const { items: rawItems, fields: rawFields, orient: rawOrient } = await searchParams;
+  const { items: rawItems, fields: rawFields, orient: rawOrient, mode: rawMode } = await searchParams;
 
   const slugs = (rawItems ?? '')
     .split(',')
@@ -25,11 +25,13 @@ export default async function TableauPrintPage({
     .filter(s => /^[a-zA-Z0-9_-]+$/.test(s));
   if (slugs.length === 0) notFound();
 
+  const mode: TableauMode = rawMode === 'Dev' ? 'Dev' : 'Str-Env';
+
   const fieldKeys = (rawFields ?? '')
     .split(',')
     .map(s => s.trim())
     .filter(k => TABLEAU_FIELD_KEYS.includes(k));
-  const fields = fieldKeys.length > 0 ? fieldKeys : TABLEAU_DEFAULT_FIELDS;
+  const fields = fieldKeys.length > 0 ? fieldKeys : TABLEAU_DEFAULTS_BY_MODE[mode];
 
   const orientation: TableauOrientation = rawOrient === 'portrait' ? 'portrait' : 'paysage';
 
@@ -37,7 +39,7 @@ export default async function TableauPrintPage({
   const projets = projetsLoaded.filter((p): p is Projet => Boolean(p));
   if (projets.length === 0) notFound();
 
-  const bundle = renderTableau({ projets, fieldKeys: fields, orientation, title: 'Références — extrait portfolio' });
+  const bundle = renderTableau({ projets, fieldKeys: fields, orientation, mode });
 
   const pageWidthMm = orientation === 'paysage' ? 297 : 210;
   const pageHeightMm = orientation === 'paysage' ? 210 : 297;

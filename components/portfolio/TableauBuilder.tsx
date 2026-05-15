@@ -3,7 +3,7 @@
 import { useMemo, useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import type { Projet, Statut } from '@/types/projet';
-import { TABLEAU_FIELDS, TABLEAU_DEFAULT_FIELDS, renderTableau, type TableauOrientation } from '@/lib/pdf/tableauTemplate';
+import { TABLEAU_FIELDS, TABLEAU_DEFAULTS_BY_MODE, TABLEAU_ORDER_BY_MODE, renderTableau, type TableauOrientation, type TableauMode } from '@/lib/pdf/tableauTemplate';
 import { SHARED_CSS, FONTS_LINK } from '@/lib/pdf/templates/shared';
 import { measureOverflow, type OverflowMeasure } from '@/lib/utils/measureOverflow';
 
@@ -33,7 +33,14 @@ export default function TableauBuilder({ projets }: Props) {
   const [selection, setSelection] = useState<Set<string>>(new Set());
   const [orderedSlugs, setOrderedSlugs] = useState<string[]>([]);
   const [orientation, setOrientation] = useState<TableauOrientation>('paysage');
-  const [fields, setFields] = useState<string[]>(TABLEAU_DEFAULT_FIELDS);
+  // Mode = jeu de colonnes par défaut + ordre canonique du tableau. Pré-réglé
+  // sur le template de la 1re référence sélectionnée à l'entrée de l'étape 3,
+  // ensuite modifiable. Quand l'utilisateur change de mode, on remet les
+  // cases cochées au défaut du nouveau mode (sinon des colonnes hors-spec
+  // pourraient rester actives).
+  const [mode, setMode] = useState<TableauMode>('Str-Env');
+  const [fields, setFields] = useState<string[]>(TABLEAU_DEFAULTS_BY_MODE['Str-Env']);
+  const [modeInitialized, setModeInitialized] = useState(false);
 
   // ----- Filtres (sous-ensemble de PortfolioBuilder) -----
   const years = useMemo(() => {
@@ -143,20 +150,40 @@ export default function TableauBuilder({ projets }: Props) {
   }, [projets]);
 
   // ----- Toggle d'un champ dans la sélection de colonnes -----
+  // L'ordre du tableau est piloté par le mode (cf. TABLEAU_ORDER_BY_MODE) :
+  // on garde la liste triée selon cet ordre — pratique pour la preview qui
+  // affiche les colonnes dans le bon ordre.
   function toggleField(key: string) {
     setFields(prev => {
-      if (prev.includes(key)) return prev.filter(k => k !== key);
-      // Insère selon l'ordre canonique du catalogue.
-      const order = TABLEAU_FIELDS.map(f => f.key);
-      const next = [...prev, key];
+      const next = prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key];
+      const order = TABLEAU_ORDER_BY_MODE[mode];
       return order.filter(k => next.includes(k));
     });
   }
 
+  function changeMode(newMode: TableauMode) {
+    setMode(newMode);
+    // Reset les colonnes cochées sur le défaut du nouveau mode.
+    setFields(TABLEAU_DEFAULTS_BY_MODE[newMode]);
+  }
+
+  // Pré-règle le mode sur le template de la 1re référence sélectionnée lors
+  // de la première entrée dans l'étape 3. Si l'utilisateur revient à l'étape
+  // 3 plus tard, on respecte son choix manuel précédent.
+  useEffect(() => {
+    if (step !== 'preview' || modeInitialized || orderedSlugs.length === 0) return;
+    const first = projetsBySlug.get(orderedSlugs[0]);
+    const initial: TableauMode = first?.template === 'Dev' ? 'Dev' : 'Str-Env';
+    setMode(initial);
+    setFields(TABLEAU_DEFAULTS_BY_MODE[initial]);
+    setModeInitialized(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, orderedSlugs, projetsBySlug, modeInitialized]);
+
   // ----- Export PDF (impression natif) -----
   function handleExport() {
     if (orderedSlugs.length === 0 || fields.length === 0) return;
-    const url = `/portfolio/tableau/print?items=${encodeURIComponent(orderedSlugs.join(','))}&fields=${encodeURIComponent(fields.join(','))}&orient=${orientation}`;
+    const url = `/portfolio/tableau/print?items=${encodeURIComponent(orderedSlugs.join(','))}&fields=${encodeURIComponent(fields.join(','))}&orient=${orientation}&mode=${encodeURIComponent(mode)}`;
     window.open(url, '_blank');
   }
 
@@ -167,9 +194,9 @@ export default function TableauBuilder({ projets }: Props) {
   );
   const previewHtml = useMemo(() => {
     if (step !== 'preview') return '';
-    const bundle = renderTableau({ projets: orderedProjets, fieldKeys: fields, orientation, title: 'Références — extrait portfolio' });
+    const bundle = renderTableau({ projets: orderedProjets, fieldKeys: fields, orientation, mode });
     return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">${FONTS_LINK}<style>${SHARED_CSS}${bundle.css}body{background:white;}</style></head><body>${bundle.body}</body></html>`;
-  }, [step, orderedProjets, fields, orientation]);
+  }, [step, orderedProjets, fields, orientation, mode]);
 
   // ----- Styles partagés -----
   const btn = (active: boolean): React.CSSProperties => ({
@@ -231,6 +258,8 @@ export default function TableauBuilder({ projets }: Props) {
             html={previewHtml}
             orientation={orientation}
             setOrientation={setOrientation}
+            mode={mode}
+            setMode={changeMode}
             fields={fields}
             toggleField={toggleField}
           />
@@ -470,10 +499,18 @@ interface PreviewStepProps {
   html: string;
   orientation: TableauOrientation;
   setOrientation: (o: TableauOrientation) => void;
+  mode: TableauMode;
+  setMode: (m: TableauMode) => void;
   fields: string[];
   toggleField: (k: string) => void;
 }
-function PreviewStep({ html, orientation, setOrientation, fields, toggleField }: PreviewStepProps) {
+function PreviewStep({ html, orientation, setOrientation, mode, setMode, fields, toggleField }: PreviewStepProps) {
+  // Affiche les colonnes dans l'ordre canonique du mode pour que la liste de
+  // checkboxes corresponde à l'ordre du tableau rendu. "Lieu" reste à sa
+  // place canonique (juste avant "Année").
+  const orderedFieldDefs = TABLEAU_ORDER_BY_MODE[mode]
+    .map(k => TABLEAU_FIELDS.find(f => f.key === k))
+    .filter((f): f is typeof TABLEAU_FIELDS[number] => Boolean(f));
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [overflow, setOverflow] = useState<OverflowMeasure | null>(null);
 
@@ -510,6 +547,19 @@ function PreviewStep({ html, orientation, setOrientation, fields, toggleField }:
     <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 20 }}>
       {/* Sidebar config */}
       <aside style={{ position: 'sticky', top: 16, alignSelf: 'start', background: 'white', border: '1px solid #DFE4E8', borderRadius: 2, padding: 16 }}>
+        <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 8 }}>Mode</div>
+        <div style={{ display: 'flex', gap: 4, marginBottom: 18 }}>
+          {(['Str-Env', 'Dev'] as const).map(m => (
+            <button key={m} onClick={() => setMode(m)}
+              style={{
+                flex: 1, padding: '6px 0', fontFamily: 'var(--sans)', fontSize: '8pt', fontWeight: 700,
+                border: mode === m ? 'none' : '1px solid #DFE4E8',
+                background: mode === m ? 'var(--ai-rouge)' : 'white',
+                color: mode === m ? 'white' : 'var(--ai-noir70)',
+                cursor: 'pointer', borderRadius: 2,
+              }}>{m}</button>
+          ))}
+        </div>
         <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 8 }}>Orientation</div>
         <div style={{ display: 'flex', gap: 4, marginBottom: 18 }}>
           {(['paysage', 'portrait'] as const).map(o => (
@@ -525,7 +575,7 @@ function PreviewStep({ html, orientation, setOrientation, fields, toggleField }:
         </div>
         <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 8 }}>Colonnes</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          {TABLEAU_FIELDS.map(f => {
+          {orderedFieldDefs.map(f => {
             const checked = fields.includes(f.key);
             return (
               <label key={f.key} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '9pt', cursor: 'pointer', padding: '2px 0' }}>
