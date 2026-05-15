@@ -226,7 +226,7 @@ export default function PortfolioGrid({ projets }: Props) {
           <h1 style={{ fontFamily: 'var(--sans)', fontSize: '28pt', fontWeight: 500, color: 'var(--ai-violet)' }}>
             Portfolio
           </h1>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 6 }}>
             <Link
               href="/portfolio/builder"
               style={{
@@ -239,9 +239,27 @@ export default function PortfolioGrid({ projets }: Props) {
                 letterSpacing: '0.05em',
                 textDecoration: 'none',
                 borderRadius: 2,
+                textAlign: 'center',
               }}
             >
               Constituer le portfolio →
+            </Link>
+            <Link
+              href="/portfolio/tableau"
+              style={{
+                padding: '8px 16px',
+                background: 'var(--ai-rouge)',
+                color: 'white',
+                fontFamily: 'var(--sans)',
+                fontSize: '9pt',
+                fontWeight: 700,
+                letterSpacing: '0.05em',
+                textDecoration: 'none',
+                borderRadius: 2,
+                textAlign: 'center',
+              }}
+            >
+              Constituer le tableau
             </Link>
           </div>
         </div>
