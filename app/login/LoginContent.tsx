@@ -98,6 +98,12 @@ export default function LoginContent() {
         )}
 
         {message && <p className={styles.message}>{message}</p>}
+
+        <div className={styles.divider}><span>ou</span></div>
+
+        <a href="/public/portfolio" className={styles.publicBtn}>
+          Page publique →
+        </a>
       </div>
     </div>
   );

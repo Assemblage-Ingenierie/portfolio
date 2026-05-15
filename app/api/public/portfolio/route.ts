@@ -16,6 +16,9 @@ export interface PublicProjet {
   lieu?: string;
   moa?: string;
   architecte?: string;
+  betAssocies?: string;
+  bailleur?: string;
+  missionAi?: string;
   programme?: string;
   programmePrincipal?: string;
   programmesPrincipaux?: string[];
@@ -25,6 +28,7 @@ export interface PublicProjet {
   rehabNeuf?: string;
   surface?: number;
   budgetHT?: string;
+  certifications?: string[];
   photoCouverture?: { url: string; width?: number; height?: number };
 }
 
@@ -35,6 +39,9 @@ function sanitize(p: Projet): PublicProjet {
     lieu: p.lieu ?? p.adresse,
     moa: p.moa,
     architecte: p.architecte,
+    betAssocies: p.betAssocies,
+    bailleur: p.bailleur,
+    missionAi: p.missionAi,
     programme: p.programme,
     programmePrincipal: p.programmePrincipal,
     programmesPrincipaux: p.programmesPrincipaux,
@@ -44,6 +51,7 @@ function sanitize(p: Projet): PublicProjet {
     rehabNeuf: p.rehabNeuf,
     surface: p.surface,
     budgetHT: p.budgetHT,
+    certifications: p.certifications,
     photoCouverture: p.photoCouverture
       ? { url: p.photoCouverture.url, width: p.photoCouverture.width, height: p.photoCouverture.height }
       : undefined,
