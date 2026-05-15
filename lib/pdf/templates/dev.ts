@@ -213,7 +213,7 @@ const CSS = `
   width: 100%;
   flex: 0 0 auto;
   font-family: var(--sans);
-  font-size: 9.5pt;
+  font-size: 9pt;
   line-height: 1.5;
   color: var(--ai-noir);
   transform: translate(

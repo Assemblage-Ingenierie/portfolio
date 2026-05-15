@@ -157,7 +157,10 @@ export async function getProjet(slug: string): Promise<Projet | null> {
   if (!/^[a-zA-Z0-9_-]+$/.test(slug)) return null;
   if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) return null;
   try {
-    const filter = `{Slug} = "${slug}"`;
+    // Gate par Visible portfolio : une fiche n'est consultable que si
+    // {Visible portfolio} = TRUE() — la coche dans Airtable est désormais
+    // le seul déclencheur de la création d'une fiche de référence.
+    const filter = `AND({Slug} = "${slug}", {Visible portfolio} = TRUE())`;
 
     const [records, prog] = await Promise.all([
       base(TABLE).select({ filterByFormula: filter, maxRecords: 1 }).all(),

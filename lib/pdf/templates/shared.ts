@@ -110,7 +110,7 @@ html, body { background: white; }
    réglage temporaire dans l'aperçu (à supprimer une fois la valeur
    définitive choisie). */
 .t-header-vignette--inactive {
-  filter: grayscale(100%) brightness(var(--vignette-grey-brightness, 1.55));
+  filter: grayscale(100%) brightness(1.90);
 }
 /* Libellé Réhabilitation / Neuf à droite de la vignette correspondante */
 .t-header-rn-label {
@@ -198,8 +198,9 @@ html, body { background: white; }
   line-height: 1.5; color: var(--ai-noir);
   margin-bottom: 2.5mm;
 }
-/* Bloc markdown rendu (description rich text Airtable) */
-.t-texte-md { font-family: var(--sans); font-size: 9.5pt; line-height: 1.5; color: var(--ai-noir); }
+/* Bloc markdown rendu (description rich text Airtable) — défaut design
+   system : Open Sans 9pt (modifiable via BandeauConfig.description). */
+.t-texte-md { font-family: var(--sans); font-size: 9pt; line-height: 1.5; color: var(--ai-noir); }
 .t-texte-md p { margin: 0 0 2.5mm; }
 .t-texte-md p:last-child { margin-bottom: 0; }
 .t-texte-md strong { font-weight: 700; }

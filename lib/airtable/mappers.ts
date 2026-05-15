@@ -122,7 +122,28 @@ export function recordToProjet(record: any, aux?: AuxValues): Projet {
   // et on accepte les valeurs legacy Editorial/Magazine en fallback auto.
   const rawTemplate = f['Template'] ?? f['Sélectionner'];
   const description: string = f['Description projet'] ?? '';
-  const tmpProjet = { photoCouverture, photosProjet, description };
+  // Calcule les pôles ici (dupliqué avec le mapping final plus bas mais
+  // nécessaire pour `autoSelectTemplate` qui en dépend).
+  const vignettePolesForTemplate: string[] | undefined = aux?.vignettePoles ?? (() => {
+    const raw = f['Vignette pôle'];
+    if (Array.isArray(raw)) {
+      const arr = raw.map((s) => String(s).trim().toUpperCase()).filter(Boolean);
+      return arr.length ? arr : undefined;
+    }
+    if (typeof raw === 'string' && raw.trim()) {
+      const arr = raw.split(',').map((s) => s.trim().toUpperCase()).filter(Boolean);
+      return arr.length ? arr : undefined;
+    }
+    return undefined;
+  })();
+  const poleForTemplate = aux?.pole ?? f['Pôle'];
+  const tmpProjet = {
+    photoCouverture,
+    photosProjet,
+    description,
+    vignettePoles: vignettePolesForTemplate,
+    pole: poleForTemplate,
+  };
   const template: TemplateChoice = isTemplateChoice(rawTemplate)
     ? rawTemplate
     : autoSelectTemplate(tmpProjet);
