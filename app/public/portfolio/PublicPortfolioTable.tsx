@@ -298,13 +298,13 @@ export default function PublicPortfolioTable() {
             )}
             {recapStd.length > 0 && (
               <section style={{ marginBottom: 32 }}>
-                <h2 style={recapTitle}>Références (mode Standard) — {recapStd.length}</h2>
+                <h2 style={recapTitle}>Références MOE — {recapStd.length}</h2>
                 <ProjetTable mode="std" rows={recapStd} selectable={false} />
               </section>
             )}
             {recapDev.length > 0 && (
               <section style={{ marginBottom: 32 }}>
-                <h2 style={recapTitle}>Références (mode DEV) — {recapDev.length}</h2>
+                <h2 style={recapTitle}>Références du pôle Développement — {recapDev.length}</h2>
                 <ProjetTable mode="dev" rows={recapDev} selectable={false} />
               </section>
             )}
