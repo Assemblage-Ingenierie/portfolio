@@ -296,8 +296,10 @@ export default function PortfolioGrid({ projets }: Props) {
         )}
       </div>
 
-      {/* Filters bar */}
-      <div style={{ background: 'white', border: '1px solid #DFE4E8', borderRadius: '2px', padding: '14px 16px', marginBottom: '20px', display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'flex-start' }}>
+      {/* Filters bar — disposition compacte : les petits filtres (Pôle ·
+          Statut · Type · Année) tiennent sur la 1re rangée ; Programme
+          (multi-select large) flue naturellement sur la rangée suivante. */}
+      <div style={{ background: 'white', border: '1px solid #DFE4E8', borderRadius: '2px', padding: '10px 14px', marginBottom: '20px', display: 'flex', flexWrap: 'wrap', gap: '14px 20px', alignItems: 'flex-start' }}>
 
         {/* Pôle — multi-sélection, intersection AND */}
         <div>
@@ -312,32 +314,7 @@ export default function PortfolioGrid({ projets }: Props) {
           </div>
         </div>
 
-        {/* Programme — multi-sélection, union OR */}
-        {programmes.length > 0 && (
-          <div style={{ maxWidth: 520 }}>
-            <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: '6px' }}>Programme</div>
-            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-              <button onClick={() => setSelectedProgrammes(new Set())} style={btn(selectedProgrammes.size === 0)}>Tous</button>
-              {programmes.map(p => (
-                <button key={p} onClick={() => toggleProgramme(p)} style={btn(selectedProgrammes.has(p))}>
-                  {p}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Neuf / Réhab */}
-        <div>
-          <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: '6px' }}>Type</div>
-          <div style={{ display: 'flex', gap: '4px' }}>
-            {(['Tous', 'Neuf', 'Réhab'] as const).map(v => (
-              <button key={v} onClick={() => setRehabNeuf(v)} style={btn(rehabNeuf === v)}>{v}</button>
-            ))}
-          </div>
-        </div>
-
-        {/* Statut */}
+        {/* Statut — déplacé en 2e position (échange avec Programme) */}
         <div>
           <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: '6px' }}>Statut</div>
           <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
@@ -354,6 +331,16 @@ export default function PortfolioGrid({ projets }: Props) {
           </div>
         </div>
 
+        {/* Neuf / Réhab */}
+        <div>
+          <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: '6px' }}>Type</div>
+          <div style={{ display: 'flex', gap: '4px' }}>
+            {(['Tous', 'Neuf', 'Réhab'] as const).map(v => (
+              <button key={v} onClick={() => setRehabNeuf(v)} style={btn(rehabNeuf === v)}>{v}</button>
+            ))}
+          </div>
+        </div>
+
         {/* Année */}
         {years.min < years.max && (
           <div>
@@ -363,6 +350,22 @@ export default function PortfolioGrid({ projets }: Props) {
               valueMin={yearMin} valueMax={yearMax}
               onChange={(mn, mx) => { setYearMin(mn); setYearMax(mx); }}
             />
+          </div>
+        )}
+
+        {/* Programme — déplacé en dernier (largeur libre, prend une rangée
+            entière sans pousser les autres filtres) */}
+        {programmes.length > 0 && (
+          <div style={{ flex: '1 1 100%' }}>
+            <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: '6px' }}>Programme</div>
+            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+              <button onClick={() => setSelectedProgrammes(new Set())} style={btn(selectedProgrammes.size === 0)}>Tous</button>
+              {programmes.map(p => (
+                <button key={p} onClick={() => toggleProgramme(p)} style={btn(selectedProgrammes.has(p))}>
+                  {p}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
