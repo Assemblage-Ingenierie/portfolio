@@ -242,7 +242,7 @@ export default function PortfolioGrid({ projets }: Props) {
                 textAlign: 'center',
               }}
             >
-              Constituer le portfolio →
+              Constituer le portfolio
             </Link>
             <Link
               href="/portfolio/tableau"

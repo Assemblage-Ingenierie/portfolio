@@ -162,7 +162,7 @@ export function renderTableau({
     }
     .tab-grid thead th {
       font-size: 9pt;
-      font-weight: 700;
+      font-weight: 400;
       letter-spacing: 0.02em;
       color: var(--ai-rouge);
       text-align: left;
