@@ -104,19 +104,12 @@ html, body { background: white; }
   width: auto;
   display: block;
 }
-/* Vignettes inactives : 2 variantes pilotées par le champ multi-select
-   "Vignette pôle".
-   - 1 pôle sélectionné → les autres sont rendues en "blanc" (très clair,
-     quasi silhouette discrète sur fond blanc).
-   - 2 pôles sélectionnés → la 3e est rendue en "grisé" (gris moyen, plus
-     présent visuellement — sert à signaler "non concerné" sans effacer).
+/* Vignettes inactives : un seul état visuel, gris à intensité réglable.
    Le filtre grayscale neutralise les couleurs SVG d'origine ; la brightness
-   contrôle l'intensité du gris obtenu. Les deux variables CSS ci-dessous
-   permettent un slider de réglage temporaire dans l'aperçu. */
-.t-header-vignette--inactive-blanc {
-  filter: grayscale(100%) brightness(var(--vignette-blanc-brightness, 2.4));
-}
-.t-header-vignette--inactive-grise {
+   contrôle l'intensité du gris obtenu. La variable CSS permet un slider de
+   réglage temporaire dans l'aperçu (à supprimer une fois la valeur
+   définitive choisie). */
+.t-header-vignette--inactive {
   filter: grayscale(100%) brightness(var(--vignette-grey-brightness, 1.55));
 }
 /* Libellé Réhabilitation / Neuf à droite de la vignette correspondante */
@@ -253,20 +246,19 @@ export function headerHtml(projet: Projet): string {
 
   // Source de vérité : champ multi-select "Vignette pôle". Si absent ou vide,
   // on retombe sur le champ legacy `pole` (single-select) pour rétro-compat.
+  // Les vignettes sélectionnées gardent leurs couleurs SVG d'origine (rouge),
+  // les autres sont grisées via filter CSS (intensité contrôlée par
+  // --vignette-grey-brightness).
   const selectedRaw = (projet.vignettePoles && projet.vignettePoles.length > 0)
     ? projet.vignettePoles
     : projet.pole ? [projet.pole] : [];
   const selected = new Set(selectedRaw.map((s) => s.toUpperCase()));
-  const activeCount = VIGNETTES.filter((v) => selected.has(v.code)).length;
-  // 1 pôle actif → autres en "blanc". 2 pôles → 3e en "grisé". Autres cas
-  // (0 ou 3 actifs) → fallback "blanc" (comportement neutre).
-  const inactiveVariant = activeCount === 2 ? 'grise' : 'blanc';
 
   const vignettes = VIGNETTES.map((v) => {
     const active = selected.has(v.code);
     const cls = active
       ? 't-header-vignette'
-      : `t-header-vignette t-header-vignette--inactive-${inactiveVariant}`;
+      : 't-header-vignette t-header-vignette--inactive';
     return `<img class="${cls}" src="${v.url}" alt="${v.code}" />`;
   }).join('');
 

@@ -69,12 +69,23 @@ async function fetchAuxByFieldId(
     records.forEach((r) => {
       const poleRaw = r.fields[FIELD_POLE];
       const prestaRaw = r.fields[FIELD_PRESTATION_ASSEMBLAGE];
+      // Avec cellFormat: 'string', les multi-selects reviennent en string
+      // CSV ("ENV, STR"), pas en array. On split sur la virgule pour
+      // récupérer chaque pôle individuellement. Array conservé en safety
+      // au cas où l'API change.
       const vignetteRaw = r.fields[FIELD_VIGNETTE_POLE];
-      const vignettePoles: string[] | undefined = Array.isArray(vignetteRaw)
-        ? vignetteRaw.map((s) => String(s).trim().toUpperCase()).filter(Boolean)
-        : typeof vignetteRaw === 'string' && vignetteRaw.trim()
-          ? [vignetteRaw.trim().toUpperCase()]
-          : undefined;
+      const toPoles = (raw: unknown): string[] | undefined => {
+        if (Array.isArray(raw)) {
+          const arr = raw.map((s) => String(s).trim().toUpperCase()).filter(Boolean);
+          return arr.length ? arr : undefined;
+        }
+        if (typeof raw === 'string' && raw.trim()) {
+          const arr = raw.split(',').map((s) => s.trim().toUpperCase()).filter(Boolean);
+          return arr.length ? arr : undefined;
+        }
+        return undefined;
+      };
+      const vignettePoles = toPoles(vignetteRaw);
       map.set(r.id, {
         principal: firstValue(r.fields[FIELD_PROGRAMME_PRINCIPAL]),
         secondaire: firstValue(r.fields[FIELD_PROGRAMME_SECONDAIRE]),

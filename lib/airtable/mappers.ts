@@ -164,8 +164,15 @@ export function recordToProjet(record: any, aux?: AuxValues): Projet {
     pole: aux?.pole ?? f['Pôle'] ?? undefined,
     vignettePoles: aux?.vignettePoles ?? (() => {
       const raw = f['Vignette pôle'];
-      if (Array.isArray(raw)) return raw.map((s) => String(s).trim().toUpperCase()).filter(Boolean);
-      if (typeof raw === 'string' && raw.trim()) return [raw.trim().toUpperCase()];
+      if (Array.isArray(raw)) {
+        const arr = raw.map((s) => String(s).trim().toUpperCase()).filter(Boolean);
+        return arr.length ? arr : undefined;
+      }
+      // cellFormat 'string' → CSV "ENV, STR" ; split obligatoire.
+      if (typeof raw === 'string' && raw.trim()) {
+        const arr = raw.split(',').map((s) => s.trim().toUpperCase()).filter(Boolean);
+        return arr.length ? arr : undefined;
+      }
       return undefined;
     })(),
     departement: f['Département'] ?? undefined,
