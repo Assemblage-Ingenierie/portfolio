@@ -209,9 +209,12 @@ export function measureOverflow(doc: Document | null | undefined): OverflowMeasu
   const leftPx = Math.max(0, Math.round(leftOverflow - H_TOL));
 
   const overflowPx = Math.max(bottomPx, topPx, rightPx, leftPx);
-  // Conversion px → mm via la hauteur du cadre A4 (297mm). Math.floor pour
-  // ne pas amplifier un sous-pixel en 1mm.
-  const rawMm = Math.floor((overflowPx / pagePx) * 297);
+  // Conversion px → mm via la hauteur du cadre. Lue depuis l'attribut
+  // `data-height-mm` du .page (permet de supporter A4 portrait 297mm comme
+  // paysage 210mm pour les exports tableau). Fallback A4 portrait.
+  const pageMm = Number(page.dataset.heightMm);
+  const heightMm = Number.isFinite(pageMm) && pageMm > 0 ? pageMm : 297;
+  const rawMm = Math.floor((overflowPx / pagePx) * heightMm);
 
   // Seuil de signalement : en dessous de MIN_REPORTABLE_MM, on considere le
   // depassement comme cosmetique (sous-pixel d'`object-fit: contain`, scaling
