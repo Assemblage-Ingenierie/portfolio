@@ -39,6 +39,10 @@ export interface Projet {
   programmePrincipal?: string;
   programmeSecondaire?: string;
   pole?: string;
+  /** Champ Airtable "Vignette pôle" (field id fld1PZuYO8mz0sULA) — multi-select
+   *  STR / ENV / DEV. Pilote l'affichage des vignettes en en-tête : valeurs
+   *  présentes = rouge (couleurs SVG d'origine), absentes = grisé. */
+  vignettePoles?: string[];
   departement?: string;
   rehabNeuf?: string;
 

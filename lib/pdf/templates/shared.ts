@@ -104,12 +104,13 @@ html, body { background: white; }
   width: auto;
   display: block;
 }
-/* Vignettes inactives : on garde le fichier blanc (silhouette) mais on
-   passe en niveaux de gris + opacity réduite pour qu'elles apparaissent
-   grisées (et plus visibles qu'en pur blanc sur fond blanc). */
+/* Vignettes inactives : un seul état visuel, gris à intensité réglable.
+   Le filtre grayscale neutralise les couleurs SVG d'origine ; la brightness
+   contrôle l'intensité du gris obtenu. La variable CSS permet un slider de
+   réglage temporaire dans l'aperçu (à supprimer une fois la valeur
+   définitive choisie). */
 .t-header-vignette--inactive {
-  filter: grayscale(100%) brightness(0.85);
-  opacity: 0.70;
+  filter: grayscale(100%) brightness(1.90);
 }
 /* Libellé Réhabilitation / Neuf à droite de la vignette correspondante */
 .t-header-rn-label {
@@ -119,6 +120,17 @@ html, body { background: white; }
   color: var(--ai-noir);
   letter-spacing: 0.02em;
   margin-left: 1mm;
+}
+/* Variante 2 lignes quand "Neuf" ET "Rehab" sont cochés : Neuf au-dessus
+   de Réhabilitation, taille réduite et interligne serré pour rester dans
+   la hauteur des vignettes (~10mm). */
+.t-header-rn-label--stacked {
+  font-size: 8.5pt;
+  line-height: 1.1;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2.2mm;
 }
 .t-header-meta {
   font-size: 9pt; font-weight: 400;
@@ -187,8 +199,9 @@ html, body { background: white; }
   line-height: 1.5; color: var(--ai-noir);
   margin-bottom: 2.5mm;
 }
-/* Bloc markdown rendu (description rich text Airtable) */
-.t-texte-md { font-family: var(--sans); font-size: 9.5pt; line-height: 1.5; color: var(--ai-noir); }
+/* Bloc markdown rendu (description rich text Airtable) — défaut design
+   system : Open Sans 9pt (modifiable via BandeauConfig.description). */
+.t-texte-md { font-family: var(--sans); font-size: 9pt; line-height: 1.5; color: var(--ai-noir); }
 .t-texte-md p { margin: 0 0 2.5mm; }
 .t-texte-md p:last-child { margin-bottom: 0; }
 .t-texte-md strong { font-weight: 700; }
@@ -215,50 +228,67 @@ html, body { background: white; }
 .t-texte-cols-2 p, .t-texte-cols-2 .t-texte-p { break-inside: avoid; }
 `;
 
-// Vignettes pôle hébergées sur Supabase Storage (bucket public "Branding").
-// Trois pôles, toujours affichés dans l'ordre STR · ENV · DEV. Celui qui
-// correspond au pôle du projet est rendu en couleur, les deux autres en
-// silhouette blanche. Attention à la casse : "Env_blanc.png" est en
-// minuscule alors que les deux autres sont en majuscule.
+// Vignettes pôle hébergées sur Supabase Storage (bucket public "Branding",
+// sous-dossier "vignettes svg"). Un seul fichier SVG par pôle : les états
+// "blanc" et "grisé" sont obtenus par filtre CSS (cf. CSS ci-dessus).
+// Ordre fixe STR · ENV · DEV.
 const VIGNETTE_BASE =
+  'https://hhkofvbptnrtwbazftlm.supabase.co/storage/v1/object/public/Branding/vignettes%20svg';
+const VIGNETTE_PNG_BASE =
   'https://hhkofvbptnrtwbazftlm.supabase.co/storage/v1/object/public/Branding/vignettes';
-const VIGNETTES: ReadonlyArray<{ code: string; colored: string; blanc: string }> = [
-  { code: 'STR', colored: `${VIGNETTE_BASE}/Str.png`, blanc: `${VIGNETTE_BASE}/Str_Blanc.png` },
-  { code: 'ENV', colored: `${VIGNETTE_BASE}/Env.png`, blanc: `${VIGNETTE_BASE}/Env_blanc.png` },
-  { code: 'DEV', colored: `${VIGNETTE_BASE}/Dev.png`, blanc: `${VIGNETTE_BASE}/Dev_Blanc.png` },
+const VIGNETTES: ReadonlyArray<{ code: string; url: string }> = [
+  { code: 'STR', url: `${VIGNETTE_BASE}/STR.svg` },
+  { code: 'ENV', url: `${VIGNETTE_BASE}/ENV.svg` },
+  { code: 'DEV', url: `${VIGNETTE_BASE}/DEV.svg` },
 ];
 
-// Vignette Rehab / Neuf — affichée à droite des 3 vignettes pôle, suivie du
-// libellé "Réhabilitation" ou "Neuf". `Rehab et Neuf` priorise la vignette
-// rehab (le projet a une part de réhabilitation, c'est l'info la plus
-// distinctive). Les fichiers PNG (filename historique : "rehabililtation"
-// avec triple 'i') sont hébergés dans le même bucket Supabase Storage.
+// Vignettes Rehab / Neuf — affichées à droite des 3 vignettes pôle.
+// SVG dans le même sous-dossier "vignettes svg" du bucket Branding.
+// Comportement d'affichage (selon le champ multi-select "Rehab / Neuf") :
+//   - "Neuf" seul → vignette Neuf + label "Neuf"
+//   - "Rehab" seul → vignette Réhabilitation + label "Réhabilitation"
+//   - les deux → vignette Neuf + vignette Réhabilitation côte à côte, puis
+//     un label sur 2 lignes (Neuf au-dessus de Réhabilitation).
 const REHAB_NEUF_VIGNETTE: Record<'rehab' | 'neuf', { url: string; label: string }> = {
-  rehab: { url: `${VIGNETTE_BASE}/rehabililtation.png`, label: 'Réhabilitation' },
-  neuf:  { url: `${VIGNETTE_BASE}/neuf.png`,           label: 'Neuf' },
+  rehab: { url: `${VIGNETTE_BASE}/Rehabilitation.svg`, label: 'Réhabilitation' },
+  neuf:  { url: `${VIGNETTE_BASE}/Neuf.svg`,           label: 'Neuf' },
 };
 
 export function headerHtml(projet: Projet): string {
   // Année placée dans le bandeau de statut, à la suite de l'état du chantier.
   const annee = projet.anneeLivraison ? ` · ${esc(String(projet.anneeLivraison))}` : '';
-  const poleActif = (projet.pole ?? '').toUpperCase();
+
+  // Source de vérité : champ multi-select "Vignette pôle". Si absent ou vide,
+  // on retombe sur le champ legacy `pole` (single-select) pour rétro-compat.
+  // Les vignettes sélectionnées gardent leurs couleurs SVG d'origine (rouge),
+  // les autres sont grisées via filter CSS (intensité contrôlée par
+  // --vignette-grey-brightness).
+  const selectedRaw = (projet.vignettePoles && projet.vignettePoles.length > 0)
+    ? projet.vignettePoles
+    : projet.pole ? [projet.pole] : [];
+  const selected = new Set(selectedRaw.map((s) => s.toUpperCase()));
+
   const vignettes = VIGNETTES.map((v) => {
-    const active = v.code === poleActif;
-    const url = active ? v.colored : v.blanc;
-    const cls = active ? 't-header-vignette' : 't-header-vignette t-header-vignette--inactive';
-    return `<img class="${cls}" src="${url}" alt="${v.code}" />`;
+    const active = selected.has(v.code);
+    const cls = active
+      ? 't-header-vignette'
+      : 't-header-vignette t-header-vignette--inactive';
+    return `<img class="${cls}" src="${v.url}" alt="${v.code}" />`;
   }).join('');
 
-  // Vignette Rehab/Neuf conditionnelle (cf. RehabNeuf champ multi-select).
-  // "Rehab et Neuf" → vignette rehab. La vignette n'est rendue que si une
-  // valeur reconnue est présente — sinon, comportement historique inchangé.
+  // Vignettes Rehab/Neuf — multi-select "Rehab / Neuf".
+  // Ordre d'affichage : Neuf en premier, puis Réhabilitation. Quand les
+  // deux sont cochés, on rend les deux SVG côte à côte suivis d'un label
+  // sur 2 lignes (Neuf au-dessus de Réhabilitation).
   const rn = (projet.rehabNeuf ?? '').toLowerCase();
   const hasRehab = rn.includes('rehab') || rn.includes('réhab');
   const hasNeuf = rn.includes('neuf');
-  const rehabNeufKey = hasRehab ? 'rehab' : hasNeuf ? 'neuf' : null;
-  const rehabNeufHtml = rehabNeufKey
-    ? `<img class="t-header-vignette" src="${REHAB_NEUF_VIGNETTE[rehabNeufKey].url}" alt="${REHAB_NEUF_VIGNETTE[rehabNeufKey].label}" />
-       <span class="t-header-rn-label">${REHAB_NEUF_VIGNETTE[rehabNeufKey].label}</span>`
+  const rnKeys: ('neuf' | 'rehab')[] = [];
+  if (hasNeuf)  rnKeys.push('neuf');
+  if (hasRehab) rnKeys.push('rehab');
+  const rehabNeufHtml = rnKeys.length > 0
+    ? `${rnKeys.map((k) => `<img class="t-header-vignette" src="${REHAB_NEUF_VIGNETTE[k].url}" alt="${REHAB_NEUF_VIGNETTE[k].label}" />`).join('')}
+       <span class="t-header-rn-label${rnKeys.length > 1 ? ' t-header-rn-label--stacked' : ''}">${rnKeys.map((k) => `<span>${esc(REHAB_NEUF_VIGNETTE[k].label)}</span>`).join('')}</span>`
     : '';
 
   const statusStyle = styleToCss(projet.bandeauConfig?.status);

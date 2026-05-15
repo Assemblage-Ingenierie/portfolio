@@ -6,13 +6,19 @@ export function nbPhotos(projet: Pick<Projet, 'photoCouverture' | 'photosProjet'
 
 /**
  * Template par défaut quand aucune valeur n'est sauvegardée en Airtable.
- * Manuel depuis 2026-05 — toutes les fiches sont créées avec les sliders
- * Manuel et un set de défauts bandeau (titre 14pt, status/labels/values/
- * description 10pt, lignes masquées) sauvegardé dans `Config template manuel`.
+ * Choisi en fonction du champ multi-select "Vignette pôle" :
+ *   - contient DEV → "Dev"
+ *   - sinon (STR, ENV, vide, mix sans DEV) → "Str-Env"
+ * Le champ Airtable "Template" explicite reste prioritaire (cf. mapper).
  */
 export function autoSelectTemplate(
-  _projet: Pick<Projet, 'photoCouverture' | 'photosProjet' | 'description'>
+  projet: Pick<Projet, 'photoCouverture' | 'photosProjet' | 'description' | 'vignettePoles' | 'pole'>
 ): TemplateChoice {
+  const poles = (projet.vignettePoles && projet.vignettePoles.length > 0)
+    ? projet.vignettePoles
+    : projet.pole ? [projet.pole] : [];
+  const codes = new Set(poles.map((p) => p.toUpperCase()));
+  if (codes.has('DEV')) return 'Dev';
   return 'Str-Env';
 }
 

@@ -1,7 +1,7 @@
 import type { Projet } from '@/types/projet';
 import { cacheTag } from 'next/cache';
 import { base, TABLE } from './client';
-import { recordToProjet, type AuxValues, FIELD_PROGRAMME_PRINCIPAL, FIELD_PROGRAMME_SECONDAIRE, FIELD_POLE, FIELD_PRESTATION_ASSEMBLAGE } from './mappers';
+import { recordToProjet, type AuxValues, FIELD_PROGRAMME_PRINCIPAL, FIELD_PROGRAMME_SECONDAIRE, FIELD_POLE, FIELD_VIGNETTE_POLE, FIELD_PRESTATION_ASSEMBLAGE } from './mappers';
 import { fetchCrmNames } from './crm';
 
 export const PROJETS_TAG = 'projets';
@@ -49,6 +49,7 @@ interface AuxByFieldId {
   principal?: string;
   secondaire?: string;
   pole?: string;
+  vignettePoles?: string[];
   prestationAssemblage?: string;
 }
 
@@ -60,7 +61,7 @@ async function fetchAuxByFieldId(
     const records = await base(TABLE)
       .select({
         ...STRING_FORMAT,
-        fields: [FIELD_PROGRAMME_PRINCIPAL, FIELD_PROGRAMME_SECONDAIRE, FIELD_POLE, FIELD_PRESTATION_ASSEMBLAGE],
+        fields: [FIELD_PROGRAMME_PRINCIPAL, FIELD_PROGRAMME_SECONDAIRE, FIELD_POLE, FIELD_VIGNETTE_POLE, FIELD_PRESTATION_ASSEMBLAGE],
         returnFieldsByFieldId: true,
         ...(filterFormula ? { filterByFormula: filterFormula } : {}),
       })
@@ -68,10 +69,28 @@ async function fetchAuxByFieldId(
     records.forEach((r) => {
       const poleRaw = r.fields[FIELD_POLE];
       const prestaRaw = r.fields[FIELD_PRESTATION_ASSEMBLAGE];
+      // Avec cellFormat: 'string', les multi-selects reviennent en string
+      // CSV ("ENV, STR"), pas en array. On split sur la virgule pour
+      // récupérer chaque pôle individuellement. Array conservé en safety
+      // au cas où l'API change.
+      const vignetteRaw = r.fields[FIELD_VIGNETTE_POLE];
+      const toPoles = (raw: unknown): string[] | undefined => {
+        if (Array.isArray(raw)) {
+          const arr = raw.map((s) => String(s).trim().toUpperCase()).filter(Boolean);
+          return arr.length ? arr : undefined;
+        }
+        if (typeof raw === 'string' && raw.trim()) {
+          const arr = raw.split(',').map((s) => s.trim().toUpperCase()).filter(Boolean);
+          return arr.length ? arr : undefined;
+        }
+        return undefined;
+      };
+      const vignettePoles = toPoles(vignetteRaw);
       map.set(r.id, {
         principal: firstValue(r.fields[FIELD_PROGRAMME_PRINCIPAL]),
         secondaire: firstValue(r.fields[FIELD_PROGRAMME_SECONDAIRE]),
         pole: typeof poleRaw === 'string' && poleRaw.trim() ? poleRaw.trim() : undefined,
+        vignettePoles,
         prestationAssemblage: typeof prestaRaw === 'string' && prestaRaw.trim() ? prestaRaw : undefined,
       });
     });
@@ -120,6 +139,7 @@ export async function getProjets(): Promise<Projet[]> {
         programmePrincipal: prog?.principal,
         programmeSecondaire: prog?.secondaire,
         pole: prog?.pole,
+        vignettePoles: prog?.vignettePoles,
         prestationAssemblage: prog?.prestationAssemblage,
         crmNames,
       };
@@ -137,7 +157,10 @@ export async function getProjet(slug: string): Promise<Projet | null> {
   if (!/^[a-zA-Z0-9_-]+$/.test(slug)) return null;
   if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) return null;
   try {
-    const filter = `{Slug} = "${slug}"`;
+    // Gate par Visible portfolio : une fiche n'est consultable que si
+    // {Visible portfolio} = TRUE() — la coche dans Airtable est désormais
+    // le seul déclencheur de la création d'une fiche de référence.
+    const filter = `AND({Slug} = "${slug}", {Visible portfolio} = TRUE())`;
 
     const [records, prog] = await Promise.all([
       base(TABLE).select({ filterByFormula: filter, maxRecords: 1 }).all(),
@@ -168,6 +191,7 @@ export async function getProjet(slug: string): Promise<Projet | null> {
       programmePrincipal: p?.principal,
       programmeSecondaire: p?.secondaire,
       pole: p?.pole,
+      vignettePoles: p?.vignettePoles,
       prestationAssemblage: p?.prestationAssemblage,
       crmNames,
     };
