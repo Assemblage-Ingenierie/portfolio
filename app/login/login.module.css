@@ -158,6 +158,30 @@
   cursor: not-allowed;
 }
 
+.publicBtn {
+  display: block;
+  width: 100%;
+  padding: .65rem 1rem;
+  text-align: center;
+  border: 1.5px solid var(--ai-gris);
+  border-radius: 6px;
+  background: #fff;
+  font-family: var(--sans);
+  font-size: .85rem;
+  font-weight: 500;
+  color: var(--ai-violet);
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+  box-sizing: border-box;
+}
+
+.publicBtn:hover {
+  border-color: var(--ai-rouge);
+  color: var(--ai-rouge);
+  background: var(--ai-gris-tres-clair);
+}
+
 .message {
   font-size: .85rem;
   color: var(--ai-violet);
