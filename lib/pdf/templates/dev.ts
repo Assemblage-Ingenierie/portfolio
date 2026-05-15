@@ -488,7 +488,7 @@ export function renderDev(projet: Projet, configIn?: ManualConfig): TemplateBund
   // (cf. shared.ts → metaGridHtml). Champ `bandeauVerticalOffset` obsolète.
   const body = `<article class="page dev-page">
     <div class="t-bandeau-wrap">
-      ${headerHtml(projet)}
+      ${headerHtml(projet, { isDev: true })}
       ${titleBlockHtml(projet, '26pt')}
       ${metaGridHtml(projet, { isDev: true })}
     </div>

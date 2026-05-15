@@ -253,15 +253,35 @@ const REHAB_NEUF_VIGNETTE: Record<'rehab' | 'neuf', { url: string; label: string
   neuf:  { url: `${VIGNETTE_BASE}/Neuf.svg`,           label: 'Neuf' },
 };
 
-export function headerHtml(projet: Projet): string {
-  // Année placée dans le bandeau de statut, à la suite de l'état du chantier.
-  const annee = projet.anneeLivraison ? ` · ${esc(String(projet.anneeLivraison))}` : '';
+/**
+ * Formate une période "YYYY - YYYY" à partir de deux dates ISO (YYYY-MM-DD).
+ * Si les deux années sont identiques, affine au mois : "MM/YYYY - MM/YYYY".
+ * Retourne `null` si aucune des deux dates n'est utilisable.
+ */
+function formatPortfolioPeriod(start?: string, end?: string): string | null {
+  const re = /^(\d{4})-(\d{2})-\d{2}/;
+  const ms = start ? re.exec(start) : null;
+  const me = end ? re.exec(end) : null;
+  if (!ms && !me) return null;
+  const ys = ms?.[1];
+  const ye = me?.[1];
+  // Si une seule borne est connue, on l'affiche seule (pas de séparateur).
+  if (ys && !ye) return ys;
+  if (ye && !ys) return ye;
+  if (ys && ye) {
+    if (ys === ye && ms && me) {
+      return `${ms[2]}/${ys} – ${me[2]}/${ye}`;
+    }
+    return `${ys} – ${ye}`;
+  }
+  return null;
+}
 
+/** Construit l'HTML des vignettes pôle (STR/ENV/DEV) + Rehab/Neuf — partagé
+ *  entre le rendu header standard et le rendu Dev (période). */
+function buildHeaderVignettes(projet: Projet): string {
   // Source de vérité : champ multi-select "Vignette pôle". Si absent ou vide,
   // on retombe sur le champ legacy `pole` (single-select) pour rétro-compat.
-  // Les vignettes sélectionnées gardent leurs couleurs SVG d'origine (rouge),
-  // les autres sont grisées via filter CSS (intensité contrôlée par
-  // --vignette-grey-brightness).
   const selectedRaw = (projet.vignettePoles && projet.vignettePoles.length > 0)
     ? projet.vignettePoles
     : projet.pole ? [projet.pole] : [];
@@ -275,10 +295,6 @@ export function headerHtml(projet: Projet): string {
     return `<img class="${cls}" src="${v.url}" alt="${v.code}" />`;
   }).join('');
 
-  // Vignettes Rehab/Neuf — multi-select "Rehab / Neuf".
-  // Ordre d'affichage : Neuf en premier, puis Réhabilitation. Quand les
-  // deux sont cochés, on rend les deux SVG côte à côte suivis d'un label
-  // sur 2 lignes (Neuf au-dessus de Réhabilitation).
   const rn = (projet.rehabNeuf ?? '').toLowerCase();
   const hasRehab = rn.includes('rehab') || rn.includes('réhab');
   const hasNeuf = rn.includes('neuf');
@@ -290,9 +306,34 @@ export function headerHtml(projet: Projet): string {
        <span class="t-header-rn-label${rnKeys.length > 1 ? ' t-header-rn-label--stacked' : ''}">${rnKeys.map((k) => `<span>${esc(REHAB_NEUF_VIGNETTE[k].label)}</span>`).join('')}</span>`
     : '';
 
+  return `${vignettes}${rehabNeufHtml}`;
+}
+
+export function headerHtml(projet: Projet, options?: { isDev?: boolean }): string {
   const statusStyle = styleToCss(projet.bandeauConfig?.status);
+  const vignettesHtml = buildHeaderVignettes(projet);
+
+  // Template Dev : affiche la période de prestation au lieu du statut + année.
+  // Source : ProjectConfig.portfolio.{date_demarrage,date_fin_estimee}
+  // (champ Airtable "Config template manuel"). Si absente, on retombe sur
+  // le rendu historique (statut + année).
+  if (options?.isDev) {
+    const period = formatPortfolioPeriod(
+      projet.portfolioPeriod?.dateDemarrage,
+      projet.portfolioPeriod?.dateFinEstimee,
+    );
+    if (period) {
+      return `<header class="t-header">
+        <div class="t-header-vignettes">${vignettesHtml}</div>
+        <div class="t-header-statut"${statusStyle ? ` style="${statusStyle}"` : ''}>Période : ${esc(period)}</div>
+      </header>`;
+    }
+  }
+
+  // Année placée dans le bandeau de statut, à la suite de l'état du chantier.
+  const annee = projet.anneeLivraison ? ` · ${esc(String(projet.anneeLivraison))}` : '';
   return `<header class="t-header">
-    <div class="t-header-vignettes">${vignettes}${rehabNeufHtml}</div>
+    <div class="t-header-vignettes">${vignettesHtml}</div>
     <div class="t-header-statut"${statusStyle ? ` style="${statusStyle}"` : ''}>● ${esc(projet.statut)}${annee}</div>
   </header>`;
 }

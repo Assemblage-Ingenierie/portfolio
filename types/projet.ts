@@ -84,4 +84,13 @@ export interface Projet {
   /** Crops non-destructifs par photo (clé = filename). Stocké dans le
    *  ProjectConfig unifié (champ Airtable "Config template manuel"). */
   photoCrops?: Record<string, CropData>;
+
+  /** Période de prestation pour le template Dev (header haut à droite).
+   *  Sourcée depuis ProjectConfig.portfolio (champ Airtable "Config template
+   *  manuel"). Format ISO YYYY-MM-DD. Si absente, le header retombe sur le
+   *  rendu statut + année. */
+  portfolioPeriod?: {
+    dateDemarrage?: string;
+    dateFinEstimee?: string;
+  };
 }

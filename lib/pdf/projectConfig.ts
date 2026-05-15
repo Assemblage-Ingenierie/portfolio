@@ -25,6 +25,12 @@ export interface ProjectConfig {
   /** Crops non-destructifs par photo (clé = filename de l'attachment).
    *  Appliqué au rendu via CSS dans les templates PDF. */
   photoCrops?: Record<string, CropData>;
+  /** Métadonnées de portfolio (template Dev) : dates de la prestation
+   *  affichées en en-tête à la place du statut. Format ISO YYYY-MM-DD. */
+  portfolio?: {
+    date_demarrage?: string;
+    date_fin_estimee?: string;
+  };
 }
 
 export const PROJECT_CONFIG_FIELD = 'Config template manuel';

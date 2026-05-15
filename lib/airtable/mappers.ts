@@ -228,10 +228,18 @@ export function recordToProjet(record: any, aux?: AuxValues): Projet {
     // config du bandeau (générale) et celle du template Manuel (conditionnelle).
     ...(() => {
       const cfg = deserializeProjectConfig(f[PROJECT_CONFIG_FIELD]);
+      const portfolio = cfg?.portfolio;
+      const hasDate = Boolean(portfolio?.date_demarrage || portfolio?.date_fin_estimee);
       return {
         savedManualConfig: cfg?.manuel ?? undefined,
         bandeauConfig: cfg?.bandeau ?? undefined,
         photoCrops: cfg?.photoCrops ?? undefined,
+        portfolioPeriod: hasDate
+          ? {
+              dateDemarrage: portfolio?.date_demarrage,
+              dateFinEstimee: portfolio?.date_fin_estimee,
+            }
+          : undefined,
       };
     })(),
   };
