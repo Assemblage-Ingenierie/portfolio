@@ -335,7 +335,7 @@ export function metaGridHtml(projet: Projet, options?: { isDev?: boolean }): str
   // Dev uniquement : Bailleur (champ texte simple de la base affaire) après
   // Entreprise — autre acteur financeur, logique avec le bloc Budget.
   if (options?.isDev && projet.bailleur) items.push({ label: 'Bailleur', value: projet.bailleur });
-  if (projet.missionAi)  items.push({ label: 'Prestation AI',    value: projet.missionAi });
+  if (projet.missionAi)  items.push({ label: 'Mission AI',       value: projet.missionAi });
   // Programme : principal en valeur principale, secondaire en sous-titre
   if (projet.programmePrincipal || projet.programmeSecondaire) items.push({
     label: 'Programme',
