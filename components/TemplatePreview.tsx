@@ -30,6 +30,14 @@ export default function TemplatePreview({
 }) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [overflow, setOverflow] = useState<OverflowMeasure | null>(null);
+  // Slider TEMPORAIRE de calibrage du gris des vignettes inactives.
+  // Pilote la variable CSS --vignette-grey-brightness dans l'iframe.
+  // À supprimer une fois la valeur définitive choisie.
+  const [greyBrightness, setGreyBrightness] = useState<number>(() => {
+    if (typeof window === 'undefined') return 1.55;
+    const v = window.localStorage.getItem('_vignette_grey_brightness');
+    return v ? Number(v) : 1.55;
+  });
 
   const html = useMemo(
     () => renderPdfHtml(projet, manualConfig ? { manualConfig } : undefined),
@@ -86,8 +94,56 @@ export default function TemplatePreview({
 
   const overflowing = overflow !== null && overflow.overflowMm > 0;
 
+  // Applique la variable CSS dans l'iframe à chaque changement de slider
+  // (et après chaque (re)chargement de l'iframe). Pas de re-render forcé du
+  // HTML : on touche juste la <html style="…"> de l'iframe.
+  useEffect(() => {
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+    const apply = () => {
+      const doc = iframe.contentDocument;
+      if (!doc) return;
+      doc.documentElement.style.setProperty('--vignette-grey-brightness', String(greyBrightness));
+    };
+    apply();
+    iframe.addEventListener('load', apply);
+    return () => iframe.removeEventListener('load', apply);
+  }, [greyBrightness, html]);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '24px 16px 48px', background: '#ECECEC', minHeight: 'calc(100vh - 48px)' }}>
+      {/* TEMPORAIRE : slider de calibrage du gris des vignettes inactives. */}
+      <div
+        style={{
+          width: '210mm',
+          marginBottom: 12,
+          padding: '8px 12px',
+          background: 'white',
+          border: '1px dashed #BBB',
+          borderRadius: 4,
+          fontFamily: 'system-ui, sans-serif',
+          fontSize: 12,
+          display: 'flex',
+          gap: 12,
+          alignItems: 'center',
+        }}
+      >
+        <span style={{ fontWeight: 600, color: '#666' }}>[TEMP] Gris vignettes inactives</span>
+        <input
+          type="range"
+          min={0.6}
+          max={2.5}
+          step={0.05}
+          value={greyBrightness}
+          onChange={(e) => {
+            const v = Number(e.target.value);
+            setGreyBrightness(v);
+            try { window.localStorage.setItem('_vignette_grey_brightness', String(v)); } catch { /* noop */ }
+          }}
+          style={{ flex: 1 }}
+        />
+        <code style={{ minWidth: 48, textAlign: 'right' }}>{greyBrightness.toFixed(2)}</code>
+      </div>
       {overflowing && (
         <div
           role="alert"

@@ -14,6 +14,10 @@ export const FIELD_PROGRAMME_SECONDAIRE = 'fldaTqKMNrIpeGBma';
 // Pôle (single-select : STR / ENV / DEV / Autre) — lu par field ID pour
 // éviter toute dérive si la colonne "Pôle" est renommée côté Airtable.
 export const FIELD_POLE = 'fldJyT3Lu0ZEH7EYE';
+// Vignette pôle (multi-select STR / ENV / DEV) — pilote l'affichage des
+// 3 vignettes en en-tête. Lu par field ID parce que le nom de colonne
+// "Vignette pôle" contient un accent (instable côté code).
+export const FIELD_VIGNETTE_POLE = 'fld1PZuYO8mz0sULA';
 // Prestation Assemblage (long text, rich text Markdown) — lu par field ID.
 // Affiché en bloc dédié dans le template "Dev" (titre + valeur rich text).
 export const FIELD_PRESTATION_ASSEMBLAGE = 'flddrMLBDxOc8r4lJ';
@@ -29,6 +33,7 @@ export interface AuxValues {
   programmePrincipal?: string;
   programmeSecondaire?: string;
   pole?: string;
+  vignettePoles?: string[];
   prestationAssemblage?: string;
   crmNames?: Map<string, string>;
 }
@@ -157,6 +162,12 @@ export function recordToProjet(record: any, aux?: AuxValues): Projet {
     // Pôle : prioritairement lu via aux par field ID (cf. FIELD_POLE), fallback
     // sur le nom de colonne 'Pôle' pour rester rétro-compatible.
     pole: aux?.pole ?? f['Pôle'] ?? undefined,
+    vignettePoles: aux?.vignettePoles ?? (() => {
+      const raw = f['Vignette pôle'];
+      if (Array.isArray(raw)) return raw.map((s) => String(s).trim().toUpperCase()).filter(Boolean);
+      if (typeof raw === 'string' && raw.trim()) return [raw.trim().toUpperCase()];
+      return undefined;
+    })(),
     departement: f['Département'] ?? undefined,
     // Multi-select : on garde toutes les valeurs (joinables) pour distinguer
     // "Rehab", "Neuf", et "Rehab et Neuf" — la vignette d'en-tête en a besoin.
