@@ -90,10 +90,31 @@ export default function PortfolioGrid({ projets }: Props) {
     return { min: Math.min(...ys), max: Math.max(...ys) };
   }, [projets]);
 
-  const poles = useMemo(() =>
-    [...new Set(projets.map(p => p.pole).filter(Boolean))].sort() as string[],
-    [projets]
-  );
+  // Codes pôle disponibles, dans l'ordre canonique STR · ENV · DEV puis
+  // alphabétique pour toute valeur exotique. Source : champ multi-select
+  // Airtable "Vignette pôle" (uppercased côté mapper).
+  const poles = useMemo(() => {
+    const set = new Set<string>();
+    projets.forEach(p => (p.vignettePoles ?? []).forEach(v => set.add(v.toUpperCase())));
+    const order = ['STR', 'ENV', 'DEV'];
+    return [...set].sort((a, b) => {
+      const ia = order.indexOf(a); const ib = order.indexOf(b);
+      if (ia >= 0 && ib >= 0) return ia - ib;
+      if (ia >= 0) return -1;
+      if (ib >= 0) return 1;
+      return a.localeCompare(b);
+    });
+  }, [projets]);
+
+  // Programmes principaux disponibles (union de tous les multi-select).
+  const programmes = useMemo(() => {
+    const set = new Set<string>();
+    projets.forEach(p => {
+      const list = p.programmesPrincipaux ?? (p.programmePrincipal ? [p.programmePrincipal] : []);
+      list.forEach(v => { if (v) set.add(v); });
+    });
+    return [...set].sort((a, b) => a.localeCompare(b, 'fr'));
+  }, [projets]);
 
   const allStatuts: Statut[] = ['En étude', 'En chantier', 'Livré', 'Abandonné', 'En pause', 'En consultation'];
 
@@ -101,9 +122,30 @@ export default function PortfolioGrid({ projets }: Props) {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [rehabNeuf, setRehabNeuf] = useState<'Tous' | 'Neuf' | 'Réhab'>('Tous');
   const [selectedStatuts, setSelectedStatuts] = useState<Set<Statut>>(new Set());
-  const [selectedPole, setSelectedPole] = useState<string | null>(null);
+  // Pôles : multi-sélection cumulable. Semantique AND — un projet passe le
+  // filtre s'il contient TOUS les pôles cochés (intersection non vide avec
+  // les pôles sélectionnés). Set vide = "Tous".
+  const [selectedPoles, setSelectedPoles] = useState<Set<string>>(new Set());
+  // Programmes : multi-sélection cumulable. Semantique OR — un projet passe
+  // s'il a au moins un des programmes cochés. Set vide = "Tous".
+  const [selectedProgrammes, setSelectedProgrammes] = useState<Set<string>>(new Set());
   const [yearMin, setYearMin] = useState(years.min);
   const [yearMax, setYearMax] = useState(years.max);
+
+  const togglePole = (code: string) => {
+    setSelectedPoles(prev => {
+      const next = new Set(prev);
+      if (next.has(code)) next.delete(code); else next.add(code);
+      return next;
+    });
+  };
+  const toggleProgramme = (p: string) => {
+    setSelectedProgrammes(prev => {
+      const next = new Set(prev);
+      if (next.has(p)) next.delete(p); else next.add(p);
+      return next;
+    });
+  };
 
   const toggleStatut = (s: Statut) => {
     setSelectedStatuts(prev => {
@@ -137,18 +179,30 @@ export default function PortfolioGrid({ projets }: Props) {
         if (rehabNeuf === 'Réhab' && !rn.includes('réhab') && !rn.includes('rehab') && !rn.includes('réhabilitation')) return false;
       }
       if (selectedStatuts.size > 0 && !selectedStatuts.has(p.statut)) return false;
-      if (selectedPole && p.pole !== selectedPole) return false;
+      if (selectedPoles.size > 0) {
+        const projetPoles = new Set((p.vignettePoles ?? []).map(v => v.toUpperCase()));
+        // AND : tous les pôles cochés doivent être présents sur le projet.
+        for (const code of selectedPoles) {
+          if (!projetPoles.has(code)) return false;
+        }
+      }
+      if (selectedProgrammes.size > 0) {
+        const projetProgs = p.programmesPrincipaux ?? (p.programmePrincipal ? [p.programmePrincipal] : []);
+        // OR : au moins un programme du projet doit être sélectionné.
+        if (!projetProgs.some(v => selectedProgrammes.has(v))) return false;
+      }
       if (p.anneeLivraison && (p.anneeLivraison < yearMin || p.anneeLivraison > yearMax)) return false;
       return true;
     });
-  }, [projets, search, rehabNeuf, selectedStatuts, selectedPole, yearMin, yearMax]);
+  }, [projets, search, rehabNeuf, selectedStatuts, selectedPoles, selectedProgrammes, yearMin, yearMax]);
 
-  const hasFilters = search || rehabNeuf !== 'Tous' || selectedStatuts.size > 0 || selectedPole;
+  const hasFilters = search || rehabNeuf !== 'Tous' || selectedStatuts.size > 0 || selectedPoles.size > 0 || selectedProgrammes.size > 0;
   const resetFilters = () => {
     setSearch('');
     setRehabNeuf('Tous');
     setSelectedStatuts(new Set());
-    setSelectedPole(null);
+    setSelectedPoles(new Set());
+    setSelectedProgrammes(new Set());
     setYearMin(years.min);
     setYearMax(years.max);
   };
@@ -225,18 +279,33 @@ export default function PortfolioGrid({ projets }: Props) {
       {/* Filters bar */}
       <div style={{ background: 'white', border: '1px solid #DFE4E8', borderRadius: '2px', padding: '14px 16px', marginBottom: '20px', display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'flex-start' }}>
 
-        {/* Pôle */}
+        {/* Pôle — multi-sélection, intersection AND */}
         <div>
           <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: '6px' }}>Pôle</div>
           <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-            <button onClick={() => setSelectedPole(null)} style={btn(selectedPole === null)}>Tous</button>
+            <button onClick={() => setSelectedPoles(new Set())} style={btn(selectedPoles.size === 0)}>Tous</button>
             {poles.map(p => (
-              <button key={p} onClick={() => setSelectedPole(selectedPole === p ? null : p)} style={btn(selectedPole === p)}>
+              <button key={p} onClick={() => togglePole(p)} style={btn(selectedPoles.has(p))}>
                 {p}
               </button>
             ))}
           </div>
         </div>
+
+        {/* Programme — multi-sélection, union OR */}
+        {programmes.length > 0 && (
+          <div style={{ maxWidth: 520 }}>
+            <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: '6px' }}>Programme</div>
+            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+              <button onClick={() => setSelectedProgrammes(new Set())} style={btn(selectedProgrammes.size === 0)}>Tous</button>
+              {programmes.map(p => (
+                <button key={p} onClick={() => toggleProgramme(p)} style={btn(selectedProgrammes.has(p))}>
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Neuf / Réhab */}
         <div>

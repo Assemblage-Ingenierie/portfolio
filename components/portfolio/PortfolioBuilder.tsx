@@ -42,16 +42,37 @@ export default function PortfolioBuilder({ projets }: Props) {
     const ys = projets.map(p => p.anneeLivraison).filter((y): y is number => !!y);
     return ys.length ? { min: Math.min(...ys), max: Math.max(...ys) } : { min: 0, max: 0 };
   }, [projets]);
-  const poles = useMemo(() =>
-    [...new Set(projets.map(p => p.pole).filter(Boolean))].sort() as string[],
-    [projets]
-  );
+  // Source : champ multi-select Airtable "Vignette pôle". Ordre canonique
+  // STR · ENV · DEV puis alphabétique.
+  const poles = useMemo(() => {
+    const set = new Set<string>();
+    projets.forEach(p => (p.vignettePoles ?? []).forEach(v => set.add(v.toUpperCase())));
+    const order = ['STR', 'ENV', 'DEV'];
+    return [...set].sort((a, b) => {
+      const ia = order.indexOf(a); const ib = order.indexOf(b);
+      if (ia >= 0 && ib >= 0) return ia - ib;
+      if (ia >= 0) return -1;
+      if (ib >= 0) return 1;
+      return a.localeCompare(b);
+    });
+  }, [projets]);
+  const programmes = useMemo(() => {
+    const set = new Set<string>();
+    projets.forEach(p => {
+      const list = p.programmesPrincipaux ?? (p.programmePrincipal ? [p.programmePrincipal] : []);
+      list.forEach(v => { if (v) set.add(v); });
+    });
+    return [...set].sort((a, b) => a.localeCompare(b, 'fr'));
+  }, [projets]);
   const allStatuts: Statut[] = ['En étude', 'En chantier', 'Livré', 'Abandonné', 'En pause', 'En consultation'];
 
   const [search, setSearch] = useState('');
   const [rehabNeuf, setRehabNeuf] = useState<'Tous' | 'Neuf' | 'Réhab'>('Tous');
   const [selectedStatuts, setSelectedStatuts] = useState<Set<Statut>>(new Set());
-  const [selectedPole, setSelectedPole] = useState<string | null>(null);
+  // Pôles : multi-sélection cumulable, AND (intersection). Set vide = "Tous".
+  const [selectedPoles, setSelectedPoles] = useState<Set<string>>(new Set());
+  // Programmes : multi-sélection cumulable, OR. Set vide = "Tous".
+  const [selectedProgrammes, setSelectedProgrammes] = useState<Set<string>>(new Set());
   const [yearMin, setYearMin] = useState(years.min);
   const [yearMax, setYearMax] = useState(years.max);
 
@@ -59,6 +80,20 @@ export default function PortfolioBuilder({ projets }: Props) {
     setSelectedStatuts(prev => {
       const next = new Set(prev);
       if (next.has(s)) next.delete(s); else next.add(s);
+      return next;
+    });
+  };
+  const togglePole = (code: string) => {
+    setSelectedPoles(prev => {
+      const next = new Set(prev);
+      if (next.has(code)) next.delete(code); else next.add(code);
+      return next;
+    });
+  };
+  const toggleProgramme = (p: string) => {
+    setSelectedProgrammes(prev => {
+      const next = new Set(prev);
+      if (next.has(p)) next.delete(p); else next.add(p);
       return next;
     });
   };
@@ -78,11 +113,20 @@ export default function PortfolioBuilder({ projets }: Props) {
         if (rehabNeuf === 'Réhab' && !rn.includes('réhab') && !rn.includes('rehab')) return false;
       }
       if (selectedStatuts.size > 0 && !selectedStatuts.has(p.statut)) return false;
-      if (selectedPole && p.pole !== selectedPole) return false;
+      if (selectedPoles.size > 0) {
+        const projetPoles = new Set((p.vignettePoles ?? []).map(v => v.toUpperCase()));
+        for (const code of selectedPoles) {
+          if (!projetPoles.has(code)) return false;
+        }
+      }
+      if (selectedProgrammes.size > 0) {
+        const projetProgs = p.programmesPrincipaux ?? (p.programmePrincipal ? [p.programmePrincipal] : []);
+        if (!projetProgs.some(v => selectedProgrammes.has(v))) return false;
+      }
       if (p.anneeLivraison && (p.anneeLivraison < yearMin || p.anneeLivraison > yearMax)) return false;
       return true;
     });
-  }, [projets, search, rehabNeuf, selectedStatuts, selectedPole, yearMin, yearMax]);
+  }, [projets, search, rehabNeuf, selectedStatuts, selectedPoles, selectedProgrammes, yearMin, yearMax]);
 
   // ----- Sélection -----
   function toggleSelect(p: Projet) {
@@ -221,12 +265,24 @@ export default function PortfolioBuilder({ projets }: Props) {
           <div>
             <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 6 }}>Pôle</div>
             <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-              <button onClick={() => setSelectedPole(null)} style={btn(selectedPole === null)}>Tous</button>
+              <button onClick={() => setSelectedPoles(new Set())} style={btn(selectedPoles.size === 0)}>Tous</button>
               {poles.map(p => (
-                <button key={p} onClick={() => setSelectedPole(selectedPole === p ? null : p)} style={btn(selectedPole === p)}>{p}</button>
+                <button key={p} onClick={() => togglePole(p)} style={btn(selectedPoles.has(p))}>{p}</button>
               ))}
             </div>
           </div>
+
+          {programmes.length > 0 && (
+            <div style={{ maxWidth: 520 }}>
+              <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 6 }}>Programme</div>
+              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                <button onClick={() => setSelectedProgrammes(new Set())} style={btn(selectedProgrammes.size === 0)}>Tous</button>
+                {programmes.map(p => (
+                  <button key={p} onClick={() => toggleProgramme(p)} style={btn(selectedProgrammes.has(p))}>{p}</button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div>
             <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 6 }}>Type</div>

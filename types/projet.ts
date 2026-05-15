@@ -37,6 +37,10 @@ export interface Projet {
   missionAi?: string;
   programme?: string;
   programmePrincipal?: string;
+  /** Toutes les valeurs du champ multi-select Airtable "Programmes principaux"
+   *  (fldKNKtsZNpvmf695). Utilisé par les filtres du portfolio. Le rendu PDF
+   *  continue de n'afficher que `programmePrincipal` (premier élément). */
+  programmesPrincipaux?: string[];
   programmeSecondaire?: string;
   pole?: string;
   /** Champ Airtable "Vignette pôle" (field id fld1PZuYO8mz0sULA) — multi-select

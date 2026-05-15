@@ -31,6 +31,7 @@ export const FIELD_PRESTATION_ASSEMBLAGE = 'flddrMLBDxOc8r4lJ';
  */
 export interface AuxValues {
   programmePrincipal?: string;
+  programmesPrincipaux?: string[];
   programmeSecondaire?: string;
   pole?: string;
   vignettePoles?: string[];
@@ -179,6 +180,7 @@ export function recordToProjet(record: any, aux?: AuxValues): Projet {
     missionAi: f['Mission AI'] ?? undefined,
     programme: f['Programme'] ?? undefined,
     programmePrincipal: aux?.programmePrincipal,
+    programmesPrincipaux: aux?.programmesPrincipaux,
     programmeSecondaire: aux?.programmeSecondaire,
     // Pôle : prioritairement lu via aux par field ID (cf. FIELD_POLE), fallback
     // sur le nom de colonne 'Pôle' pour rester rétro-compatible.

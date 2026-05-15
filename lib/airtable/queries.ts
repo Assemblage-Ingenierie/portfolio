@@ -47,10 +47,27 @@ function extractIds(v: any): string[] {
  */
 interface AuxByFieldId {
   principal?: string;
+  principaux?: string[];
   secondaire?: string;
   pole?: string;
   vignettePoles?: string[];
   prestationAssemblage?: string;
+}
+
+// Multi-select avec cellFormat: 'string' → CSV. Renvoie l'array complet
+// (par opposition à `firstValue` qui ne garde que le premier élément).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function allValues(v: any): string[] | undefined {
+  if (v === undefined || v === null || v === '') return undefined;
+  if (Array.isArray(v)) {
+    const arr = v.map((s) => String(s).trim()).filter(Boolean);
+    return arr.length ? arr : undefined;
+  }
+  if (typeof v === 'string') {
+    const arr = v.split(/\s*,\s*/).map((s) => s.trim()).filter(Boolean);
+    return arr.length ? arr : undefined;
+  }
+  return undefined;
 }
 
 async function fetchAuxByFieldId(
@@ -88,6 +105,7 @@ async function fetchAuxByFieldId(
       const vignettePoles = toPoles(vignetteRaw);
       map.set(r.id, {
         principal: firstValue(r.fields[FIELD_PROGRAMME_PRINCIPAL]),
+        principaux: allValues(r.fields[FIELD_PROGRAMME_PRINCIPAL]),
         secondaire: firstValue(r.fields[FIELD_PROGRAMME_SECONDAIRE]),
         pole: typeof poleRaw === 'string' && poleRaw.trim() ? poleRaw.trim() : undefined,
         vignettePoles,
@@ -137,6 +155,7 @@ export async function getProjets(): Promise<Projet[]> {
       const prog = programmes.get(r.id);
       const aux: AuxValues = {
         programmePrincipal: prog?.principal,
+        programmesPrincipaux: prog?.principaux,
         programmeSecondaire: prog?.secondaire,
         pole: prog?.pole,
         vignettePoles: prog?.vignettePoles,
@@ -189,6 +208,7 @@ export async function getProjet(slug: string): Promise<Projet | null> {
     const p = prog.get(r.id);
     const aux: AuxValues = {
       programmePrincipal: p?.principal,
+      programmesPrincipaux: p?.principaux,
       programmeSecondaire: p?.secondaire,
       pole: p?.pole,
       vignettePoles: p?.vignettePoles,
