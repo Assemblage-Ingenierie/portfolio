@@ -335,10 +335,11 @@ export function metaGridHtml(projet: Projet, options?: { isDev?: boolean }): str
 
   if (options?.isDev) {
     // Bandeau Dev — ordre fixé par le métier :
-    // MOA · Bailleur · Budget · Programme · Mission AI · BET associés.
+    // MOA · Bailleur · Architecte · Budget · Programme · Mission AI · BET associés.
     // Seuls les champs renseignés apparaissent.
     if (projet.moa)         items.push({ label: "Maître d'ouvrage", value: projet.moa });
     if (projet.bailleur)    items.push({ label: 'Bailleur',         value: projet.bailleur });
+    if (projet.architecte)  items.push({ label: 'Architecte',       value: projet.architecte });
     if (projet.budgetHT)    items.push({ label: 'Budget',           value: projet.budgetHT });
     if (programmeItem)      items.push(programmeItem);
     if (projet.missionAi)   items.push({ label: 'Mission AI',       value: projet.missionAi });
