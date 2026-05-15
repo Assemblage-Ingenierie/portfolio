@@ -396,9 +396,10 @@ function columnsFor(mode: ColMode): ColumnDef[] {
   };
   const bailleur: ColumnDef = { key: 'bailleur', label: 'Bailleur', render: (p) => p.bailleur ?? '—' };
   const missionAi: ColumnDef = { key: 'missionAi', label: 'Mission AI', render: (p) => p.missionAi ?? '—' };
+  const lieu: ColumnDef = { key: 'lieu', label: 'Lieu', render: (p) => p.lieu ?? '—' };
 
   if (mode === 'dev') {
-    return [nom, moa, bailleur, budget, programme, missionAi, bet];
+    return [nom, lieu, moa, bailleur, budget, programme, missionAi, bet];
   }
   return [nom, moa, programme, architecte, bet, surface, budget, certification, statut];
 }
