@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import '@fontsource/newsreader/index.css';
 import '@fontsource/open-sans/index.css';
 import './globals.css';
@@ -13,7 +14,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="fr">
       <body>
-        <AuthGate>{children}</AuthGate>
+        <Suspense fallback={null}>
+          <AuthGate>{children}</AuthGate>
+        </Suspense>
       </body>
     </html>
   );
