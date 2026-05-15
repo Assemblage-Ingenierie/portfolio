@@ -145,6 +145,7 @@ export async function getProjets(): Promise<Projet[]> {
       ...extractIds(r.fields['Architecte']),
       ...extractIds(r.fields['Mandataire']),
       ...extractIds(r.fields['Entreprise']),
+      ...extractIds(r.fields['BET associés']),
     ]);
 
     // 3. Résolution des noms depuis la base CRM AI (silencieux si non configuré)
@@ -193,6 +194,7 @@ export async function getProjet(slug: string): Promise<Projet | null> {
       ...extractIds(r.fields['Architecte']),
       ...extractIds(r.fields['Mandataire']),
       ...extractIds(r.fields['Entreprise']),
+      ...extractIds(r.fields['BET associés']),
     ];
     // Debug : on log même en succès pour pouvoir tracer pourquoi un champ
     // n'est pas résolu (le console.error de fetchCrmNames ne se déclenche
