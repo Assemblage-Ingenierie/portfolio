@@ -61,10 +61,17 @@ export interface BandeauConfig {
    *  render (cf. `titleMetaGapCss` dans `lib/pdf/templates/shared.ts`).
    *  Disponible sur les 4 templates PDF. */
   titleMetaGap?: number;
+  /** Espacement entre la photo principale et le bloc Description projet
+   *  (champ `.man-text` / `.dev-text`). 0..100, 50 = neutre. Mappé sur
+   *  ±PHOTO_TEXT_GAP_RANGE_MM via `photoTextGapCss`. Disponible sur
+   *  Str-Env et Dev (les templates avec photo principale + texte). */
+  photoTextGap?: number;
 }
 
 /** Demi-amplitude (en mm) du slider `titleMetaGap`. À 0% → -RANGE, à 100% → +RANGE. */
 export const TITLE_META_GAP_RANGE_MM = 12;
+/** Demi-amplitude (en mm) du slider `photoTextGap`. */
+export const PHOTO_TEXT_GAP_RANGE_MM = 15;
 
 /** Convertit un `titleMetaGap` (0..100, 50 = neutre) en CSS `margin-top`
  *  applicable sur `.t-meta-grid`. Retourne '' si non défini ou égal à 50. */
@@ -73,6 +80,18 @@ export function titleMetaGapCss(config?: BandeauConfig): string {
   if (v === undefined || !Number.isFinite(v)) return '';
   const clamped = Math.max(0, Math.min(100, v));
   const offsetMm = ((clamped - 50) / 50) * TITLE_META_GAP_RANGE_MM;
+  if (offsetMm === 0) return '';
+  return `margin-top:${offsetMm.toFixed(2)}mm`;
+}
+
+/** Convertit un `photoTextGap` (0..100, 50 = neutre) en CSS `margin-top`
+ *  applicable sur `.man-text` / `.dev-text`. Retourne '' si non défini
+ *  ou égal à 50. */
+export function photoTextGapCss(config?: BandeauConfig): string {
+  const v = config?.photoTextGap;
+  if (v === undefined || !Number.isFinite(v)) return '';
+  const clamped = Math.max(0, Math.min(100, v));
+  const offsetMm = ((clamped - 50) / 50) * PHOTO_TEXT_GAP_RANGE_MM;
   if (offsetMm === 0) return '';
   return `margin-top:${offsetMm.toFixed(2)}mm`;
 }
