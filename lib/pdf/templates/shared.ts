@@ -174,10 +174,9 @@ html, body { background: white; }
 }
 .t-meta-item {
   padding: 0 3mm;
-  border-right: 1px solid var(--ai-gris);
 }
 .t-meta-item:first-child { padding-left: 0; }
-.t-meta-item:last-child { padding-right: 0; border-right: none; }
+.t-meta-item:last-child { padding-right: 0; }
 .t-meta-label {
   font-family: var(--sans); font-size: 8.5pt; font-weight: 400;
   letter-spacing: 0.06em;
@@ -323,25 +322,39 @@ export function titleBlockHtml(projet: Projet, h1Size = '32pt'): string {
 export function metaGridHtml(projet: Projet, options?: { isDev?: boolean }): string {
   const items: { label: string; value: string; sub?: string }[] = [];
 
-  // Ordre fixe : seuls les champs renseignés apparaissent.
-  if (projet.moa)        items.push({ label: "Maître d'ouvrage", value: projet.moa });
-  if (projet.architecte) items.push({ label: 'Architecte',       value: projet.architecte });
-  // Dev uniquement : BET associés (linked record Sync CRM) inséré juste
-  // après Architecte pour rester dans la zone "acteurs du projet".
-  if (options?.isDev && projet.betAssocies) items.push({ label: 'BET associés', value: projet.betAssocies });
-  if (projet.budgetHT)   items.push({ label: 'Budget',           value: projet.budgetHT });
-  if (projet.surface)    items.push({ label: 'Surface',          value: `${projet.surface.toLocaleString('fr-FR')} m²` });
-  if (projet.entreprise) items.push({ label: 'Entreprise',       value: projet.entreprise });
-  // Dev uniquement : Bailleur (champ texte simple de la base affaire) après
-  // Entreprise — autre acteur financeur, logique avec le bloc Budget.
-  if (options?.isDev && projet.bailleur) items.push({ label: 'Bailleur', value: projet.bailleur });
-  if (projet.missionAi)  items.push({ label: 'Mission AI',       value: projet.missionAi });
-  // Programme : principal en valeur principale, secondaire en sous-titre
-  if (projet.programmePrincipal || projet.programmeSecondaire) items.push({
-    label: 'Programme',
-    value: projet.programmePrincipal ?? projet.programmeSecondaire ?? '',
-    sub: projet.programmePrincipal ? projet.programmeSecondaire : undefined,
-  });
+  // Programme : principal en valeur principale, secondaire en sous-titre.
+  // Helper utilisé par les deux templates.
+  const programmeItem = (projet.programmePrincipal || projet.programmeSecondaire)
+    ? {
+        label: 'Programme',
+        value: projet.programmePrincipal ?? projet.programmeSecondaire ?? '',
+        sub: projet.programmePrincipal ? projet.programmeSecondaire : undefined,
+      }
+    : null;
+
+  if (options?.isDev) {
+    // Bandeau Dev — ordre fixé par le métier :
+    // MOA · Bailleur · Architecte · Budget · Programme · Mission AI · BET associés.
+    // Seuls les champs renseignés apparaissent.
+    if (projet.moa)         items.push({ label: "Maître d'ouvrage", value: projet.moa });
+    if (projet.bailleur)    items.push({ label: 'Bailleur',         value: projet.bailleur });
+    if (projet.architecte)  items.push({ label: 'Architecte',       value: projet.architecte });
+    if (projet.budgetHT)    items.push({ label: 'Budget',           value: projet.budgetHT });
+    if (programmeItem)      items.push(programmeItem);
+    if (projet.missionAi)   items.push({ label: 'Mission AI',       value: projet.missionAi });
+    if (projet.betAssocies) items.push({ label: 'BET associés',     value: projet.betAssocies });
+  } else {
+    // Bandeau Str-Env — ordre historique + BET associés inséré juste après
+    // Architecte (même nature : linked record Sync CRM "acteurs du projet").
+    if (projet.moa)         items.push({ label: "Maître d'ouvrage", value: projet.moa });
+    if (projet.architecte)  items.push({ label: 'Architecte',       value: projet.architecte });
+    if (projet.betAssocies) items.push({ label: 'BET associés',     value: projet.betAssocies });
+    if (projet.budgetHT)    items.push({ label: 'Budget',           value: projet.budgetHT });
+    if (projet.surface)     items.push({ label: 'Surface',          value: `${projet.surface.toLocaleString('fr-FR')} m²` });
+    if (projet.entreprise)  items.push({ label: 'Entreprise',       value: projet.entreprise });
+    if (projet.missionAi)   items.push({ label: 'Mission AI',       value: projet.missionAi });
+    if (programmeItem)      items.push(programmeItem);
+  }
 
   if (items.length === 0) return '';
 

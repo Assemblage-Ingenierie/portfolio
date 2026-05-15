@@ -182,6 +182,8 @@ export default function PortfolioGrid({ projets }: Props) {
       if (selectedPoles.size > 0) {
         const projetPoles = new Set((p.vignettePoles ?? []).map(v => v.toUpperCase()));
         // AND : tous les pôles cochés doivent être présents sur le projet.
+        // 1 coché → projets qui contiennent au moins ce pôle ; 2 cochés →
+        // uniquement les projets qui contiennent les deux.
         for (const code of selectedPoles) {
           if (!projetPoles.has(code)) return false;
         }

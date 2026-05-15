@@ -1,6 +1,6 @@
 import type { Projet } from '@/types/projet';
 import { renderMarkdown } from '@/lib/utils/markdown';
-import { styleToCss } from '@/lib/pdf/bandeauConfig';
+import { styleToCss, photoTextGapCss } from '@/lib/pdf/bandeauConfig';
 import {
   TemplateBundle,
   headerHtml, footerHtml, titleBlockHtml, metaGridHtml,
@@ -371,7 +371,10 @@ export function renderDev(projet: Projet, configIn?: ManualConfig): TemplateBund
   const col2Pct = clampPercent(cfg.textCol2Percent ?? 50);
 
   const descStyle = styleToCss(projet.bandeauConfig?.description);
-  const descAttr = descStyle ? ` style="${descStyle}"` : '';
+  // Espacement photo principale ↔ description (slider BandeauConfig.photoTextGap).
+  const photoTextGap = photoTextGapCss(projet.bandeauConfig);
+  const mergedDescStyle = [descStyle, photoTextGap].filter(Boolean).join(';');
+  const descAttr = mergedDescStyle ? ` style="${mergedDescStyle}"` : '';
 
   let textHtml = '';
   if (description.length > 0) {
