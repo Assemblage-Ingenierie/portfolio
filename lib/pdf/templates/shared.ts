@@ -121,6 +121,16 @@ html, body { background: white; }
   letter-spacing: 0.02em;
   margin-left: 1mm;
 }
+/* Variante 2 lignes quand "Neuf" ET "Rehab" sont cochés : Neuf au-dessus
+   de Réhabilitation, taille réduite et interligne serré pour rester dans
+   la hauteur des vignettes (~10mm). */
+.t-header-rn-label--stacked {
+  font-size: 8.5pt;
+  line-height: 1.1;
+  display: inline-flex;
+  flex-direction: column;
+  justify-content: center;
+}
 .t-header-meta {
   font-size: 9pt; font-weight: 400;
   letter-spacing: 0.06em; font-variant: small-caps;
@@ -230,14 +240,16 @@ const VIGNETTES: ReadonlyArray<{ code: string; url: string }> = [
   { code: 'DEV', url: `${VIGNETTE_BASE}/DEV.svg` },
 ];
 
-// Vignette Rehab / Neuf — affichée à droite des 3 vignettes pôle, suivie du
-// libellé "Réhabilitation" ou "Neuf". `Rehab et Neuf` priorise la vignette
-// rehab (le projet a une part de réhabilitation, c'est l'info la plus
-// distinctive). Les fichiers PNG (filename historique : "rehabililtation"
-// avec triple 'i') sont hébergés dans le même bucket Supabase Storage.
+// Vignettes Rehab / Neuf — affichées à droite des 3 vignettes pôle.
+// SVG dans le même sous-dossier "vignettes svg" du bucket Branding.
+// Comportement d'affichage (selon le champ multi-select "Rehab / Neuf") :
+//   - "Neuf" seul → vignette Neuf + label "Neuf"
+//   - "Rehab" seul → vignette Réhabilitation + label "Réhabilitation"
+//   - les deux → vignette Neuf + vignette Réhabilitation côte à côte, puis
+//     un label sur 2 lignes (Neuf au-dessus de Réhabilitation).
 const REHAB_NEUF_VIGNETTE: Record<'rehab' | 'neuf', { url: string; label: string }> = {
-  rehab: { url: `${VIGNETTE_PNG_BASE}/rehabililtation.png`, label: 'Réhabilitation' },
-  neuf:  { url: `${VIGNETTE_PNG_BASE}/neuf.png`,           label: 'Neuf' },
+  rehab: { url: `${VIGNETTE_BASE}/Rehabilitation.svg`, label: 'Réhabilitation' },
+  neuf:  { url: `${VIGNETTE_BASE}/Neuf.svg`,           label: 'Neuf' },
 };
 
 export function headerHtml(projet: Projet): string {
@@ -262,16 +274,19 @@ export function headerHtml(projet: Projet): string {
     return `<img class="${cls}" src="${v.url}" alt="${v.code}" />`;
   }).join('');
 
-  // Vignette Rehab/Neuf conditionnelle (cf. RehabNeuf champ multi-select).
-  // "Rehab et Neuf" → vignette rehab. La vignette n'est rendue que si une
-  // valeur reconnue est présente — sinon, comportement historique inchangé.
+  // Vignettes Rehab/Neuf — multi-select "Rehab / Neuf".
+  // Ordre d'affichage : Neuf en premier, puis Réhabilitation. Quand les
+  // deux sont cochés, on rend les deux SVG côte à côte suivis d'un label
+  // sur 2 lignes (Neuf au-dessus de Réhabilitation).
   const rn = (projet.rehabNeuf ?? '').toLowerCase();
   const hasRehab = rn.includes('rehab') || rn.includes('réhab');
   const hasNeuf = rn.includes('neuf');
-  const rehabNeufKey = hasRehab ? 'rehab' : hasNeuf ? 'neuf' : null;
-  const rehabNeufHtml = rehabNeufKey
-    ? `<img class="t-header-vignette" src="${REHAB_NEUF_VIGNETTE[rehabNeufKey].url}" alt="${REHAB_NEUF_VIGNETTE[rehabNeufKey].label}" />
-       <span class="t-header-rn-label">${REHAB_NEUF_VIGNETTE[rehabNeufKey].label}</span>`
+  const rnKeys: ('neuf' | 'rehab')[] = [];
+  if (hasNeuf)  rnKeys.push('neuf');
+  if (hasRehab) rnKeys.push('rehab');
+  const rehabNeufHtml = rnKeys.length > 0
+    ? `${rnKeys.map((k) => `<img class="t-header-vignette" src="${REHAB_NEUF_VIGNETTE[k].url}" alt="${REHAB_NEUF_VIGNETTE[k].label}" />`).join('')}
+       <span class="t-header-rn-label${rnKeys.length > 1 ? ' t-header-rn-label--stacked' : ''}">${rnKeys.map((k) => esc(REHAB_NEUF_VIGNETTE[k].label)).join('<br />')}</span>`
     : '';
 
   const statusStyle = styleToCss(projet.bandeauConfig?.status);
