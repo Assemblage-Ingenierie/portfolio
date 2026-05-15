@@ -180,10 +180,13 @@ export default function PortfolioGrid({ projets }: Props) {
       }
       if (selectedStatuts.size > 0 && !selectedStatuts.has(p.statut)) return false;
       if (selectedPoles.size > 0) {
-        const projetPoles = (p.vignettePoles ?? []).map(v => v.toUpperCase());
-        // OR : intersection non-vide entre les pôles cochés et les pôles du
-        // projet. Un projet passe dès qu'il contient au moins un pôle coché.
-        if (!projetPoles.some(code => selectedPoles.has(code))) return false;
+        const projetPoles = new Set((p.vignettePoles ?? []).map(v => v.toUpperCase()));
+        // AND : tous les pôles cochés doivent être présents sur le projet.
+        // 1 coché → projets qui contiennent au moins ce pôle ; 2 cochés →
+        // uniquement les projets qui contiennent les deux.
+        for (const code of selectedPoles) {
+          if (!projetPoles.has(code)) return false;
+        }
       }
       if (selectedProgrammes.size > 0) {
         const projetProgs = p.programmesPrincipaux ?? (p.programmePrincipal ? [p.programmePrincipal] : []);
