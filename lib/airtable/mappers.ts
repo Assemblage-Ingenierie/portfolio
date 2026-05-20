@@ -106,14 +106,26 @@ export function recordToProjet(record: any, aux?: AuxValues): Projet {
     ...dimsFrom(a),
   }));
 
-  // Champ "Certification" (field id fldnb9rfM4C3m9Pcu) — accepte string
-  // (séparé par \n ou ,) ET array (cas multi-select). Le rendu downstream
-  // traite uniformément un string[].
+  // Champ "Certification" (field id fldnb9rfM4C3m9Pcu) — depuis 2026 c'est
+  // un champ rich text (Markdown GFM). Airtable retourne une string contenant
+  // possiblement des listes (`- item`, `* item`, `1. item`) ou du texte
+  // formaté. Le rendu downstream attend un `string[]` (une entrée par certif).
+  //
+  // Stratégie de parsing :
+  //   1. Split sur newlines (pas sur virgules — risque de couper des labels
+  //      "ISO 14001, version 2015" en deux fragments).
+  //   2. Strip des marqueurs de liste Markdown au début de chaque ligne :
+  //      `- `, `* `, `+ `, `1. `, `2) `, etc.
+  //   3. Ignore les lignes vides (séparateurs de paragraphes).
+  // Conservation : si Airtable renvoie array (rétro-compat ancien format
+  // multi-select), on ne fait que trim ; si rien, array vide.
   const rawCertification = f['Certification'];
+  const stripBullet = (line: string): string =>
+    line.replace(/^\s*(?:[-*+]|\d+[.)])\s+/, '').trim();
   const certifications: string[] = Array.isArray(rawCertification)
     ? rawCertification.map((s) => String(s).trim()).filter(Boolean)
     : typeof rawCertification === 'string' && rawCertification
-      ? rawCertification.split(/[\n,]+/).map((s: string) => s.trim()).filter(Boolean)
+      ? rawCertification.split('\n').map(stripBullet).filter(Boolean)
       : [];
 
   // Champ "Mots-clés" : la virgule est le SEUL séparateur de ligne. Tout
@@ -186,8 +198,12 @@ export function recordToProjet(record: any, aux?: AuxValues): Projet {
     // Entreprise). En cellFormat=json on reçoit un array de record IDs,
     // résolution des noms via crmNames.
     betAssocies: resolveCrm(f['BET associés'], aux?.crmNames),
-    entreprise: resolveCrm(f['Entreprise'], aux?.crmNames),
-    bailleur: f['Bailleur'] ?? undefined,
+    // Entreprise (fldWsiJtKrOWyzRDr) et Bailleur (fldUYSS8DyqtT2gDJ) : depuis
+    // 2026, ces deux champs sont aussi des linked records vers la base CRM AI.
+    // Fallback string si Airtable retourne directement une string (rétro-compat
+    // sur les anciennes fiches non migrées).
+    entreprise: resolveCrm(f['Entreprise'], aux?.crmNames) ?? (typeof f['Entreprise'] === 'string' ? f['Entreprise'] : undefined),
+    bailleur: resolveCrm(f['Bailleur'], aux?.crmNames) ?? (typeof f['Bailleur'] === 'string' ? f['Bailleur'] : undefined),
     referentAi: f['Référent AI'] ?? undefined,
 
     surface: f['Surface(m²)'] ?? undefined,

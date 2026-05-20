@@ -145,13 +145,17 @@ export async function getProjets(): Promise<Projet[]> {
       fetchAuxByFieldId(filter),
     ]);
 
-    // 2. Collecte des record IDs CRM depuis MOA / Architecte / Mandataire / Entreprise
+    // 2. Collecte des record IDs CRM depuis MOA / Architecte / Mandataire /
+    //    Entreprise / BET associés / Bailleur — tous des linked records vers
+    //    la base CRM AI (fldUYSS8DyqtT2gDJ pour Bailleur,
+    //    fldWsiJtKrOWyzRDr pour Entreprise).
     const crmIds = records.flatMap((r) => [
       ...extractIds(r.fields["Maître d'ouvrage"]),
       ...extractIds(r.fields['Architecte']),
       ...extractIds(r.fields['Mandataire']),
       ...extractIds(r.fields['Entreprise']),
       ...extractIds(r.fields['BET associés']),
+      ...extractIds(r.fields['Bailleur']),
     ]);
 
     // 3. Résolution des noms depuis la base CRM AI (silencieux si non configuré)
@@ -204,6 +208,7 @@ export async function getProjet(slug: string): Promise<Projet | null> {
       ...extractIds(r.fields['Mandataire']),
       ...extractIds(r.fields['Entreprise']),
       ...extractIds(r.fields['BET associés']),
+      ...extractIds(r.fields['Bailleur']),
     ];
     // Debug : on log même en succès pour pouvoir tracer pourquoi un champ
     // n'est pas résolu (le console.error de fetchCrmNames ne se déclenche
