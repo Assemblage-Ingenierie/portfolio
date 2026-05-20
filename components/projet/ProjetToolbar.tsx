@@ -33,8 +33,11 @@ export default function ProjetToolbar({
   onSave,
 }: Props) {
   const [publishing, setPublishing] = useState(false);
-  const [result, setResult] = useState<{ url?: string; error?: string; warning?: string; status?: string; type?: string; author?: number; id?: number } | null>(null);
+  const [result, setResult] = useState<{ url?: string; error?: string; warning?: string; status?: string; type?: string; author?: number; id?: number; previousUrl?: string } | null>(null);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  // Promotion du dernier draft vers la prod (route /update-prod).
+  const [promoting, setPromoting] = useState(false);
+  const [promoteResult, setPromoteResult] = useState<{ prodUrl?: string; prodId?: number; draftUrl?: string; error?: string } | null>(null);
 
   async function handlePublish(variant: 'v1' | 'v2') {
     const label = variant === 'v2' ? 'Export WP 2' : 'Export WP 1';
@@ -49,11 +52,32 @@ export default function ProjetToolbar({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Erreur inconnue');
-      setResult({ url: data.url, warning: data.warning, status: data.status, type: data.type, author: data.author, id: data.id });
+      setResult({ url: data.url, warning: data.warning, status: data.status, type: data.type, author: data.author, id: data.id, previousUrl: data.previousUrl });
     } catch (e) {
       setResult({ error: e instanceof Error ? e.message : 'Erreur' });
     } finally {
       setPublishing(false);
+    }
+  }
+
+  async function handleUpdateProd() {
+    if (!confirm(
+      'Cette action remplace immédiatement la version publiée sur assemblage.net par le contenu du dernier brouillon. Continuer ?'
+    )) return;
+    setPromoting(true);
+    setPromoteResult(null);
+    try {
+      const res = await authedFetch(`/api/projet/${projet.slug}/update-prod`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Erreur inconnue');
+      setPromoteResult({ prodUrl: data.prodUrl, prodId: data.prodId, draftUrl: data.draftUrl });
+    } catch (e) {
+      setPromoteResult({ error: e instanceof Error ? e.message : 'Erreur' });
+    } finally {
+      setPromoting(false);
     }
   }
 
@@ -166,6 +190,14 @@ export default function ProjetToolbar({
       >
         {publishing ? 'Publication…' : 'Export WP 2'}
       </button>
+      <button
+        style={{ ...btn, background: '#E30513', color: 'white', border: 'none' }}
+        onClick={handleUpdateProd}
+        disabled={promoting}
+        title="Pousse le contenu du dernier brouillon créé vers le post WordPress publié existant (recherche par slug)"
+      >
+        {promoting ? 'Mise à jour…' : 'Mettre à jour la production'}
+      </button>
       {projet.urlWordpress && (
         <a
           href={projet.urlWordpress}
@@ -180,11 +212,25 @@ export default function ProjetToolbar({
         <span style={{ color: '#90EE90', fontWeight: 600 }}>
           ✓ Publié #{result.id} [{result.type}/{result.status}, author {result.author}] —{' '}
           <a href={result.url} target="_blank" rel="noopener noreferrer" style={{ color: '#90EE90' }}>voir le brouillon</a>
+          {result.previousUrl && (
+            <span style={{ color: '#ffdd88', marginLeft: 8, fontWeight: 400 }}>
+              · ancien brouillon : <a href={result.previousUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#ffdd88' }}>{result.previousUrl}</a> (à supprimer manuellement après validation)
+            </span>
+          )}
           {result.warning && <span style={{ color: '#ffdd88', marginLeft: 8 }}>({result.warning})</span>}
         </span>
       )}
       {result?.error && (
         <span style={{ color: '#ffaaaa', fontWeight: 600 }}>✗ {result.error}</span>
+      )}
+      {promoteResult?.prodUrl && (
+        <span style={{ color: '#90EE90', fontWeight: 600 }}>
+          ✓ Production mise à jour #{promoteResult.prodId} —{' '}
+          <a href={promoteResult.prodUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#90EE90' }}>voir l&apos;article publié</a>
+        </span>
+      )}
+      {promoteResult?.error && (
+        <span style={{ color: '#ffaaaa', fontWeight: 600 }}>✗ {promoteResult.error}</span>
       )}
     </div>
   );

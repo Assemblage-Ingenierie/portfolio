@@ -117,7 +117,8 @@ Airtable ──► lib/airtable/queries.ts (getProjets / getProjet)
 |-------|---------|------|
 | `/api/projet/[slug]/fields` | PATCH | Sauvegarde les champs éditables dans Airtable. Retourne `{ ok, slug }` (le nouveau slug si renommage). Invalide le cache `projets`. |
 | `/api/projet/[slug]/pdf` | GET | Génère un PDF A4 via Puppeteer (navigue vers `?print=true`) |
-| `/api/projet/[slug]/publish` | POST | Upload médias → WordPress, crée/met à jour le post en draft, write-back URL dans Airtable |
+| `/api/projet/[slug]/publish` | POST | Upload médias → WordPress, crée **toujours** un nouveau draft (jamais d'UPDATE sur post existant), write-back URL dans Airtable |
+| `/api/projet/[slug]/update-prod` | POST | Promeut le contenu du dernier draft tracké dans Airtable vers le post publié existant (lookup par slug + status=publish) |
 | `/api/admin/users/[id]` | PATCH | Met à jour `role` / `is_approved` dans `portfolio_profiles` (vérifie le rôle admin côté serveur) |
 
 ### Templates de rendu PDF
@@ -146,10 +147,19 @@ Indépendants du système de templates PDF. `lib/wordpress/builders.ts` (Editori
 
 ### WordPress
 
-- `lib/wordpress/client.ts` : upload media (stream binaire depuis l'URL Airtable) + create/update post via REST API
+- `lib/wordpress/client.ts` : upload media (stream binaire depuis l'URL Airtable) + create/update post via REST API + helpers `findPublishedPostBySlug`, `getPostContent`, `extractWpPostId`
 - **Authentification : Basic auth** avec `WP_USER` + `WP_APP_PASSWORD` (Application Password WordPress, espaces retirés)
-- `extractWpPostId` parse `?p=<id>` dans l'URL WordPress pour détecter un post existant à mettre à jour
 - Seules les URLs d'images provenant de `*.airtable.com` / `*.airtableusercontent.com` sont autorisées (SSRF guard dans `publish/route.ts`)
+
+#### Workflow draft → preview → promotion en production
+
+L'export ne touche **jamais** à un post WordPress existant — il crée systématiquement un nouveau brouillon. La promotion vers la production est une action explicite, séparée.
+
+1. **Export WP 1** (`/api/projet/[slug]/publish`) — crée un nouveau draft. WP suffixe automatiquement les slugs en collision (`la-maison-sur-le-fleuve` → `-2` → `-3`…). Le post apparaît systématiquement dans `/wp-admin/edit.php`. L'URL Airtable `urlWordpress` est mise à jour pour pointer sur ce dernier draft. Réponse inclut `previousUrl` pour rappeler à l'utilisateur l'ancien draft à nettoyer manuellement.
+2. **Itération** — l'utilisateur peut relancer Export WP 1 autant de fois qu'il veut. Chaque export = un nouveau draft. Les drafts précédents restent en place et doivent être supprimés manuellement par l'utilisateur depuis WP admin.
+3. **Mettre à jour la production** (`/api/projet/[slug]/update-prod`) — quand un draft est validé visuellement, ce bouton lit le contenu du dernier draft (URL trackée dans `urlWordpress`), recherche le post de production par slug (`GET /posts?slug=<slug>&status=publish&per_page=1`), et fait un `POST /posts/{prodId}` pour remplacer title/content/excerpt/featured_media. Le statut publish est préservé, l'URL SEO de la production est préservée. Si aucune version publiée n'existe (404), l'utilisateur doit publier un draft manuellement dans WP admin avant de pouvoir utiliser ce bouton.
+
+**Important** : par construction, le code n'envoie **jamais** `status: 'trash'` ni `DELETE`. Aucun export ne peut mettre un post existant à la corbeille.
 
 ### PDF
 
