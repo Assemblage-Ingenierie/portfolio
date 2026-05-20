@@ -37,6 +37,32 @@ export interface PublicProjet {
   budgetHT?: string;
   certifications?: string[];
   photoCouverture?: { url: string; width?: number; height?: number };
+  /** URL publique de la fiche sur assemblage.net (permalink WordPress).
+   *  Computed côté serveur — voir `deducePublicUrl`. */
+  publicUrl?: string;
+}
+
+/**
+ * Calcule l'URL publique d'une fiche sur assemblage.net.
+ * - Si `urlWordpress` existe et n'est PAS un draft (`?p=<id>`) → on l'utilise
+ *   tel quel (URL faisant autorité, écrit par WP lors d'une publication).
+ * - Sinon → on construit `${wpRoot}/${slug}/` depuis `WP_BASE_URL`. Best
+ *   effort : si la fiche n'a jamais été publiée côté WP, l'URL 404. Quand
+ *   le slug WP a été suffixé (collision `-2`, `-3`…), la version `urlWordpress`
+ *   sera correcte au prochain publish ou écrasement manuel côté Airtable.
+ * - Retourne undefined si on n'a ni l'un ni l'autre (env vide).
+ */
+function deducePublicUrl(p: Projet): string | undefined {
+  // 1) URL stockée et qui ressemble à un permalink (pas un draft)
+  if (p.urlWordpress && !p.urlWordpress.includes('?p=')) {
+    return p.urlWordpress;
+  }
+  // 2) Fallback : construit depuis le slug + racine WP
+  const wpRoot = (process.env.WP_BASE_URL ?? '')
+    .replace(/\/$/, '')
+    .replace(/\/wp-json\/wp\/v2$/, '');
+  if (!wpRoot || !p.slug) return undefined;
+  return `${wpRoot}/${p.slug}/`;
 }
 
 function sanitize(p: Projet): PublicProjet {
@@ -65,6 +91,7 @@ function sanitize(p: Projet): PublicProjet {
     photoCouverture: p.photoCouverture
       ? { url: p.photoCouverture.url, width: p.photoCouverture.width, height: p.photoCouverture.height }
       : undefined,
+    publicUrl: deducePublicUrl(p),
   };
 }
 
