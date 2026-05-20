@@ -3,9 +3,11 @@
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import type { Projet, Statut } from '@/types/projet';
+import { RangeSlider } from './RangeSlider';
 
 const STATUT_BG: Record<string, string> = {
   'En étude': '#DFE4E8',
+  'Concours': '#F0E8F5',
   'En chantier': '#F9E1E3',
   'Livré': '#d4edda',
   'Abandonné': '#e2e3e5',
@@ -14,6 +16,7 @@ const STATUT_BG: Record<string, string> = {
 };
 const STATUT_COLOR: Record<string, string> = {
   'En étude': '#30323E',
+  'Concours': '#6B4F94',
   'En chantier': '#E30513',
   'Livré': '#155724',
   'Abandonné': '#6c757d',
@@ -35,52 +38,6 @@ function Badge({ statut }: { statut: Statut }) {
     }}>
       {statut}
     </span>
-  );
-}
-
-function RangeSlider({
-  min, max, valueMin, valueMax, onChange,
-}: {
-  min: number; max: number; valueMin: number; valueMax: number;
-  onChange: (min: number, max: number) => void;
-}) {
-  const range = max - min || 1;
-  const pctLeft = ((valueMin - min) / range) * 100;
-  const pctRight = ((max - valueMax) / range) * 100;
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '180px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '8pt', fontWeight: 700, color: '#E30513' }}>
-        <span>{valueMin}</span><span>{valueMax}</span>
-      </div>
-      <div className="range-slider">
-        {/* Track background */}
-        <div style={{
-          position: 'absolute', top: '50%', left: 0, right: 0,
-          height: '4px', background: '#DFE4E8', borderRadius: '2px',
-          transform: 'translateY(-50%)', pointerEvents: 'none',
-        }} />
-        {/* Active range fill */}
-        <div style={{
-          position: 'absolute', top: '50%',
-          left: `${pctLeft}%`, right: `${pctRight}%`,
-          height: '4px', background: '#E30513', borderRadius: '2px',
-          transform: 'translateY(-50%)', pointerEvents: 'none',
-        }} />
-        {/* Min thumb — higher z-index when at max to stay grabbable */}
-        <input
-          type="range" min={min} max={max} value={valueMin}
-          style={{ zIndex: valueMin >= valueMax ? 3 : 1 }}
-          onChange={e => onChange(Math.min(Number(e.target.value), valueMax), valueMax)}
-        />
-        {/* Max thumb */}
-        <input
-          type="range" min={min} max={max} value={valueMax}
-          style={{ zIndex: valueMin >= valueMax ? 2 : 3 }}
-          onChange={e => onChange(valueMin, Math.max(Number(e.target.value), valueMin))}
-        />
-      </div>
-    </div>
   );
 }
 
@@ -130,7 +87,10 @@ export default function PortfolioGrid({ projets }: Props) {
     return [...set].sort((a, b) => a.localeCompare(b, 'fr'));
   }, [projets]);
 
-  const allStatuts: Statut[] = ['En étude', 'En chantier', 'Livré', 'Abandonné', 'En pause', 'En consultation'];
+  // Ordre demandé : Livré · Concours · En chantier · En pause · En étude · En consultation.
+  // "Abandonné" est volontairement omis du filtre UI (reste dans le type pour
+  // compatibilité avec d'anciens records).
+  const allStatuts: Statut[] = ['Livré', 'Concours', 'En chantier', 'En pause', 'En étude', 'En consultation'];
 
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');

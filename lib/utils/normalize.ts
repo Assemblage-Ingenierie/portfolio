@@ -1,7 +1,6 @@
 import type { Statut } from '@/types/projet';
 
 const MAP: Record<string, Statut> = {
-  'concours': 'En étude',
   'en consultation': 'En consultation',
   'str en pause': 'En pause',
   'livraison prévue en 2024': 'En chantier',
@@ -12,7 +11,7 @@ const MAP: Record<string, Statut> = {
 };
 
 const VALID: Statut[] = [
-  'En étude', 'En chantier', 'Livré', 'Abandonné', 'En pause', 'En consultation',
+  'En étude', 'Concours', 'En chantier', 'Livré', 'Abandonné', 'En pause', 'En consultation',
 ];
 
 export function normalizeStatut(raw: string | undefined): Statut {

@@ -4,6 +4,7 @@ import type { CropData } from '@/lib/pdf/photoCrop';
 
 export type Statut =
   | 'En étude'
+  | 'Concours'
   | 'En chantier'
   | 'Livré'
   | 'Abandonné'

@@ -13,6 +13,7 @@ type Step = 'select' | 'order' | 'preview';
 
 const STATUT_BG: Record<string, string> = {
   'En étude': '#DFE4E8',
+  'Concours': '#F0E8F5',
   'En chantier': '#F9E1E3',
   'Livré': '#d4edda',
   'Abandonné': '#e2e3e5',
@@ -21,6 +22,7 @@ const STATUT_BG: Record<string, string> = {
 };
 const STATUT_COLOR: Record<string, string> = {
   'En étude': '#30323E',
+  'Concours': '#6B4F94',
   'En chantier': '#E30513',
   'Livré': '#155724',
   'Abandonné': '#6c757d',
@@ -59,7 +61,7 @@ export default function TableauBuilder({ projets }: Props) {
       return a.localeCompare(b);
     });
   }, [projets]);
-  const allStatuts: Statut[] = ['En étude', 'En chantier', 'Livré', 'Abandonné', 'En pause', 'En consultation'];
+  const allStatuts: Statut[] = ['Livré', 'Concours', 'En chantier', 'En pause', 'En étude', 'En consultation'];
   // Matériaux : valeurs disponibles dans les projets (multi-select AND).
   const materiauxOptions = useMemo(() => {
     const set = new Set<string>();

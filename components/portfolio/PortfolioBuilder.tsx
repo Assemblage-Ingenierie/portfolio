@@ -5,9 +5,11 @@ import Link from 'next/link';
 import type { Projet, Statut, TemplateChoice } from '@/types/projet';
 import { TEMPLATE_OPTIONS } from '@/types/projet';
 import { autoSelectTemplate } from '@/lib/pdf/selectTemplate';
+import { RangeSlider } from './RangeSlider';
 
 const STATUT_BG: Record<string, string> = {
   'En étude': '#DFE4E8',
+  'Concours': '#F0E8F5',
   'En chantier': '#F9E1E3',
   'Livré': '#d4edda',
   'Abandonné': '#e2e3e5',
@@ -16,6 +18,7 @@ const STATUT_BG: Record<string, string> = {
 };
 const STATUT_COLOR: Record<string, string> = {
   'En étude': '#30323E',
+  'Concours': '#6B4F94',
   'En chantier': '#E30513',
   'Livré': '#155724',
   'Abandonné': '#6c757d',
@@ -70,7 +73,9 @@ export default function PortfolioBuilder({ projets }: Props) {
     });
     return [...set].sort((a, b) => a.localeCompare(b, 'fr'));
   }, [projets]);
-  const allStatuts: Statut[] = ['En étude', 'En chantier', 'Livré', 'Abandonné', 'En pause', 'En consultation'];
+  // Ordre demandé : Livré · Concours · En chantier · En pause · En étude · En consultation.
+  // "Abandonné" omis volontairement du filtre (reste dans le type pour compat).
+  const allStatuts: Statut[] = ['Livré', 'Concours', 'En chantier', 'En pause', 'En étude', 'En consultation'];
 
   const [search, setSearch] = useState('');
   const [rehabNeuf, setRehabNeuf] = useState<'Tous' | 'Neuf' | 'Réhab'>('Tous');
@@ -313,18 +318,6 @@ export default function PortfolioBuilder({ projets }: Props) {
             </div>
           )}
 
-          {materiauxOptions.length > 0 && (
-            <div style={{ flex: '1 1 100%' }}>
-              <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 6 }}>Matériaux</div>
-              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                <button onClick={() => setSelectedMateriaux(new Set())} style={btn(selectedMateriaux.size === 0)}>Tous</button>
-                {materiauxOptions.map(v => (
-                  <button key={v} onClick={() => toggleMateriaux(v)} style={btn(selectedMateriaux.has(v))}>{v}</button>
-                ))}
-              </div>
-            </div>
-          )}
-
           <div>
             <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 6 }}>Type</div>
             <div style={{ display: 'flex', gap: 4 }}>
@@ -348,16 +341,34 @@ export default function PortfolioBuilder({ projets }: Props) {
             </div>
           </div>
 
-          {years.min < years.max && (
-            <div>
-              <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 6 }}>Année</div>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: '9pt' }}>
-                <input type="number" value={yearMin} onChange={e => setYearMin(Math.min(Number(e.target.value), yearMax))} style={{ width: 60, padding: '4px 6px', border: '1px solid #DFE4E8', borderRadius: 2 }} />
-                <span style={{ color: 'var(--ai-noir70)' }}>–</span>
-                <input type="number" value={yearMax} onChange={e => setYearMax(Math.max(Number(e.target.value), yearMin))} style={{ width: 60, padding: '4px 6px', border: '1px solid #DFE4E8', borderRadius: 2 }} />
-              </div>
+          {/* Matériaux (multi-select AND) + Année (slider) sur la même rangée.
+              Le conteneur prend toute la largeur restante et flexe en interne. */}
+          {(materiauxOptions.length > 0 || years.min < years.max) && (
+            <div style={{ flex: '1 1 100%', display: 'flex', gap: 20, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+              {materiauxOptions.length > 0 && (
+                <div style={{ flex: '1 1 auto', minWidth: 240 }}>
+                  <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 6 }}>Matériaux</div>
+                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                    <button onClick={() => setSelectedMateriaux(new Set())} style={btn(selectedMateriaux.size === 0)}>Tous</button>
+                    {materiauxOptions.map(v => (
+                      <button key={v} onClick={() => toggleMateriaux(v)} style={btn(selectedMateriaux.has(v))}>{v}</button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {years.min < years.max && (
+                <div style={{ flex: '0 0 auto' }}>
+                  <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 6 }}>Année de livraison</div>
+                  <RangeSlider
+                    min={years.min} max={years.max}
+                    valueMin={yearMin} valueMax={yearMax}
+                    onChange={(mn, mx) => { setYearMin(mn); setYearMax(mx); }}
+                  />
+                </div>
+              )}
             </div>
           )}
+
         </div>
 
         {/* Actions sélection groupée */}
