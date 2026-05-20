@@ -336,6 +336,17 @@ export default function PublicPortfolioTable() {
               <div style={{ padding: 16, background: '#F9E1E3', color: '#E30513', borderRadius: 2, marginBottom: 16 }}>{error}</div>
             )}
 
+            {/* Indication sur la cliquabilité des noms de projet — placée
+                après le bandeau des filtres et avant la table. */}
+            <p style={{
+              fontSize: '12pt',
+              color: 'var(--ai-noir70, #5A6068)',
+              fontStyle: 'italic',
+              margin: '0 0 16px',
+            }}>
+              Cliquez sur le nom d&apos;un projet pour être redirigé sur la fiche de référence complète.
+            </p>
+
             <ProjetTable
               mode={currentMode}
               rows={paged}
@@ -450,9 +461,7 @@ function columnsFor(mode: ColMode): ColumnDef[] {
               fontFamily: 'var(--serif)',
               fontSize: '10pt',
               color: 'var(--ai-noir, #30323E)',
-              textDecoration: 'underline',
-              textDecorationColor: 'var(--ai-rouge, #E30513)',
-              textUnderlineOffset: '2px',
+              textDecoration: 'none',
             }}
           >
             {p.nom}
