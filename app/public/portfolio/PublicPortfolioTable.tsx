@@ -103,7 +103,13 @@ export default function PublicPortfolioTable() {
         const fs = [p.nom, p.moa, p.architecte, p.programme, p.lieu, p.betAssocies, p.bailleur];
         if (!fs.some((v) => typeof v === 'string' && v.toLowerCase().includes(q))) return false;
       }
-      if (selectedStatuts.size > 0 && !selectedStatuts.has(p.statut)) return false;
+      // Statut : AND — le projet doit avoir TOUS les statuts cochés.
+      if (selectedStatuts.size > 0) {
+        const vals = new Set(p.statutValues ?? [p.statut]);
+        for (const s of selectedStatuts) {
+          if (!vals.has(s)) return false;
+        }
+      }
       if (selectedPoles.size > 0) {
         const pp = new Set((p.vignettePoles ?? []).map((v) => v.toUpperCase()));
         for (const code of selectedPoles) if (!pp.has(code)) return false;

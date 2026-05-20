@@ -60,10 +60,18 @@ export default function TableauBuilder({ projets }: Props) {
     });
   }, [projets]);
   const allStatuts: Statut[] = ['En étude', 'En chantier', 'Livré', 'Abandonné', 'En pause', 'En consultation'];
+  // Matériaux : valeurs disponibles dans les projets (multi-select AND).
+  const materiauxOptions = useMemo(() => {
+    const set = new Set<string>();
+    projets.forEach(p => (p.materiaux ?? []).forEach(v => { if (v) set.add(v); }));
+    return [...set].sort((a, b) => a.localeCompare(b, 'fr'));
+  }, [projets]);
 
   const [search, setSearch] = useState('');
   const [selectedPoles, setSelectedPoles] = useState<Set<string>>(new Set());
   const [selectedStatuts, setSelectedStatuts] = useState<Set<Statut>>(new Set());
+  // Matériaux : multi-sélection AND. Set vide = "Tous".
+  const [selectedMateriaux, setSelectedMateriaux] = useState<Set<string>>(new Set());
   const [yearMin, setYearMin] = useState(years.min);
   const [yearMax, setYearMax] = useState(years.max);
 
@@ -81,6 +89,13 @@ export default function TableauBuilder({ projets }: Props) {
       return next;
     });
   };
+  const toggleMateriaux = (v: string) => {
+    setSelectedMateriaux(prev => {
+      const next = new Set(prev);
+      if (next.has(v)) next.delete(v); else next.add(v);
+      return next;
+    });
+  };
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -89,15 +104,28 @@ export default function TableauBuilder({ projets }: Props) {
         const fs = [p.nom, p.affaire, p.adresse, p.moa, p.architecte, p.programme];
         if (!fs.some(v => typeof v === 'string' && v.toLowerCase().includes(q))) return false;
       }
-      if (selectedStatuts.size > 0 && !selectedStatuts.has(p.statut)) return false;
+      // Statut : AND — le projet doit avoir TOUS les statuts cochés.
+      if (selectedStatuts.size > 0) {
+        const vals = new Set(p.statutValues ?? [p.statut]);
+        for (const s of selectedStatuts) {
+          if (!vals.has(s)) return false;
+        }
+      }
       if (selectedPoles.size > 0) {
         const pp = new Set((p.vignettePoles ?? []).map(v => v.toUpperCase()));
         for (const code of selectedPoles) if (!pp.has(code)) return false;
       }
+      // Matériaux : AND — le projet doit avoir TOUS les matériaux cochés.
+      if (selectedMateriaux.size > 0) {
+        const vals = new Set((p.materiaux ?? []).map(v => v.toLowerCase()));
+        for (const sel of selectedMateriaux) {
+          if (!vals.has(sel.toLowerCase())) return false;
+        }
+      }
       if (p.anneeLivraison && (p.anneeLivraison < yearMin || p.anneeLivraison > yearMax)) return false;
       return true;
     });
-  }, [projets, search, selectedStatuts, selectedPoles, yearMin, yearMax]);
+  }, [projets, search, selectedStatuts, selectedPoles, selectedMateriaux, yearMin, yearMax]);
 
   // ----- Sélection -----
   function toggleSelect(slug: string) {
@@ -239,6 +267,7 @@ export default function TableauBuilder({ projets }: Props) {
             search={search} setSearch={setSearch}
             poles={poles} selectedPoles={selectedPoles} togglePole={togglePole} setSelectedPoles={setSelectedPoles}
             allStatuts={allStatuts} selectedStatuts={selectedStatuts} toggleStatut={toggleStatut}
+            materiauxOptions={materiauxOptions} selectedMateriaux={selectedMateriaux} toggleMateriaux={toggleMateriaux} setSelectedMateriaux={setSelectedMateriaux}
             yearMin={yearMin} yearMax={yearMax} setYearMin={setYearMin} setYearMax={setYearMax} years={years}
             btn={btn}
           />
@@ -340,6 +369,10 @@ interface SelectStepProps {
   allStatuts: Statut[];
   selectedStatuts: Set<Statut>;
   toggleStatut: (s: Statut) => void;
+  materiauxOptions: string[];
+  selectedMateriaux: Set<string>;
+  toggleMateriaux: (v: string) => void;
+  setSelectedMateriaux: (s: Set<string>) => void;
   yearMin: number; yearMax: number;
   setYearMin: (n: number) => void; setYearMax: (n: number) => void;
   years: { min: number; max: number };
@@ -388,6 +421,17 @@ function SelectStep(p: SelectStepProps) {
               <input type="number" value={p.yearMin} onChange={e => p.setYearMin(Math.min(Number(e.target.value), p.yearMax))} style={{ width: 60, padding: '4px 6px', border: '1px solid #DFE4E8', borderRadius: 2 }} />
               <span style={{ color: 'var(--ai-noir70)' }}>–</span>
               <input type="number" value={p.yearMax} onChange={e => p.setYearMax(Math.max(Number(e.target.value), p.yearMin))} style={{ width: 60, padding: '4px 6px', border: '1px solid #DFE4E8', borderRadius: 2 }} />
+            </div>
+          </div>
+        )}
+        {p.materiauxOptions.length > 0 && (
+          <div style={{ flex: '1 1 100%' }}>
+            <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 6 }}>Matériaux</div>
+            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+              <button onClick={() => p.setSelectedMateriaux(new Set())} style={p.btn(p.selectedMateriaux.size === 0)}>Tous</button>
+              {p.materiauxOptions.map(v => (
+                <button key={v} onClick={() => p.toggleMateriaux(v)} style={p.btn(p.selectedMateriaux.has(v))}>{v}</button>
+              ))}
             </div>
           </div>
         )}

@@ -56,6 +56,12 @@ export default function PortfolioBuilder({ projets }: Props) {
       return a.localeCompare(b);
     });
   }, [projets]);
+  // Matériaux : valeurs disponibles dans les projets (multi-select AND).
+  const materiauxOptions = useMemo(() => {
+    const set = new Set<string>();
+    projets.forEach(p => (p.materiaux ?? []).forEach(v => { if (v) set.add(v); }));
+    return [...set].sort((a, b) => a.localeCompare(b, 'fr'));
+  }, [projets]);
   const programmes = useMemo(() => {
     const set = new Set<string>();
     projets.forEach(p => {
@@ -73,6 +79,8 @@ export default function PortfolioBuilder({ projets }: Props) {
   const [selectedPoles, setSelectedPoles] = useState<Set<string>>(new Set());
   // Programmes : multi-sélection cumulable, OR. Set vide = "Tous".
   const [selectedProgrammes, setSelectedProgrammes] = useState<Set<string>>(new Set());
+  // Matériaux : multi-sélection cumulable, AND. Set vide = "Tous".
+  const [selectedMateriaux, setSelectedMateriaux] = useState<Set<string>>(new Set());
   const [yearMin, setYearMin] = useState(years.min);
   const [yearMax, setYearMax] = useState(years.max);
 
@@ -97,6 +105,13 @@ export default function PortfolioBuilder({ projets }: Props) {
       return next;
     });
   };
+  const toggleMateriaux = (v: string) => {
+    setSelectedMateriaux(prev => {
+      const next = new Set(prev);
+      if (next.has(v)) next.delete(v); else next.add(v);
+      return next;
+    });
+  };
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -112,7 +127,13 @@ export default function PortfolioBuilder({ projets }: Props) {
         if (rehabNeuf === 'Neuf' && !rn.includes('neuf')) return false;
         if (rehabNeuf === 'Réhab' && !rn.includes('réhab') && !rn.includes('rehab')) return false;
       }
-      if (selectedStatuts.size > 0 && !selectedStatuts.has(p.statut)) return false;
+      // Statut : AND — le projet doit avoir TOUS les statuts cochés.
+      if (selectedStatuts.size > 0) {
+        const vals = new Set(p.statutValues ?? [p.statut]);
+        for (const s of selectedStatuts) {
+          if (!vals.has(s)) return false;
+        }
+      }
       if (selectedPoles.size > 0) {
         const projetPoles = new Set((p.vignettePoles ?? []).map(v => v.toUpperCase()));
         // AND : tous les pôles cochés doivent être présents sur le projet.
@@ -124,10 +145,17 @@ export default function PortfolioBuilder({ projets }: Props) {
         const projetProgs = p.programmesPrincipaux ?? (p.programmePrincipal ? [p.programmePrincipal] : []);
         if (!projetProgs.some(v => selectedProgrammes.has(v))) return false;
       }
+      // Matériaux : AND — le projet doit avoir TOUS les matériaux cochés.
+      if (selectedMateriaux.size > 0) {
+        const vals = new Set((p.materiaux ?? []).map(v => v.toLowerCase()));
+        for (const sel of selectedMateriaux) {
+          if (!vals.has(sel.toLowerCase())) return false;
+        }
+      }
       if (p.anneeLivraison && (p.anneeLivraison < yearMin || p.anneeLivraison > yearMax)) return false;
       return true;
     });
-  }, [projets, search, rehabNeuf, selectedStatuts, selectedPoles, selectedProgrammes, yearMin, yearMax]);
+  }, [projets, search, rehabNeuf, selectedStatuts, selectedPoles, selectedProgrammes, selectedMateriaux, yearMin, yearMax]);
 
   // ----- Sélection -----
   function toggleSelect(p: Projet) {
@@ -280,6 +308,18 @@ export default function PortfolioBuilder({ projets }: Props) {
                 <button onClick={() => setSelectedProgrammes(new Set())} style={btn(selectedProgrammes.size === 0)}>Tous</button>
                 {programmes.map(p => (
                   <button key={p} onClick={() => toggleProgramme(p)} style={btn(selectedProgrammes.has(p))}>{p}</button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {materiauxOptions.length > 0 && (
+            <div style={{ flex: '1 1 100%' }}>
+              <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 6 }}>Matériaux</div>
+              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                <button onClick={() => setSelectedMateriaux(new Set())} style={btn(selectedMateriaux.size === 0)}>Tous</button>
+                {materiauxOptions.map(v => (
+                  <button key={v} onClick={() => toggleMateriaux(v)} style={btn(selectedMateriaux.has(v))}>{v}</button>
                 ))}
               </div>
             </div>

@@ -1,7 +1,7 @@
 import type { Projet } from '@/types/projet';
 import { cacheTag } from 'next/cache';
 import { base, TABLE } from './client';
-import { recordToProjet, type AuxValues, FIELD_PROGRAMME_PRINCIPAL, FIELD_PROGRAMME_SECONDAIRE, FIELD_POLE, FIELD_VIGNETTE_POLE, FIELD_PRESTATION_ASSEMBLAGE } from './mappers';
+import { recordToProjet, type AuxValues, FIELD_PROGRAMME_PRINCIPAL, FIELD_PROGRAMME_SECONDAIRE, FIELD_POLE, FIELD_VIGNETTE_POLE, FIELD_PRESTATION_ASSEMBLAGE, FIELD_REHAB_NEUF, FIELD_MATERIAUX, FIELD_STATUT } from './mappers';
 import { fetchCrmNames } from './crm';
 
 export const PROJETS_TAG = 'projets';
@@ -52,6 +52,9 @@ interface AuxByFieldId {
   pole?: string;
   vignettePoles?: string[];
   prestationAssemblage?: string;
+  rehabNeuf?: string[];
+  materiaux?: string[];
+  statut?: string[];
 }
 
 // Multi-select avec cellFormat: 'string' → CSV. Renvoie l'array complet
@@ -78,7 +81,7 @@ async function fetchAuxByFieldId(
     const records = await base(TABLE)
       .select({
         ...STRING_FORMAT,
-        fields: [FIELD_PROGRAMME_PRINCIPAL, FIELD_PROGRAMME_SECONDAIRE, FIELD_POLE, FIELD_VIGNETTE_POLE, FIELD_PRESTATION_ASSEMBLAGE],
+        fields: [FIELD_PROGRAMME_PRINCIPAL, FIELD_PROGRAMME_SECONDAIRE, FIELD_POLE, FIELD_VIGNETTE_POLE, FIELD_PRESTATION_ASSEMBLAGE, FIELD_REHAB_NEUF, FIELD_MATERIAUX, FIELD_STATUT],
         returnFieldsByFieldId: true,
         ...(filterFormula ? { filterByFormula: filterFormula } : {}),
       })
@@ -110,6 +113,9 @@ async function fetchAuxByFieldId(
         pole: typeof poleRaw === 'string' && poleRaw.trim() ? poleRaw.trim() : undefined,
         vignettePoles,
         prestationAssemblage: typeof prestaRaw === 'string' && prestaRaw.trim() ? prestaRaw : undefined,
+        rehabNeuf: allValues(r.fields[FIELD_REHAB_NEUF]) ?? [],
+        materiaux: allValues(r.fields[FIELD_MATERIAUX]) ?? [],
+        statut: allValues(r.fields[FIELD_STATUT]) ?? [],
       });
     });
   } catch (err) {
@@ -161,6 +167,9 @@ export async function getProjets(): Promise<Projet[]> {
         pole: prog?.pole,
         vignettePoles: prog?.vignettePoles,
         prestationAssemblage: prog?.prestationAssemblage,
+        rehabNeufValues: prog?.rehabNeuf,
+        materiauxValues: prog?.materiaux,
+        statutValues: prog?.statut,
         crmNames,
       };
       return recordToProjet(r, aux);
@@ -215,6 +224,9 @@ export async function getProjet(slug: string): Promise<Projet | null> {
       pole: p?.pole,
       vignettePoles: p?.vignettePoles,
       prestationAssemblage: p?.prestationAssemblage,
+      rehabNeufValues: p?.rehabNeuf,
+      materiauxValues: p?.materiaux,
+      statutValues: p?.statut,
       crmNames,
     };
     return recordToProjet(r, aux);
