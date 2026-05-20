@@ -350,28 +350,31 @@ export default function PortfolioGrid({ projets }: Props) {
           </div>
         )}
 
-        {/* Matériaux — multi-sélection AND */}
-        {materiauxOptions.length > 0 && (
-          <div style={{ flex: '1 1 100%' }}>
-            <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: '6px' }}>Matériaux</div>
-            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-              <button onClick={() => setSelectedMateriaux(new Set())} style={btn(selectedMateriaux.size === 0)}>Tous</button>
-              {materiauxOptions.map(v => (
-                <button key={v} onClick={() => toggleMateriaux(v)} style={btn(selectedMateriaux.has(v))}>{v}</button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Année */}
-        {years.min < years.max && (
-          <div>
-            <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: '6px' }}>Année de livraison</div>
-            <RangeSlider
-              min={years.min} max={years.max}
-              valueMin={yearMin} valueMax={yearMax}
-              onChange={(mn, mx) => { setYearMin(mn); setYearMax(mx); }}
-            />
+        {/* Matériaux (multi-select AND) + Année slider sur la même rangée.
+            Matériaux flex à gauche, slider repoussé à droite via marginLeft auto. */}
+        {(materiauxOptions.length > 0 || years.min < years.max) && (
+          <div style={{ flex: '1 1 100%', display: 'flex', gap: '20px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+            {materiauxOptions.length > 0 && (
+              <div style={{ flex: '1 1 auto', minWidth: 240 }}>
+                <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: '6px' }}>Matériaux</div>
+                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                  <button onClick={() => setSelectedMateriaux(new Set())} style={btn(selectedMateriaux.size === 0)}>Tous</button>
+                  {materiauxOptions.map(v => (
+                    <button key={v} onClick={() => toggleMateriaux(v)} style={btn(selectedMateriaux.has(v))}>{v}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {years.min < years.max && (
+              <div style={{ flex: '0 0 auto', marginLeft: 'auto' }}>
+                <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: '6px' }}>Année de livraison</div>
+                <RangeSlider
+                  min={years.min} max={years.max}
+                  valueMin={yearMin} valueMax={yearMax}
+                  onChange={(mn, mx) => { setYearMin(mn); setYearMax(mx); }}
+                />
+              </div>
+            )}
           </div>
         )}
 
