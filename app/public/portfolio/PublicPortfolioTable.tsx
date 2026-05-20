@@ -339,12 +339,12 @@ export default function PublicPortfolioTable() {
             {/* Indication sur la cliquabilité des noms de projet — placée
                 après le bandeau des filtres et avant la table. */}
             <p style={{
-              fontSize: '12pt',
+              fontSize: '10pt',
               color: 'var(--ai-noir70, #5A6068)',
               fontStyle: 'italic',
               margin: '0 0 16px',
             }}>
-              Cliquez sur le nom d&apos;un projet pour être redirigé sur la fiche de référence complète.
+              Cliquez sur le nom d&apos;un projet pour être redirigé vers sa fiche de référence.
             </p>
 
             <ProjetTable
