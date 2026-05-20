@@ -183,13 +183,9 @@ export default function ProjetToolbar({
       >
         {publishing ? 'Publication…' : 'Export WP 1'}
       </button>
-      <button
-        style={{ ...btn, background: 'white', color: 'var(--ai-violet)', border: 'none' }}
-        onClick={() => handlePublish('v2')}
-        disabled={publishing}
-      >
-        {publishing ? 'Publication…' : 'Export WP 2'}
-      </button>
+      {/* Bouton Export WP 2 masqué dans l'UI mais le code de génération
+          (variant: 'v2' / buildWpContentV2) reste en place côté serveur
+          pour pouvoir le ré-activer rapidement si besoin. */}
       <button
         style={{ ...btn, background: '#E30513', color: 'white', border: 'none' }}
         onClick={handleUpdateProd}
