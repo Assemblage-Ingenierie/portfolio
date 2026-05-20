@@ -762,49 +762,12 @@ function PreviewStep({
   // Limite stricte sur le nombre d'itérations pour converger sur un
   // rowsPerPage qui rentre — évite toute boucle infinie en cas d'overflow
   // résiduel inexplicable (ex. ligne unique trop haute pour une A4).
-  const MAX_PAGINATION_ATTEMPTS = 6;
+  const MAX_PAGINATION_ATTEMPTS = 8;
 
-  useEffect(() => {
-    const iframe = iframeRef.current;
-    if (!iframe) return;
-    let cancelled = false;
-    async function measure() {
-      try {
-        const doc = iframe?.contentDocument;
-        if (!doc) return;
-        try { await doc.fonts?.ready; } catch { /* noop */ }
-        if (cancelled) return;
-        requestAnimationFrame(() => {
-          if (cancelled) return;
-          requestAnimationFrame(() => {
-            if (cancelled) return;
-            // measureOverflow ne regarde que le 1er .page — ça nous va, on
-            // pagine avec une taille uniforme donc si la 1re page tient les
-            // suivantes tiendront aussi.
-            const m = measureOverflow(doc);
-            setOverflow(m);
-            // Mémorise le nb de pages rendues pour dimensionner l'iframe.
-            const pages = doc.querySelectorAll('.tab-page').length;
-            setPageCount(Math.max(1, pages));
-          });
-        });
-      } catch { /* noop */ }
-    }
-    function onLoad() { measure(); }
-    iframe.addEventListener('load', onLoad);
-    measure();
-    return () => { cancelled = true; iframe.removeEventListener('load', onLoad); };
-  }, [html]);
-
-  // ----- Auto-pagination paysage -----
-  // Quand un dépassement vertical est détecté en paysage, on calcule un
-  // rowsPerPage qui fait tenir le contenu en mesurant directement la
-  // hauteur moyenne d'une ligne et la hauteur des éléments non-tbody
-  // (titre + thead + footer + paddings). Si après pagination il reste
-  // de l'overflow (variance des hauteurs), on décrémente d'une ligne ;
-  // s'il reste beaucoup d'espace libre, on incrémente. Direction lock
-  // pour éviter toute oscillation.
+  // Direction-lock : empêche d'osciller entre +1 et -1 quand on est sur la
+  // bonne valeur à 1 ligne près. Réinitialisé via le useEffect en aval.
   const paginationDirection = useRef<null | 'down' | 'up'>(null);
+
   // Reset du direction-lock quand le parent réinitialise la pagination
   // (changement orientation / mode / colonnes / champ libre…).
   useEffect(() => {
@@ -813,83 +776,117 @@ function PreviewStep({
     }
   }, [autoRowsPerPage, paginationAttempts]);
 
+  // ----- Mesure + auto-pagination paysage (effet unique) -----
+  // Critique : la décision de pagination doit se faire DANS le même cycle
+  // async que la mesure pour éviter la cascade de re-renders synchrones
+  // sur un state `overflow` périmé. À chaque changement de `html` :
+  //   1. iframe se recharge
+  //   2. on attend `load` + fonts.ready + 2× rAF (DOM stabilisé)
+  //   3. on mesure overflow + métriques DOM directes (hauteur ligne, etc.)
+  //   4. on décide : décrémenter / incrémenter / accepter / stop
+  //   5. setState → re-render → html change → cycle recommence avec un
+  //      DOM RÉACTUALISÉ
+  // Plus de bug de "fitRows lu sur l'ancien DOM avant que l'iframe ait
+  // rechargé".
   useEffect(() => {
-    if (!overflow) return;
-    if (orientation !== 'paysage') return;
-    if (paginationAttempts >= MAX_PAGINATION_ATTEMPTS) return;
-
-    const N = orderedProjets.length;
-    if (N <= 1) return; // Une seule ligne ne se pagine pas.
-
     const iframe = iframeRef.current;
-    const doc = iframe?.contentDocument;
-    if (!doc) return;
+    if (!iframe) return;
+    let cancelled = false;
 
-    // Mesure DOM précise depuis la 1re .tab-page rendue.
-    const firstPage = doc.querySelector<HTMLElement>('.tab-page');
-    const tbody = firstPage?.querySelector<HTMLElement>('tbody');
-    if (!firstPage || !tbody) return;
-    const rows = tbody.querySelectorAll<HTMLElement>('tr');
-    if (rows.length === 0) return;
+    async function measureAndPaginate() {
+      try {
+        const doc = iframe?.contentDocument;
+        if (!doc) return;
+        try { await doc.fonts?.ready; } catch { /* noop */ }
+        if (cancelled) return;
 
-    const tbodyHeight = tbody.getBoundingClientRect().height;
-    const avgRowHeight = tbodyHeight / rows.length;
-    if (avgRowHeight <= 0) return;
-    const pageHeight = firstPage.clientHeight; // A4 area en px
-    const scrollHeight = firstPage.scrollHeight; // contenu total (peut > pageHeight si overflow)
+        requestAnimationFrame(() => {
+          if (cancelled) return;
+          requestAnimationFrame(() => {
+            if (cancelled) return;
 
-    // Non-tbody = tout sauf les lignes du corps (titre + thead + footer +
-    // paddings + spacer). En cas d'overflow, le spacer est écrasé à 0 donc
-    // c'est juste les éléments fixes. Sans overflow, le spacer prend
-    // l'espace libre — donc tbodyHeight + nonBody = pageHeight.
-    const nonBodyHeight = scrollHeight - tbodyHeight;
-    const availableForBody = pageHeight - nonBodyHeight;
+            // 1. Mesures DOM toujours faites (utilisé partout y compris pour
+            //    afficher le warning + le compteur de pages).
+            const m = measureOverflow(doc);
+            setOverflow(m);
+            const pages = doc.querySelectorAll('.tab-page').length;
+            setPageCount(Math.max(1, pages));
 
-    if (availableForBody <= 0) return; // page trop petite pour même 1 ligne
+            // 2. Décision pagination — paysage uniquement, limites de garde.
+            if (!m) return;
+            if (orientation !== 'paysage') return;
+            if (paginationAttempts >= MAX_PAGINATION_ATTEMPTS) return;
+            const N = orderedProjets.length;
+            if (N <= 1) return;
 
-    // Nombre de lignes qui rentrent confortablement.
-    const fitRows = Math.max(1, Math.floor(availableForBody / avgRowHeight));
+            const firstPage = doc.querySelector<HTMLElement>('.tab-page');
+            const tbody = firstPage?.querySelector<HTMLElement>('tbody');
+            if (!firstPage || !tbody) return;
+            const rows = tbody.querySelectorAll<HTMLElement>('tr');
+            if (rows.length === 0) return;
 
-    if (overflow.overflowMm > 0) {
-      // Cas overflow : on doit réduire.
-      if (paginationDirection.current === 'up') {
-        // On vient d'incrémenter et ça déborde → revenir en arrière et stop.
-        if (autoRowsPerPage && autoRowsPerPage > 1) {
-          setAutoRowsPerPage(autoRowsPerPage - 1);
-        }
-        setPaginationAttempts(MAX_PAGINATION_ATTEMPTS); // verrouille
-        return;
-      }
-      paginationDirection.current = 'down';
-      if (autoRowsPerPage === null) {
-        // Première passe : on utilise la mesure DOM (beaucoup plus précise
-        // que le ratio overflow approximatif).
-        setAutoRowsPerPage(fitRows);
-      } else if (autoRowsPerPage > 1) {
-        setAutoRowsPerPage(autoRowsPerPage - 1);
-      }
-      setPaginationAttempts(c => c + 1);
-    } else if (autoRowsPerPage !== null) {
-      // Pas d'overflow et pagination active : reste-t-il de la place pour
-      // ajouter des lignes ? Le .tab-spacer (flex 1 1 auto) absorbe tout
-      // l'espace libre en bas de la page — sa hauteur nous donne directement
-      // ce qu'on peut récupérer.
-      const spacer = firstPage.querySelector<HTMLElement>('.tab-spacer');
-      const spacerHeight = spacer ? spacer.getBoundingClientRect().height : 0;
-      // Tant que le spacer mesure plus qu'une ligne entière, on a clairement
-      // la place pour une référence de plus. On ajoute par incréments de 1
-      // pour ne pas dépasser à cause de la variance des hauteurs de ligne.
-      if (spacerHeight > avgRowHeight && paginationDirection.current !== 'down') {
-        paginationDirection.current = 'up';
-        setAutoRowsPerPage(autoRowsPerPage + 1);
-        setPaginationAttempts(c => c + 1);
-      }
-      // Évite la variable inutilisée fitRows quand on branche ici.
-      void fitRows;
+            const tbodyHeight = tbody.getBoundingClientRect().height;
+            const avgRowHeight = tbodyHeight / rows.length;
+            if (avgRowHeight <= 0) return;
+            const pageHeight = firstPage.clientHeight;
+            const scrollHeight = firstPage.scrollHeight;
+            // Non-tbody (titre + thead + footer + paddings + spacer-collapsed).
+            // En cas d'overflow le spacer fait 0 ; sans overflow il remplit.
+            const nonBodyHeight = scrollHeight - tbodyHeight;
+            const availableForBody = pageHeight - nonBodyHeight;
+            if (availableForBody <= 0) return;
+
+            const fitRows = Math.max(1, Math.floor(availableForBody / avgRowHeight));
+
+            if (m.overflowMm > 0) {
+              // Encore en débordement → réduire.
+              if (paginationDirection.current === 'up') {
+                // On venait d'incrémenter, ça déborde → revenir en arrière + stop.
+                if (autoRowsPerPage && autoRowsPerPage > 1) {
+                  setAutoRowsPerPage(autoRowsPerPage - 1);
+                }
+                setPaginationAttempts(MAX_PAGINATION_ATTEMPTS);
+                return;
+              }
+              paginationDirection.current = 'down';
+              if (autoRowsPerPage === null) {
+                // 1re passe : mesure DOM précise. On clamp à N-1 pour
+                // garantir qu'il y a effectivement chunking (sinon
+                // chunkSize >= N → pas de pagination → boucle infinie).
+                const target = Math.min(fitRows, N - 1);
+                setAutoRowsPerPage(Math.max(1, target));
+              } else if (autoRowsPerPage > 1) {
+                setAutoRowsPerPage(autoRowsPerPage - 1);
+              }
+              setPaginationAttempts(c => c + 1);
+            } else if (autoRowsPerPage !== null) {
+              // Pas d'overflow → reste-t-il de la place ? Mesure du spacer.
+              const spacer = firstPage.querySelector<HTMLElement>('.tab-spacer');
+              const spacerHeight = spacer ? spacer.getBoundingClientRect().height : 0;
+              if (spacerHeight > avgRowHeight && paginationDirection.current !== 'down') {
+                paginationDirection.current = 'up';
+                setAutoRowsPerPage(autoRowsPerPage + 1);
+                setPaginationAttempts(c => c + 1);
+              }
+            }
+            // Cas autoRowsPerPage === null && pas d'overflow : tout tient
+            // sur 1 page, rien à faire.
+            void fitRows;
+          });
+        });
+      } catch { /* noop */ }
     }
-    // Si autoRowsPerPage === null et pas d'overflow → tout tient sur une page,
-    // rien à faire (le state reste null).
-  }, [overflow, orientation, orderedProjets.length, autoRowsPerPage, paginationAttempts, setAutoRowsPerPage, setPaginationAttempts]);
+
+    function onLoad() { measureAndPaginate(); }
+    iframe.addEventListener('load', onLoad);
+    // On NE PAS appeler measureAndPaginate() immédiatement : sur changement
+    // de srcDoc, l'iframe est encore en "loading" et son contentDocument
+    // reflète l'ancien DOM. Le check `readyState === 'complete'` est
+    // également piégé car il peut renvoyer true pour l'ancienne srcDoc juste
+    // avant que la nouvelle ne commence à charger. Seul l'event `load`
+    // garantit qu'on mesure le DOM correspondant au state React courant.
+    return () => { cancelled = true; iframe.removeEventListener('load', onLoad); };
+  }, [html, orientation, orderedProjets.length, autoRowsPerPage, paginationAttempts, setAutoRowsPerPage, setPaginationAttempts]);
 
   // L'overflow visuel n'est "réel" que si l'auto-pagination n'a pas réussi
   // (paginationAttempts >= MAX). Sinon on est en cours de convergence et le
