@@ -46,11 +46,14 @@ export interface PublicProjet {
  * Calcule l'URL publique d'une fiche sur assemblage.net.
  * - Si `urlWordpress` existe et n'est PAS un draft (`?p=<id>`) → on l'utilise
  *   tel quel (URL faisant autorité, écrit par WP lors d'une publication).
- * - Sinon → on construit `${wpRoot}/${slug}/` depuis `WP_BASE_URL`. Best
- *   effort : si la fiche n'a jamais été publiée côté WP, l'URL 404. Quand
- *   le slug WP a été suffixé (collision `-2`, `-3`…), la version `urlWordpress`
- *   sera correcte au prochain publish ou écrasement manuel côté Airtable.
- * - Retourne undefined si on n'a ni l'un ni l'autre (env vide).
+ * - Sinon → on construit `${wpRoot}/${slug}/` depuis `WP_BASE_URL`. C'est
+ *   l'URL stable du post de production : update-prod envoie `slug: projet.slug`
+ *   sur le post existant, qui a déjà ce slug, donc WP ne le change pas
+ *   (seuls les NOUVEAUX drafts en collision se font suffixer `-2`, `-3`…
+ *   et ces drafts ne sont jamais ce qu'on veut linker depuis le public).
+ *   Si la fiche n'a JAMAIS été publiée côté WP, l'URL construite 404 —
+ *   c'est attendu (rien à linker).
+ * - Retourne undefined si l'env WP est vide.
  */
 function deducePublicUrl(p: Projet): string | undefined {
   // 1) URL stockée et qui ressemble à un permalink (pas un draft)
