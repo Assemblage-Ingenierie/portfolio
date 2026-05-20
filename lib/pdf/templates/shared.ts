@@ -377,7 +377,7 @@ export function metaGridHtml(projet: Projet, options?: { isDev?: boolean }): str
     // Bandeau Dev — ordre fixé par le métier :
     // MOA · Bailleur · Architecte · Budget · Programme · Mission AI · BET associés.
     // Seuls les champs renseignés apparaissent.
-    if (projet.moa)         items.push({ label: "Maître d'ouvrage", value: projet.moa });
+    if (projet.moa)         items.push({ label: 'MOA',              value: projet.moa });
     if (projet.bailleur)    items.push({ label: 'Bailleur',         value: projet.bailleur });
     if (projet.architecte)  items.push({ label: 'Architecte',       value: projet.architecte });
     if (projet.budgetHT)    items.push({ label: 'Budget',           value: projet.budgetHT });
@@ -387,7 +387,7 @@ export function metaGridHtml(projet: Projet, options?: { isDev?: boolean }): str
   } else {
     // Bandeau Str-Env — ordre historique + BET associés inséré juste après
     // Architecte (même nature : linked record Sync CRM "acteurs du projet").
-    if (projet.moa)         items.push({ label: "Maître d'ouvrage", value: projet.moa });
+    if (projet.moa)         items.push({ label: 'MOA',              value: projet.moa });
     if (projet.architecte)  items.push({ label: 'Architecte',       value: projet.architecte });
     if (projet.betAssocies) items.push({ label: 'BET associés',     value: projet.betAssocies });
     if (projet.budgetHT)    items.push({ label: 'Budget',           value: projet.budgetHT });

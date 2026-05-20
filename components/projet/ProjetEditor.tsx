@@ -257,7 +257,7 @@ export default function ProjetEditor({ projet }: Props) {
         <div style={SECTION}>
           <div style={STITLE}>Intervenants</div>
           <div style={GRID2}>
-            <div><label style={LABEL}>Maître d&apos;ouvrage</label><input value={moa} onChange={e => setMoa(e.target.value)} style={INPUT} /></div>
+            <div><label style={LABEL}>MOA</label><input value={moa} onChange={e => setMoa(e.target.value)} style={INPUT} /></div>
             <div><label style={LABEL}>Mission AI</label><input value={missionAi} onChange={e => setMissionAi(e.target.value)} style={INPUT} /></div>
             <div><label style={LABEL}>Mandataire</label><input value={mandataire} onChange={e => setMandataire(e.target.value)} style={INPUT} /></div>
             <div><label style={LABEL}>BET associés</label><input value={betAssocies} onChange={e => setBetAssocies(e.target.value)} style={INPUT} /></div>
