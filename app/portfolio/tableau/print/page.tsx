@@ -15,9 +15,14 @@ import type { Projet } from '@/types/projet';
 export default async function TableauPrintPage({
   searchParams,
 }: {
-  searchParams: Promise<{ items?: string; fields?: string; orient?: string; mode?: string }>;
+  searchParams: Promise<{
+    items?: string; fields?: string; orient?: string; mode?: string;
+    cln?: string;  // champ libre — nom de la colonne
+    clv?: string;  // champ libre — JSON { slug: description }
+    rpp?: string;  // rows per page (auto-pagination paysage)
+  }>;
 }) {
-  const { items: rawItems, fields: rawFields, orient: rawOrient, mode: rawMode } = await searchParams;
+  const { items: rawItems, fields: rawFields, orient: rawOrient, mode: rawMode, cln: rawCln, clv: rawClv, rpp: rawRpp } = await searchParams;
 
   const slugs = (rawItems ?? '')
     .split(',')
@@ -35,11 +40,36 @@ export default async function TableauPrintPage({
 
   const orientation: TableauOrientation = rawOrient === 'portrait' ? 'portrait' : 'paysage';
 
+  // Champ libre : nom + valeurs par slug (JSON URL-encodé côté client).
+  const champLibreNom = typeof rawCln === 'string' && rawCln.trim() ? rawCln : undefined;
+  let champLibreValues: Record<string, string> | undefined;
+  if (rawClv) {
+    try {
+      const parsed: unknown = JSON.parse(rawClv);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        // Sanitise : on ne garde que les paires { slug-valide: string }.
+        const safe: Record<string, string> = {};
+        for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
+          if (/^[a-zA-Z0-9_-]+$/.test(k) && typeof v === 'string') safe[k] = v;
+        }
+        if (Object.keys(safe).length > 0) champLibreValues = safe;
+      }
+    } catch { /* JSON invalide → on ignore */ }
+  }
+
+  const rowsPerPageParsed = rawRpp ? Number(rawRpp) : NaN;
+  const rowsPerPage = Number.isFinite(rowsPerPageParsed) && rowsPerPageParsed > 0
+    ? Math.floor(rowsPerPageParsed)
+    : undefined;
+
   const projetsLoaded = await Promise.all(slugs.map(s => getProjet(s)));
   const projets = projetsLoaded.filter((p): p is Projet => Boolean(p));
   if (projets.length === 0) notFound();
 
-  const bundle = renderTableau({ projets, fieldKeys: fields, orientation, mode });
+  const bundle = renderTableau({
+    projets, fieldKeys: fields, orientation, mode,
+    champLibreNom, champLibreValues, rowsPerPage,
+  });
 
   const pageWidthMm = orientation === 'paysage' ? 297 : 210;
   const pageHeightMm = orientation === 'paysage' ? 210 : 297;

@@ -33,9 +33,25 @@ export const TABLEAU_FIELDS: TableauFieldDef[] = [
   { key: 'bet',          label: 'BET associés',      getValue: (p) => p.betAssocies },
   { key: 'bailleur',     label: 'Bailleur',          getValue: (p) => p.bailleur },
   { key: 'mission',      label: 'Mission AI',        getValue: (p) => p.missionAi },
-  { key: 'programme',    label: 'Programme',         getValue: (p) => p.programmePrincipal ?? p.programmeSecondaire },
+  // Programme = multi-select Airtable "Programmes principaux" (fldKNKtsZNpvmf695).
+  // Toutes les valeurs jointes — fallback sur programmePrincipal puis Secondaire
+  // pour les anciens records.
+  { key: 'programme',    label: 'Programme',         getValue: (p) =>
+      (p.programmesPrincipaux && p.programmesPrincipaux.length > 0)
+        ? p.programmesPrincipaux.join(', ')
+        : (p.programmePrincipal ?? p.programmeSecondaire) },
   { key: 'surface',      label: 'Surface',           getValue: (p) => p.surface ? `${p.surface.toLocaleString('fr-FR')} m²` : undefined },
   { key: 'budget',       label: 'Budget',            getValue: (p) => p.budgetHT },
+  // Nouveaux champs cochables (par défaut désactivés sur les 2 modes).
+  { key: 'statut',       label: 'Statut',            getValue: (p) =>
+      (p.statutValues && p.statutValues.length > 0) ? p.statutValues.join(', ') : p.statut },
+  { key: 'materiaux',    label: 'Matériaux',         getValue: (p) =>
+      (p.materiaux && p.materiaux.length > 0) ? p.materiaux.join(', ') : undefined },
+  { key: 'certification', label: 'Certification',    getValue: (p) =>
+      (p.certifications && p.certifications.length > 0) ? p.certifications.join(', ') : undefined },
+  // Champ libre — placeholder. Le label et la valeur sont injectés à la
+  // volée par renderTableau quand `champLibreNom` est défini dans les options.
+  { key: 'champLibre',   label: 'Champ libre',       getValue: () => undefined },
 ];
 
 export const TABLEAU_FIELD_KEYS = TABLEAU_FIELDS.map((f) => f.key);
@@ -44,8 +60,10 @@ export const TABLEAU_FIELD_KEYS = TABLEAU_FIELDS.map((f) => f.key);
  *  cet ordre — d'où le placement de "Lieu" juste avant "Année" même si
  *  l'utilisateur l'active dans un second temps. */
 export const TABLEAU_ORDER_BY_MODE: Record<TableauMode, string[]> = {
-  'Str-Env': ['nom', 'architecte', 'moa', 'mission', 'programme', 'budget', 'surface', 'lieu', 'annee'],
-  'Dev':     ['nom', 'moa', 'bailleur', 'architecte', 'programme', 'mission', 'budget', 'bet', 'lieu', 'annee'],
+  // Statut · Matériaux · Certification s'insèrent après Année. "champLibre"
+  // reste impérativement en dernière position (cf. demande utilisateur).
+  'Str-Env': ['nom', 'architecte', 'moa', 'mission', 'programme', 'budget', 'surface', 'lieu', 'annee', 'statut', 'materiaux', 'certification', 'champLibre'],
+  'Dev':     ['nom', 'moa', 'bailleur', 'architecte', 'programme', 'mission', 'budget', 'bet', 'lieu', 'annee', 'statut', 'materiaux', 'certification', 'champLibre'],
 };
 
 /** Colonnes activées par défaut pour chaque mode. "Lieu" est dans le
@@ -67,6 +85,16 @@ export interface RenderTableauOptions {
   orientation: TableauOrientation;
   mode?: TableauMode;
   title?: string;
+  /** Nom de la colonne "Champ libre" (dernière colonne). Si défini ET que
+   *  'champLibre' est dans fieldKeys, le label de la colonne devient ce nom
+   *  et les valeurs sont prises dans `champLibreValues`. */
+  champLibreNom?: string;
+  /** Map slug → description du champ libre pour chaque référence. */
+  champLibreValues?: Record<string, string>;
+  /** Si défini et inférieur au nombre de projets, le tableau est paginé en
+   *  plusieurs `.page` A4 contenant chacune au plus `rowsPerPage` lignes.
+   *  Header de colonnes + footer logo/count sont répétés sur chaque page. */
+  rowsPerPage?: number;
 }
 
 export function renderTableau({
@@ -75,6 +103,9 @@ export function renderTableau({
   orientation,
   mode = 'Str-Env',
   title = 'Tableau de références',
+  champLibreNom,
+  champLibreValues,
+  rowsPerPage,
 }: RenderTableauOptions): { body: string; css: string } {
   // Largeur / hauteur de la page en mm selon orientation.
   const pageWidthMm = orientation === 'paysage' ? 297 : 210;
@@ -87,32 +118,60 @@ export function renderTableau({
   const fieldByKey = new Map(TABLEAU_FIELDS.map((f) => [f.key, f]));
   const fields = order
     .filter((k) => selected.has(k))
-    .map((k) => fieldByKey.get(k))
+    .map((k) => {
+      const f = fieldByKey.get(k);
+      if (!f) return undefined;
+      // Override pour la colonne champ libre : label = nom utilisateur,
+      // valeur = description par slug.
+      if (k === 'champLibre' && champLibreNom) {
+        return {
+          ...f,
+          label: champLibreNom,
+          getValue: (p: Projet) => champLibreValues?.[p.slug],
+        };
+      }
+      return f;
+    })
     .filter((f): f is TableauFieldDef => Boolean(f));
 
-  // Header de tableau + lignes de données.
+  // Header de tableau (répété sur chaque page).
   const head = `<thead><tr>${fields.map((f) =>
     `<th>${esc(f.label)}</th>`
   ).join('')}</tr></thead>`;
 
-  const body = `<tbody>${projets.map((p) =>
-    `<tr>${fields.map((f) => {
-      const v = f.getValue(p);
-      return `<td>${v ? esc(v) : '<span class="tab-empty">—</span>'}</td>`;
-    }).join('')}</tr>`
-  ).join('')}</tbody>`;
+  // Découpage en pages. Si rowsPerPage non défini ou > total, une seule page.
+  const chunkSize = (rowsPerPage && rowsPerPage > 0 && rowsPerPage < projets.length)
+    ? rowsPerPage
+    : projets.length;
+  const pages: Projet[][] = [];
+  for (let i = 0; i < projets.length; i += chunkSize) {
+    pages.push(projets.slice(i, i + chunkSize));
+  }
+  if (pages.length === 0) pages.push([]);
 
   const titleHtml = title ? `<h1 class="tab-title">${esc(title)}</h1>` : '';
+  const totalCount = projets.length;
 
-  const html = `<article class="page tab-page" data-height-mm="${pageHeightMm}">
-    ${titleHtml}
-    <table class="tab-grid">${head}${body}</table>
-    <div class="tab-spacer"></div>
-    <footer class="tab-footer">
-      <img class="tab-footer-logo" src="${LOGO_URL}" alt="Assemblage ingénierie" />
-      <span>${projets.length} référence${projets.length > 1 ? 's' : ''}</span>
-    </footer>
-  </article>`;
+  const renderOnePage = (pageProjets: Projet[]) => {
+    const tbody = `<tbody>${pageProjets.map((p) =>
+      `<tr>${fields.map((f) => {
+        const v = f.getValue(p);
+        return `<td>${v ? esc(v) : '<span class="tab-empty">—</span>'}</td>`;
+      }).join('')}</tr>`
+    ).join('')}</tbody>`;
+
+    return `<article class="page tab-page" data-height-mm="${pageHeightMm}">
+      ${titleHtml}
+      <table class="tab-grid">${head}${tbody}</table>
+      <div class="tab-spacer"></div>
+      <footer class="tab-footer">
+        <img class="tab-footer-logo" src="${LOGO_URL}" alt="Assemblage ingénierie" />
+        <span>${totalCount} référence${totalCount > 1 ? 's' : ''}</span>
+      </footer>
+    </article>`;
+  };
+
+  const html = pages.map(renderOnePage).join('\n');
 
   const css = `
     /* Override @page pour cet export : taille pilotée par orientation.
