@@ -336,6 +336,17 @@ export default function PublicPortfolioTable() {
               <div style={{ padding: 16, background: '#F9E1E3', color: '#E30513', borderRadius: 2, marginBottom: 16 }}>{error}</div>
             )}
 
+            {/* Indication sur la cliquabilité des noms de projet — placée
+                après le bandeau des filtres et avant la table. */}
+            <p style={{
+              fontSize: '10pt',
+              color: 'var(--ai-noir70, #5A6068)',
+              fontStyle: 'italic',
+              margin: '0 0 16px',
+            }}>
+              Cliquez sur le nom d&apos;un projet pour être redirigé vers sa fiche de référence.
+            </p>
+
             <ProjetTable
               mode={currentMode}
               rows={paged}
@@ -437,7 +448,27 @@ function columnsFor(mode: ColMode): ColumnDef[] {
         {p.photoCouverture
           ? <div style={{ width: 48, height: 36, backgroundImage: `url(${p.photoCouverture.url})`, backgroundSize: 'cover', backgroundPosition: 'center', borderRadius: 1, flexShrink: 0 }} />
           : <div style={{ width: 48, height: 36, background: 'var(--ai-gris, #DFE4E8)', borderRadius: 1, flexShrink: 0 }} />}
-        <span style={{ fontFamily: 'var(--serif)', fontSize: '10pt', color: 'var(--ai-noir, #30323E)' }}>{p.nom}</span>
+        {/* Lien vers la fiche publiée sur assemblage.net. `publicUrl` est dérivé
+            côté serveur (voir deducePublicUrl dans /api/public/portfolio).
+            Quand undefined (env WP non config ou impossible à dériver) on
+            retombe sur du texte simple. */}
+        {p.publicUrl ? (
+          <a
+            href={p.publicUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              fontFamily: 'var(--serif)',
+              fontSize: '10pt',
+              color: 'var(--ai-noir, #30323E)',
+              textDecoration: 'none',
+            }}
+          >
+            {p.nom}
+          </a>
+        ) : (
+          <span style={{ fontFamily: 'var(--serif)', fontSize: '10pt', color: 'var(--ai-noir, #30323E)' }}>{p.nom}</span>
+        )}
       </div>
     ),
   };

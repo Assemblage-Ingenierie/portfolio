@@ -37,6 +37,35 @@ export interface PublicProjet {
   budgetHT?: string;
   certifications?: string[];
   photoCouverture?: { url: string; width?: number; height?: number };
+  /** URL publique de la fiche sur assemblage.net (permalink WordPress).
+   *  Computed côté serveur — voir `deducePublicUrl`. */
+  publicUrl?: string;
+}
+
+/**
+ * Calcule l'URL publique d'une fiche sur assemblage.net.
+ * - Si `urlWordpress` existe et n'est PAS un draft (`?p=<id>`) → on l'utilise
+ *   tel quel (URL faisant autorité, écrit par WP lors d'une publication).
+ * - Sinon → on construit `${wpRoot}/${slug}/` depuis `WP_BASE_URL`. C'est
+ *   l'URL stable du post de production : update-prod envoie `slug: projet.slug`
+ *   sur le post existant, qui a déjà ce slug, donc WP ne le change pas
+ *   (seuls les NOUVEAUX drafts en collision se font suffixer `-2`, `-3`…
+ *   et ces drafts ne sont jamais ce qu'on veut linker depuis le public).
+ *   Si la fiche n'a JAMAIS été publiée côté WP, l'URL construite 404 —
+ *   c'est attendu (rien à linker).
+ * - Retourne undefined si l'env WP est vide.
+ */
+function deducePublicUrl(p: Projet): string | undefined {
+  // 1) URL stockée et qui ressemble à un permalink (pas un draft)
+  if (p.urlWordpress && !p.urlWordpress.includes('?p=')) {
+    return p.urlWordpress;
+  }
+  // 2) Fallback : construit depuis le slug + racine WP
+  const wpRoot = (process.env.WP_BASE_URL ?? '')
+    .replace(/\/$/, '')
+    .replace(/\/wp-json\/wp\/v2$/, '');
+  if (!wpRoot || !p.slug) return undefined;
+  return `${wpRoot}/${p.slug}/`;
 }
 
 function sanitize(p: Projet): PublicProjet {
@@ -65,6 +94,7 @@ function sanitize(p: Projet): PublicProjet {
     photoCouverture: p.photoCouverture
       ? { url: p.photoCouverture.url, width: p.photoCouverture.width, height: p.photoCouverture.height }
       : undefined,
+    publicUrl: deducePublicUrl(p),
   };
 }
 
