@@ -3,6 +3,7 @@
 import { useMemo, useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import type { Projet, Statut } from '@/types/projet';
+import { RangeSlider } from './RangeSlider';
 import { TABLEAU_FIELDS, TABLEAU_DEFAULTS_BY_MODE, TABLEAU_ORDER_BY_MODE, renderTableau, type TableauOrientation, type TableauMode } from '@/lib/pdf/tableauTemplate';
 import { SHARED_CSS, FONTS_LINK } from '@/lib/pdf/templates/shared';
 import { measureOverflow, type OverflowMeasure } from '@/lib/utils/measureOverflow';
@@ -10,6 +11,11 @@ import { measureOverflow, type OverflowMeasure } from '@/lib/utils/measureOverfl
 interface Props { projets: Projet[]; }
 
 type Step = 'select' | 'order' | 'preview';
+
+const chipLabel: React.CSSProperties = {
+  fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em',
+  textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 6,
+};
 
 const STATUT_BG: Record<string, string> = {
   'En étude': '#DFE4E8',
@@ -68,12 +74,28 @@ export default function TableauBuilder({ projets }: Props) {
     projets.forEach(p => (p.materiaux ?? []).forEach(v => { if (v) set.add(v); }));
     return [...set].sort((a, b) => a.localeCompare(b, 'fr'));
   }, [projets]);
+  // Type Neuf/Réhab : valeurs depuis le multi-select Airtable.
+  const rehabNeufOptions = useMemo(() => {
+    const set = new Set<string>();
+    projets.forEach(p => (p.rehabNeufValues ?? []).forEach(v => { if (v) set.add(v); }));
+    return [...set].sort((a, b) => a.localeCompare(b, 'fr'));
+  }, [projets]);
+  // Programmes principaux disponibles.
+  const programmes = useMemo(() => {
+    const set = new Set<string>();
+    projets.forEach(p => {
+      const list = p.programmesPrincipaux ?? (p.programmePrincipal ? [p.programmePrincipal] : []);
+      list.forEach(v => { if (v) set.add(v); });
+    });
+    return [...set].sort((a, b) => a.localeCompare(b, 'fr'));
+  }, [projets]);
 
   const [search, setSearch] = useState('');
   const [selectedPoles, setSelectedPoles] = useState<Set<string>>(new Set());
   const [selectedStatuts, setSelectedStatuts] = useState<Set<Statut>>(new Set());
-  // Matériaux : multi-sélection AND. Set vide = "Tous".
   const [selectedMateriaux, setSelectedMateriaux] = useState<Set<string>>(new Set());
+  const [selectedRehabNeuf, setSelectedRehabNeuf] = useState<Set<string>>(new Set());
+  const [selectedProgrammes, setSelectedProgrammes] = useState<Set<string>>(new Set());
   const [yearMin, setYearMin] = useState(years.min);
   const [yearMax, setYearMax] = useState(years.max);
 
@@ -98,6 +120,20 @@ export default function TableauBuilder({ projets }: Props) {
       return next;
     });
   };
+  const toggleRehabNeuf = (v: string) => {
+    setSelectedRehabNeuf(prev => {
+      const next = new Set(prev);
+      if (next.has(v)) next.delete(v); else next.add(v);
+      return next;
+    });
+  };
+  const toggleProgramme = (v: string) => {
+    setSelectedProgrammes(prev => {
+      const next = new Set(prev);
+      if (next.has(v)) next.delete(v); else next.add(v);
+      return next;
+    });
+  };
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -117,7 +153,19 @@ export default function TableauBuilder({ projets }: Props) {
         const pp = new Set((p.vignettePoles ?? []).map(v => v.toUpperCase()));
         for (const code of selectedPoles) if (!pp.has(code)) return false;
       }
-      // Matériaux : AND — le projet doit avoir TOUS les matériaux cochés.
+      // Type Neuf/Réhab : AND.
+      if (selectedRehabNeuf.size > 0) {
+        const vals = (p.rehabNeufValues ?? []).map(v => v.toLowerCase());
+        for (const sel of selectedRehabNeuf) {
+          if (!vals.includes(sel.toLowerCase())) return false;
+        }
+      }
+      // Programmes : OR — au moins un programme du projet doit être sélectionné.
+      if (selectedProgrammes.size > 0) {
+        const projetProgs = p.programmesPrincipaux ?? (p.programmePrincipal ? [p.programmePrincipal] : []);
+        if (!projetProgs.some(v => selectedProgrammes.has(v))) return false;
+      }
+      // Matériaux : AND.
       if (selectedMateriaux.size > 0) {
         const vals = new Set((p.materiaux ?? []).map(v => v.toLowerCase()));
         for (const sel of selectedMateriaux) {
@@ -127,7 +175,7 @@ export default function TableauBuilder({ projets }: Props) {
       if (p.anneeLivraison && (p.anneeLivraison < yearMin || p.anneeLivraison > yearMax)) return false;
       return true;
     });
-  }, [projets, search, selectedStatuts, selectedPoles, selectedMateriaux, yearMin, yearMax]);
+  }, [projets, search, selectedStatuts, selectedPoles, selectedRehabNeuf, selectedProgrammes, selectedMateriaux, yearMin, yearMax]);
 
   // ----- Sélection -----
   function toggleSelect(slug: string) {
@@ -269,6 +317,8 @@ export default function TableauBuilder({ projets }: Props) {
             search={search} setSearch={setSearch}
             poles={poles} selectedPoles={selectedPoles} togglePole={togglePole} setSelectedPoles={setSelectedPoles}
             allStatuts={allStatuts} selectedStatuts={selectedStatuts} toggleStatut={toggleStatut}
+            rehabNeufOptions={rehabNeufOptions} selectedRehabNeuf={selectedRehabNeuf} toggleRehabNeuf={toggleRehabNeuf} setSelectedRehabNeuf={setSelectedRehabNeuf}
+            programmes={programmes} selectedProgrammes={selectedProgrammes} toggleProgramme={toggleProgramme} setSelectedProgrammes={setSelectedProgrammes}
             materiauxOptions={materiauxOptions} selectedMateriaux={selectedMateriaux} toggleMateriaux={toggleMateriaux} setSelectedMateriaux={setSelectedMateriaux}
             yearMin={yearMin} yearMax={yearMax} setYearMin={setYearMin} setYearMax={setYearMax} years={years}
             btn={btn}
@@ -371,6 +421,14 @@ interface SelectStepProps {
   allStatuts: Statut[];
   selectedStatuts: Set<Statut>;
   toggleStatut: (s: Statut) => void;
+  rehabNeufOptions: string[];
+  selectedRehabNeuf: Set<string>;
+  toggleRehabNeuf: (v: string) => void;
+  setSelectedRehabNeuf: (s: Set<string>) => void;
+  programmes: string[];
+  selectedProgrammes: Set<string>;
+  toggleProgramme: (v: string) => void;
+  setSelectedProgrammes: (s: Set<string>) => void;
   materiauxOptions: string[];
   selectedMateriaux: Set<string>;
   toggleMateriaux: (v: string) => void;
@@ -393,9 +451,13 @@ function SelectStep(p: SelectStepProps) {
           border: '1px solid #DFE4E8', borderRadius: 2, outline: 'none', background: 'white', marginBottom: 16,
         }}
       />
+      {/* Filtres — layout aligné sur la page publique :
+          Row 1 : Pôle · Statut · Type
+          Row 2 : Programme (pleine largeur)
+          Row 3 : Matériaux (gauche, flex) · Année slider (droite) */}
       <div style={{ background: 'white', border: '1px solid #DFE4E8', borderRadius: 2, padding: '14px 16px', marginBottom: 20, display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'flex-start' }}>
         <div>
-          <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 6 }}>Pôle</div>
+          <div style={chipLabel}>Pôle</div>
           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
             <button onClick={() => p.setSelectedPoles(new Set())} style={p.btn(p.selectedPoles.size === 0)}>Tous</button>
             {p.poles.map(c => (
@@ -404,7 +466,7 @@ function SelectStep(p: SelectStepProps) {
           </div>
         </div>
         <div>
-          <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 6 }}>Statut</div>
+          <div style={chipLabel}>Statut</div>
           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
             {p.allStatuts.map(s => (
               <button key={s} onClick={() => p.toggleStatut(s)} style={{
@@ -416,25 +478,54 @@ function SelectStep(p: SelectStepProps) {
             ))}
           </div>
         </div>
-        {p.years.min < p.years.max && (
+
+        {p.rehabNeufOptions.length > 0 && (
           <div>
-            <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 6 }}>Année</div>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: '9pt' }}>
-              <input type="number" value={p.yearMin} onChange={e => p.setYearMin(Math.min(Number(e.target.value), p.yearMax))} style={{ width: 60, padding: '4px 6px', border: '1px solid #DFE4E8', borderRadius: 2 }} />
-              <span style={{ color: 'var(--ai-noir70)' }}>–</span>
-              <input type="number" value={p.yearMax} onChange={e => p.setYearMax(Math.max(Number(e.target.value), p.yearMin))} style={{ width: 60, padding: '4px 6px', border: '1px solid #DFE4E8', borderRadius: 2 }} />
+            <div style={chipLabel}>Type</div>
+            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+              <button onClick={() => p.setSelectedRehabNeuf(new Set())} style={p.btn(p.selectedRehabNeuf.size === 0)}>Tous</button>
+              {p.rehabNeufOptions.map(v => (
+                <button key={v} onClick={() => p.toggleRehabNeuf(v)} style={p.btn(p.selectedRehabNeuf.has(v))}>{v}</button>
+              ))}
             </div>
           </div>
         )}
-        {p.materiauxOptions.length > 0 && (
+
+        {p.programmes.length > 0 && (
           <div style={{ flex: '1 1 100%' }}>
-            <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 6 }}>Matériaux</div>
+            <div style={chipLabel}>Programme</div>
             <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-              <button onClick={() => p.setSelectedMateriaux(new Set())} style={p.btn(p.selectedMateriaux.size === 0)}>Tous</button>
-              {p.materiauxOptions.map(v => (
-                <button key={v} onClick={() => p.toggleMateriaux(v)} style={p.btn(p.selectedMateriaux.has(v))}>{v}</button>
+              <button onClick={() => p.setSelectedProgrammes(new Set())} style={p.btn(p.selectedProgrammes.size === 0)}>Tous</button>
+              {p.programmes.map(v => (
+                <button key={v} onClick={() => p.toggleProgramme(v)} style={p.btn(p.selectedProgrammes.has(v))}>{v}</button>
               ))}
             </div>
+          </div>
+        )}
+
+        {(p.materiauxOptions.length > 0 || p.years.min < p.years.max) && (
+          <div style={{ flex: '1 1 100%', display: 'flex', gap: 20, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+            {p.materiauxOptions.length > 0 && (
+              <div style={{ flex: '1 1 auto', minWidth: 240 }}>
+                <div style={chipLabel}>Matériaux</div>
+                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                  <button onClick={() => p.setSelectedMateriaux(new Set())} style={p.btn(p.selectedMateriaux.size === 0)}>Tous</button>
+                  {p.materiauxOptions.map(v => (
+                    <button key={v} onClick={() => p.toggleMateriaux(v)} style={p.btn(p.selectedMateriaux.has(v))}>{v}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {p.years.min < p.years.max && (
+              <div style={{ flex: '0 0 auto', marginLeft: 'auto' }}>
+                <div style={chipLabel}>Année de livraison</div>
+                <RangeSlider
+                  min={p.years.min} max={p.years.max}
+                  valueMin={p.yearMin} valueMax={p.yearMax}
+                  onChange={(mn, mx) => { p.setYearMin(mn); p.setYearMax(mx); }}
+                />
+              </div>
+            )}
           </div>
         )}
       </div>
