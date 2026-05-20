@@ -5,9 +5,11 @@ import Link from 'next/link';
 import type { Projet, Statut, TemplateChoice } from '@/types/projet';
 import { TEMPLATE_OPTIONS } from '@/types/projet';
 import { autoSelectTemplate } from '@/lib/pdf/selectTemplate';
+import { RangeSlider } from './RangeSlider';
 
 const STATUT_BG: Record<string, string> = {
   'En étude': '#DFE4E8',
+  'Concours': '#F0E8F5',
   'En chantier': '#F9E1E3',
   'Livré': '#d4edda',
   'Abandonné': '#e2e3e5',
@@ -16,6 +18,7 @@ const STATUT_BG: Record<string, string> = {
 };
 const STATUT_COLOR: Record<string, string> = {
   'En étude': '#30323E',
+  'Concours': '#6B4F94',
   'En chantier': '#E30513',
   'Livré': '#155724',
   'Abandonné': '#6c757d',
@@ -56,6 +59,18 @@ export default function PortfolioBuilder({ projets }: Props) {
       return a.localeCompare(b);
     });
   }, [projets]);
+  // Matériaux : valeurs disponibles dans les projets (multi-select AND).
+  const materiauxOptions = useMemo(() => {
+    const set = new Set<string>();
+    projets.forEach(p => (p.materiaux ?? []).forEach(v => { if (v) set.add(v); }));
+    return [...set].sort((a, b) => a.localeCompare(b, 'fr'));
+  }, [projets]);
+  // Type Neuf/Réhab : multi-select AND, valeurs depuis le multi-select Airtable.
+  const rehabNeufOptions = useMemo(() => {
+    const set = new Set<string>();
+    projets.forEach(p => (p.rehabNeufValues ?? []).forEach(v => { if (v) set.add(v); }));
+    return [...set].sort((a, b) => a.localeCompare(b, 'fr'));
+  }, [projets]);
   const programmes = useMemo(() => {
     const set = new Set<string>();
     projets.forEach(p => {
@@ -64,15 +79,20 @@ export default function PortfolioBuilder({ projets }: Props) {
     });
     return [...set].sort((a, b) => a.localeCompare(b, 'fr'));
   }, [projets]);
-  const allStatuts: Statut[] = ['En étude', 'En chantier', 'Livré', 'Abandonné', 'En pause', 'En consultation'];
+  // Ordre demandé : Livré · Concours · En chantier · En pause · En étude · En consultation.
+  // "Abandonné" omis volontairement du filtre (reste dans le type pour compat).
+  const allStatuts: Statut[] = ['Livré', 'Concours', 'En chantier', 'En pause', 'En étude', 'En consultation'];
 
   const [search, setSearch] = useState('');
-  const [rehabNeuf, setRehabNeuf] = useState<'Tous' | 'Neuf' | 'Réhab'>('Tous');
+  // Type Neuf/Réhab : multi-sélection cumulable, AND. Set vide = "Tous".
+  const [selectedRehabNeuf, setSelectedRehabNeuf] = useState<Set<string>>(new Set());
   const [selectedStatuts, setSelectedStatuts] = useState<Set<Statut>>(new Set());
   // Pôles : multi-sélection cumulable, AND (intersection). Set vide = "Tous".
   const [selectedPoles, setSelectedPoles] = useState<Set<string>>(new Set());
   // Programmes : multi-sélection cumulable, OR. Set vide = "Tous".
   const [selectedProgrammes, setSelectedProgrammes] = useState<Set<string>>(new Set());
+  // Matériaux : multi-sélection cumulable, AND. Set vide = "Tous".
+  const [selectedMateriaux, setSelectedMateriaux] = useState<Set<string>>(new Set());
   const [yearMin, setYearMin] = useState(years.min);
   const [yearMax, setYearMax] = useState(years.max);
 
@@ -97,6 +117,20 @@ export default function PortfolioBuilder({ projets }: Props) {
       return next;
     });
   };
+  const toggleMateriaux = (v: string) => {
+    setSelectedMateriaux(prev => {
+      const next = new Set(prev);
+      if (next.has(v)) next.delete(v); else next.add(v);
+      return next;
+    });
+  };
+  const toggleRehabNeuf = (v: string) => {
+    setSelectedRehabNeuf(prev => {
+      const next = new Set(prev);
+      if (next.has(v)) next.delete(v); else next.add(v);
+      return next;
+    });
+  };
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -106,13 +140,20 @@ export default function PortfolioBuilder({ projets }: Props) {
         // Filtre par type — un champ Airtable non-string ferait crasher `.toLowerCase()`.
         if (!fields.some(v => typeof v === 'string' && v.toLowerCase().includes(q))) return false;
       }
-      if (rehabNeuf !== 'Tous') {
-        if (!p.rehabNeuf) return false;
-        const rn = p.rehabNeuf.toLowerCase();
-        if (rehabNeuf === 'Neuf' && !rn.includes('neuf')) return false;
-        if (rehabNeuf === 'Réhab' && !rn.includes('réhab') && !rn.includes('rehab')) return false;
+      // Type Neuf/Réhab : AND — le projet doit avoir TOUTES les valeurs cochées.
+      if (selectedRehabNeuf.size > 0) {
+        const vals = (p.rehabNeufValues ?? []).map(v => v.toLowerCase());
+        for (const sel of selectedRehabNeuf) {
+          if (!vals.includes(sel.toLowerCase())) return false;
+        }
       }
-      if (selectedStatuts.size > 0 && !selectedStatuts.has(p.statut)) return false;
+      // Statut : AND — le projet doit avoir TOUS les statuts cochés.
+      if (selectedStatuts.size > 0) {
+        const vals = new Set(p.statutValues ?? [p.statut]);
+        for (const s of selectedStatuts) {
+          if (!vals.has(s)) return false;
+        }
+      }
       if (selectedPoles.size > 0) {
         const projetPoles = new Set((p.vignettePoles ?? []).map(v => v.toUpperCase()));
         // AND : tous les pôles cochés doivent être présents sur le projet.
@@ -124,10 +165,17 @@ export default function PortfolioBuilder({ projets }: Props) {
         const projetProgs = p.programmesPrincipaux ?? (p.programmePrincipal ? [p.programmePrincipal] : []);
         if (!projetProgs.some(v => selectedProgrammes.has(v))) return false;
       }
+      // Matériaux : AND — le projet doit avoir TOUS les matériaux cochés.
+      if (selectedMateriaux.size > 0) {
+        const vals = new Set((p.materiaux ?? []).map(v => v.toLowerCase()));
+        for (const sel of selectedMateriaux) {
+          if (!vals.has(sel.toLowerCase())) return false;
+        }
+      }
       if (p.anneeLivraison && (p.anneeLivraison < yearMin || p.anneeLivraison > yearMax)) return false;
       return true;
     });
-  }, [projets, search, rehabNeuf, selectedStatuts, selectedPoles, selectedProgrammes, yearMin, yearMax]);
+  }, [projets, search, selectedRehabNeuf, selectedStatuts, selectedPoles, selectedProgrammes, selectedMateriaux, yearMin, yearMax]);
 
   // ----- Sélection -----
   function toggleSelect(p: Projet) {
@@ -214,6 +262,10 @@ export default function PortfolioBuilder({ projets }: Props) {
   }, [projets]);
 
   // ----- Styles -----
+  const chipLabel: React.CSSProperties = {
+    fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em',
+    textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 6,
+  };
   const btn = (active: boolean): React.CSSProperties => ({
     padding: '4px 12px', borderRadius: '2px', cursor: 'pointer',
     fontFamily: 'var(--sans)', fontSize: '8pt', fontWeight: 700,
@@ -261,10 +313,13 @@ export default function PortfolioBuilder({ projets }: Props) {
           }}
         />
 
-        {/* Filtres */}
+        {/* Filtres — layout aligné sur la page publique :
+            Row 1 : Pôle · Statut · Type
+            Row 2 : Programme (pleine largeur)
+            Row 3 : Matériaux (gauche, flex) · Année slider (droite) */}
         <div style={{ background: 'white', border: '1px solid #DFE4E8', borderRadius: '2px', padding: '14px 16px', marginBottom: 20, display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'flex-start' }}>
           <div>
-            <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 6 }}>Pôle</div>
+            <div style={chipLabel}>Pôle</div>
             <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
               <button onClick={() => setSelectedPoles(new Set())} style={btn(selectedPoles.size === 0)}>Tous</button>
               {poles.map(p => (
@@ -273,29 +328,8 @@ export default function PortfolioBuilder({ projets }: Props) {
             </div>
           </div>
 
-          {programmes.length > 0 && (
-            <div style={{ maxWidth: 520 }}>
-              <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 6 }}>Programme</div>
-              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                <button onClick={() => setSelectedProgrammes(new Set())} style={btn(selectedProgrammes.size === 0)}>Tous</button>
-                {programmes.map(p => (
-                  <button key={p} onClick={() => toggleProgramme(p)} style={btn(selectedProgrammes.has(p))}>{p}</button>
-                ))}
-              </div>
-            </div>
-          )}
-
           <div>
-            <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 6 }}>Type</div>
-            <div style={{ display: 'flex', gap: 4 }}>
-              {(['Tous', 'Neuf', 'Réhab'] as const).map(v => (
-                <button key={v} onClick={() => setRehabNeuf(v)} style={btn(rehabNeuf === v)}>{v}</button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 6 }}>Statut</div>
+            <div style={chipLabel}>Statut</div>
             <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
               {allStatuts.map(s => (
                 <button key={s} onClick={() => toggleStatut(s)} style={{
@@ -308,16 +342,57 @@ export default function PortfolioBuilder({ projets }: Props) {
             </div>
           </div>
 
-          {years.min < years.max && (
+          {rehabNeufOptions.length > 0 && (
             <div>
-              <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 6 }}>Année</div>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: '9pt' }}>
-                <input type="number" value={yearMin} onChange={e => setYearMin(Math.min(Number(e.target.value), yearMax))} style={{ width: 60, padding: '4px 6px', border: '1px solid #DFE4E8', borderRadius: 2 }} />
-                <span style={{ color: 'var(--ai-noir70)' }}>–</span>
-                <input type="number" value={yearMax} onChange={e => setYearMax(Math.max(Number(e.target.value), yearMin))} style={{ width: 60, padding: '4px 6px', border: '1px solid #DFE4E8', borderRadius: 2 }} />
+              <div style={chipLabel}>Type</div>
+              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                <button onClick={() => setSelectedRehabNeuf(new Set())} style={btn(selectedRehabNeuf.size === 0)}>Tous</button>
+                {rehabNeufOptions.map(v => (
+                  <button key={v} onClick={() => toggleRehabNeuf(v)} style={btn(selectedRehabNeuf.has(v))}>{v}</button>
+                ))}
               </div>
             </div>
           )}
+
+          {programmes.length > 0 && (
+            <div style={{ flex: '1 1 100%' }}>
+              <div style={chipLabel}>Programme</div>
+              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                <button onClick={() => setSelectedProgrammes(new Set())} style={btn(selectedProgrammes.size === 0)}>Tous</button>
+                {programmes.map(p => (
+                  <button key={p} onClick={() => toggleProgramme(p)} style={btn(selectedProgrammes.has(p))}>{p}</button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Matériaux (multi-select AND) + Année (slider) sur la même rangée. */}
+          {(materiauxOptions.length > 0 || years.min < years.max) && (
+            <div style={{ flex: '1 1 100%', display: 'flex', gap: 20, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+              {materiauxOptions.length > 0 && (
+                <div style={{ flex: '1 1 auto', minWidth: 240 }}>
+                  <div style={chipLabel}>Matériaux</div>
+                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                    <button onClick={() => setSelectedMateriaux(new Set())} style={btn(selectedMateriaux.size === 0)}>Tous</button>
+                    {materiauxOptions.map(v => (
+                      <button key={v} onClick={() => toggleMateriaux(v)} style={btn(selectedMateriaux.has(v))}>{v}</button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {years.min < years.max && (
+                <div style={{ flex: '0 0 auto', marginLeft: 'auto' }}>
+                  <div style={chipLabel}>Année de livraison</div>
+                  <RangeSlider
+                    min={years.min} max={years.max}
+                    valueMin={yearMin} valueMax={yearMax}
+                    onChange={(mn, mx) => { setYearMin(mn); setYearMax(mx); }}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
         </div>
 
         {/* Actions sélection groupée */}

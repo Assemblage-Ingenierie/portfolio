@@ -21,6 +21,16 @@ export const FIELD_VIGNETTE_POLE = 'fld1PZuYO8mz0sULA';
 // Prestation Assemblage (long text, rich text Markdown) — lu par field ID.
 // Affiché en bloc dédié dans le template "Dev" (titre + valeur rich text).
 export const FIELD_PRESTATION_ASSEMBLAGE = 'flddrMLBDxOc8r4lJ';
+// Rehab / Neuf (multi-select : "Neuf" | "Réhab") — lu par field ID pour
+// éviter toute dérive si la colonne est renommée côté Airtable.
+export const FIELD_REHAB_NEUF = 'fldyD7L9E7cGL26vH';
+// Matériaux (multi-select) — lu par field ID.
+export const FIELD_MATERIAUX = 'fldC4SW9n1H2PZ3MH';
+// Statut (multi-select : En étude / En chantier / Livré / Abandonné / En pause /
+// En consultation) — lu par field ID pour permettre le filtrage AND sur
+// plusieurs valeurs. Le champ historique 'État avancement' reste utilisé en
+// fallback pour le statut canonique (single value).
+export const FIELD_STATUT = 'fldxXNdE0uNaomeby';
 
 /**
  * Valeurs auxiliaires injectées dans le mapper.
@@ -36,6 +46,12 @@ export interface AuxValues {
   pole?: string;
   vignettePoles?: string[];
   prestationAssemblage?: string;
+  /** Valeurs brutes du multi-select "Rehab / Neuf" (field fldyD7L9E7cGL26vH). */
+  rehabNeufValues?: string[];
+  /** Valeurs brutes du multi-select "Matériaux" (field fldC4SW9n1H2PZ3MH). */
+  materiauxValues?: string[];
+  /** Valeurs brutes du multi-select "Statut" (field fldxXNdE0uNaomeby). */
+  statutValues?: string[];
   crmNames?: Map<string, string>;
 }
 
@@ -199,17 +215,37 @@ export function recordToProjet(record: any, aux?: AuxValues): Projet {
       return undefined;
     })(),
     departement: f['Département'] ?? undefined,
-    // Multi-select : on garde toutes les valeurs (joinables) pour distinguer
-    // "Rehab", "Neuf", et "Rehab et Neuf" — la vignette d'en-tête en a besoin.
+    prestationAssemblage: aux?.prestationAssemblage,
+    // Rehab / Neuf : prioritairement lu via aux (field ID), fallback nom de colonne.
     rehabNeuf: (() => {
+      const vals = aux?.rehabNeufValues;
+      if (vals) return vals.length > 0 ? vals.join(', ') : undefined;
       const raw = f['Rehab / Neuf'];
       if (Array.isArray(raw)) return raw.length > 0 ? raw.join(', ') : undefined;
       if (typeof raw === 'string' && raw.trim()) return raw;
       return undefined;
     })(),
-    prestationAssemblage: aux?.prestationAssemblage,
+    rehabNeufValues: (() => {
+      const vals = aux?.rehabNeufValues;
+      if (vals) return vals;
+      const raw = f['Rehab / Neuf'];
+      if (Array.isArray(raw)) return raw.map((s) => String(s).trim()).filter(Boolean);
+      if (typeof raw === 'string' && raw.trim()) return raw.split(/\s*,\s*/).filter(Boolean);
+      return [];
+    })(),
 
     statut: normalizeStatut(f['État avancement']),
+    // Statut multi-select (field ID FIELD_STATUT) : array de toutes les valeurs
+    // pour le filtre AND. Fallback sur `statut` canonique si l'aux n'est pas
+    // disponible (rétro-compat avec l'ancienne colonne single-select).
+    statutValues: (() => {
+      const vals = aux?.statutValues;
+      if (vals && vals.length > 0) {
+        // Dédoublonnage : plusieurs raw values peuvent normaliser vers le même Statut.
+        return [...new Set(vals.map((v) => normalizeStatut(v)))];
+      }
+      return [normalizeStatut(f['État avancement'])];
+    })(),
     template,
     visiblePortfolio: f['Visible portfolio'] ?? false,
 
@@ -217,7 +253,7 @@ export function recordToProjet(record: any, aux?: AuxValues): Projet {
     photosProjet,
 
     certifications,
-    materiaux: [],
+    materiaux: aux?.materiauxValues ?? [],
     motsCles,
     tagsSiteWeb,
 

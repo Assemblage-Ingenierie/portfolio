@@ -24,8 +24,15 @@ export interface PublicProjet {
   programmesPrincipaux?: string[];
   anneeLivraison?: number;
   statut: Projet['statut'];
+  /** Valeurs brutes du multi-select Statut (field fldxXNdE0uNaomeby) — utilisé
+   *  par le filtre AND côté client. */
+  statutValues?: Projet['statutValues'];
   vignettePoles?: string[];
   rehabNeuf?: string;
+  /** Multi-select brut (field fldyD7L9E7cGL26vH) — pour filtre AND côté client. */
+  rehabNeufValues?: string[];
+  /** Multi-select Matériaux (field fldC4SW9n1H2PZ3MH). */
+  materiaux?: string[];
   surface?: number;
   budgetHT?: string;
   certifications?: string[];
@@ -47,8 +54,11 @@ function sanitize(p: Projet): PublicProjet {
     programmesPrincipaux: p.programmesPrincipaux,
     anneeLivraison: p.anneeLivraison,
     statut: p.statut,
+    statutValues: p.statutValues,
     vignettePoles: p.vignettePoles,
     rehabNeuf: p.rehabNeuf,
+    rehabNeufValues: p.rehabNeufValues,
+    materiaux: p.materiaux,
     surface: p.surface,
     budgetHT: p.budgetHT,
     certifications: p.certifications,
@@ -92,7 +102,11 @@ export async function GET(req: NextRequest) {
       });
     }
     if (statuts.length) {
-      result = result.filter((p) => statuts.includes(p.statut));
+      // AND : un projet passe seulement s'il a TOUS les statuts demandés.
+      result = result.filter((p) => {
+        const set = new Set(p.statutValues ?? [p.statut]);
+        return statuts.every((s) => set.has(s as Projet['statut']));
+      });
     }
     if (Number.isFinite(anneeMin) && anneeMin > 0) {
       result = result.filter((p) => !p.anneeLivraison || p.anneeLivraison >= anneeMin);

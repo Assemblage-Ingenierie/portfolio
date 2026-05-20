@@ -3,6 +3,7 @@
 import { useMemo, useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import type { Projet, Statut } from '@/types/projet';
+import { RangeSlider } from './RangeSlider';
 import { TABLEAU_FIELDS, TABLEAU_DEFAULTS_BY_MODE, TABLEAU_ORDER_BY_MODE, renderTableau, type TableauOrientation, type TableauMode } from '@/lib/pdf/tableauTemplate';
 import { SHARED_CSS, FONTS_LINK } from '@/lib/pdf/templates/shared';
 import { measureOverflow, type OverflowMeasure } from '@/lib/utils/measureOverflow';
@@ -11,8 +12,14 @@ interface Props { projets: Projet[]; }
 
 type Step = 'select' | 'order' | 'preview';
 
+const chipLabel: React.CSSProperties = {
+  fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em',
+  textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 6,
+};
+
 const STATUT_BG: Record<string, string> = {
   'En étude': '#DFE4E8',
+  'Concours': '#F0E8F5',
   'En chantier': '#F9E1E3',
   'Livré': '#d4edda',
   'Abandonné': '#e2e3e5',
@@ -21,6 +28,7 @@ const STATUT_BG: Record<string, string> = {
 };
 const STATUT_COLOR: Record<string, string> = {
   'En étude': '#30323E',
+  'Concours': '#6B4F94',
   'En chantier': '#E30513',
   'Livré': '#155724',
   'Abandonné': '#6c757d',
@@ -42,6 +50,23 @@ export default function TableauBuilder({ projets }: Props) {
   const [fields, setFields] = useState<string[]>(TABLEAU_DEFAULTS_BY_MODE['Str-Env']);
   const [modeInitialized, setModeInitialized] = useState(false);
 
+  // ----- Champ libre -----
+  // nomConfigured : true quand l'utilisateur a confirmé le nom + descriptions.
+  // Tant que false, on ne rend pas la colonne (mais on garde 'champLibre' dans
+  // `fields` pour mémoriser l'intention de l'utilisateur).
+  const [champLibreNom, setChampLibreNom] = useState('');
+  const [champLibreValues, setChampLibreValues] = useState<Record<string, string>>({});
+  const [champLibreConfigured, setChampLibreConfigured] = useState(false);
+  const [showChampLibreModal, setShowChampLibreModal] = useState(false);
+
+  // ----- Pagination automatique (paysage) -----
+  // Quand measureOverflow détecte un dépassement, on calcule un rowsPerPage
+  // qui fait tenir le contenu, on re-render, et on itère si besoin. Reset
+  // automatique sur changement d'orientation / mode / colonnes / ordre /
+  // champ libre — tous les paramètres qui changent la hauteur du tableau.
+  const [autoRowsPerPage, setAutoRowsPerPage] = useState<number | null>(null);
+  const [paginationAttempts, setPaginationAttempts] = useState(0);
+
   // ----- Filtres (sous-ensemble de PortfolioBuilder) -----
   const years = useMemo(() => {
     const ys = projets.map(p => p.anneeLivraison).filter((y): y is number => !!y);
@@ -59,11 +84,35 @@ export default function TableauBuilder({ projets }: Props) {
       return a.localeCompare(b);
     });
   }, [projets]);
-  const allStatuts: Statut[] = ['En étude', 'En chantier', 'Livré', 'Abandonné', 'En pause', 'En consultation'];
+  const allStatuts: Statut[] = ['Livré', 'Concours', 'En chantier', 'En pause', 'En étude', 'En consultation'];
+  // Matériaux : valeurs disponibles dans les projets (multi-select AND).
+  const materiauxOptions = useMemo(() => {
+    const set = new Set<string>();
+    projets.forEach(p => (p.materiaux ?? []).forEach(v => { if (v) set.add(v); }));
+    return [...set].sort((a, b) => a.localeCompare(b, 'fr'));
+  }, [projets]);
+  // Type Neuf/Réhab : valeurs depuis le multi-select Airtable.
+  const rehabNeufOptions = useMemo(() => {
+    const set = new Set<string>();
+    projets.forEach(p => (p.rehabNeufValues ?? []).forEach(v => { if (v) set.add(v); }));
+    return [...set].sort((a, b) => a.localeCompare(b, 'fr'));
+  }, [projets]);
+  // Programmes principaux disponibles.
+  const programmes = useMemo(() => {
+    const set = new Set<string>();
+    projets.forEach(p => {
+      const list = p.programmesPrincipaux ?? (p.programmePrincipal ? [p.programmePrincipal] : []);
+      list.forEach(v => { if (v) set.add(v); });
+    });
+    return [...set].sort((a, b) => a.localeCompare(b, 'fr'));
+  }, [projets]);
 
   const [search, setSearch] = useState('');
   const [selectedPoles, setSelectedPoles] = useState<Set<string>>(new Set());
   const [selectedStatuts, setSelectedStatuts] = useState<Set<Statut>>(new Set());
+  const [selectedMateriaux, setSelectedMateriaux] = useState<Set<string>>(new Set());
+  const [selectedRehabNeuf, setSelectedRehabNeuf] = useState<Set<string>>(new Set());
+  const [selectedProgrammes, setSelectedProgrammes] = useState<Set<string>>(new Set());
   const [yearMin, setYearMin] = useState(years.min);
   const [yearMax, setYearMax] = useState(years.max);
 
@@ -81,6 +130,27 @@ export default function TableauBuilder({ projets }: Props) {
       return next;
     });
   };
+  const toggleMateriaux = (v: string) => {
+    setSelectedMateriaux(prev => {
+      const next = new Set(prev);
+      if (next.has(v)) next.delete(v); else next.add(v);
+      return next;
+    });
+  };
+  const toggleRehabNeuf = (v: string) => {
+    setSelectedRehabNeuf(prev => {
+      const next = new Set(prev);
+      if (next.has(v)) next.delete(v); else next.add(v);
+      return next;
+    });
+  };
+  const toggleProgramme = (v: string) => {
+    setSelectedProgrammes(prev => {
+      const next = new Set(prev);
+      if (next.has(v)) next.delete(v); else next.add(v);
+      return next;
+    });
+  };
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -89,15 +159,40 @@ export default function TableauBuilder({ projets }: Props) {
         const fs = [p.nom, p.affaire, p.adresse, p.moa, p.architecte, p.programme];
         if (!fs.some(v => typeof v === 'string' && v.toLowerCase().includes(q))) return false;
       }
-      if (selectedStatuts.size > 0 && !selectedStatuts.has(p.statut)) return false;
+      // Statut : AND — le projet doit avoir TOUS les statuts cochés.
+      if (selectedStatuts.size > 0) {
+        const vals = new Set(p.statutValues ?? [p.statut]);
+        for (const s of selectedStatuts) {
+          if (!vals.has(s)) return false;
+        }
+      }
       if (selectedPoles.size > 0) {
         const pp = new Set((p.vignettePoles ?? []).map(v => v.toUpperCase()));
         for (const code of selectedPoles) if (!pp.has(code)) return false;
       }
+      // Type Neuf/Réhab : AND.
+      if (selectedRehabNeuf.size > 0) {
+        const vals = (p.rehabNeufValues ?? []).map(v => v.toLowerCase());
+        for (const sel of selectedRehabNeuf) {
+          if (!vals.includes(sel.toLowerCase())) return false;
+        }
+      }
+      // Programmes : OR — au moins un programme du projet doit être sélectionné.
+      if (selectedProgrammes.size > 0) {
+        const projetProgs = p.programmesPrincipaux ?? (p.programmePrincipal ? [p.programmePrincipal] : []);
+        if (!projetProgs.some(v => selectedProgrammes.has(v))) return false;
+      }
+      // Matériaux : AND.
+      if (selectedMateriaux.size > 0) {
+        const vals = new Set((p.materiaux ?? []).map(v => v.toLowerCase()));
+        for (const sel of selectedMateriaux) {
+          if (!vals.has(sel.toLowerCase())) return false;
+        }
+      }
       if (p.anneeLivraison && (p.anneeLivraison < yearMin || p.anneeLivraison > yearMax)) return false;
       return true;
     });
-  }, [projets, search, selectedStatuts, selectedPoles, yearMin, yearMax]);
+  }, [projets, search, selectedStatuts, selectedPoles, selectedRehabNeuf, selectedProgrammes, selectedMateriaux, yearMin, yearMax]);
 
   // ----- Sélection -----
   function toggleSelect(slug: string) {
@@ -154,8 +249,34 @@ export default function TableauBuilder({ projets }: Props) {
   // on garde la liste triée selon cet ordre — pratique pour la preview qui
   // affiche les colonnes dans le bon ordre.
   function toggleField(key: string) {
+    // Cas spécial : champ libre — ouverture du modal de configuration au lieu
+    // d'un simple toggle. La case ne se coche qu'après confirmation du modal.
+    if (key === 'champLibre') {
+      if (fields.includes('champLibre')) {
+        // Décocher : on retire le champ mais on garde les valeurs en mémoire
+        // (au cas où l'utilisateur le re-coche plus tard).
+        setFields(prev => prev.filter(k => k !== 'champLibre'));
+      } else {
+        setShowChampLibreModal(true);
+      }
+      return;
+    }
     setFields(prev => {
       const next = prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key];
+      const order = TABLEAU_ORDER_BY_MODE[mode];
+      return order.filter(k => next.includes(k));
+    });
+  }
+
+  // ----- Champ libre : confirmation du modal -----
+  function confirmChampLibre(nom: string, values: Record<string, string>) {
+    setChampLibreNom(nom);
+    setChampLibreValues(values);
+    setChampLibreConfigured(true);
+    setShowChampLibreModal(false);
+    // Ajoute 'champLibre' à fields (dernière colonne via TABLEAU_ORDER_BY_MODE).
+    setFields(prev => {
+      const next = prev.includes('champLibre') ? prev : [...prev, 'champLibre'];
       const order = TABLEAU_ORDER_BY_MODE[mode];
       return order.filter(k => next.includes(k));
     });
@@ -183,8 +304,24 @@ export default function TableauBuilder({ projets }: Props) {
   // ----- Export PDF (impression natif) -----
   function handleExport() {
     if (orderedSlugs.length === 0 || fields.length === 0) return;
-    const url = `/portfolio/tableau/print?items=${encodeURIComponent(orderedSlugs.join(','))}&fields=${encodeURIComponent(fields.join(','))}&orient=${orientation}&mode=${encodeURIComponent(mode)}`;
-    window.open(url, '_blank');
+    const params = new URLSearchParams();
+    params.set('items', orderedSlugs.join(','));
+    params.set('fields', fields.join(','));
+    params.set('orient', orientation);
+    params.set('mode', mode);
+    if (champLibreConfigured && fields.includes('champLibre')) {
+      params.set('cln', champLibreNom);
+      // Réduit aux slugs réellement exportés.
+      const filteredValues: Record<string, string> = {};
+      orderedSlugs.forEach(s => {
+        if (champLibreValues[s]) filteredValues[s] = champLibreValues[s];
+      });
+      params.set('clv', JSON.stringify(filteredValues));
+    }
+    if (autoRowsPerPage && autoRowsPerPage > 0) {
+      params.set('rpp', String(autoRowsPerPage));
+    }
+    window.open(`/portfolio/tableau/print?${params.toString()}`, '_blank');
   }
 
   // ----- Aperçu HTML du tableau (iframe) -----
@@ -194,9 +331,26 @@ export default function TableauBuilder({ projets }: Props) {
   );
   const previewHtml = useMemo(() => {
     if (step !== 'preview') return '';
-    const bundle = renderTableau({ projets: orderedProjets, fieldKeys: fields, orientation, mode });
+    const bundle = renderTableau({
+      projets: orderedProjets,
+      fieldKeys: fields,
+      orientation,
+      mode,
+      champLibreNom: champLibreConfigured ? champLibreNom : undefined,
+      champLibreValues: champLibreConfigured ? champLibreValues : undefined,
+      // Pagination auto déclenchée par l'effet d'overflow ci-dessous.
+      rowsPerPage: autoRowsPerPage ?? undefined,
+    });
     return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">${FONTS_LINK}<style>${SHARED_CSS}${bundle.css}body{background:white;}</style></head><body>${bundle.body}</body></html>`;
-  }, [step, orderedProjets, fields, orientation, mode]);
+  }, [step, orderedProjets, fields, orientation, mode, champLibreNom, champLibreValues, champLibreConfigured, autoRowsPerPage]);
+
+  // Reset de la pagination automatique sur toute modification qui change la
+  // hauteur du tableau (orientation, mode, colonnes, ordre, champ libre).
+  // Sans ce reset on garderait un rowsPerPage qui ne correspond plus.
+  useEffect(() => {
+    setAutoRowsPerPage(null);
+    setPaginationAttempts(0);
+  }, [orientation, mode, fields, orderedSlugs, champLibreNom, champLibreValues, champLibreConfigured]);
 
   // ----- Styles partagés -----
   const btn = (active: boolean): React.CSSProperties => ({
@@ -239,6 +393,9 @@ export default function TableauBuilder({ projets }: Props) {
             search={search} setSearch={setSearch}
             poles={poles} selectedPoles={selectedPoles} togglePole={togglePole} setSelectedPoles={setSelectedPoles}
             allStatuts={allStatuts} selectedStatuts={selectedStatuts} toggleStatut={toggleStatut}
+            rehabNeufOptions={rehabNeufOptions} selectedRehabNeuf={selectedRehabNeuf} toggleRehabNeuf={toggleRehabNeuf} setSelectedRehabNeuf={setSelectedRehabNeuf}
+            programmes={programmes} selectedProgrammes={selectedProgrammes} toggleProgramme={toggleProgramme} setSelectedProgrammes={setSelectedProgrammes}
+            materiauxOptions={materiauxOptions} selectedMateriaux={selectedMateriaux} toggleMateriaux={toggleMateriaux} setSelectedMateriaux={setSelectedMateriaux}
             yearMin={yearMin} yearMax={yearMax} setYearMin={setYearMin} setYearMax={setYearMax} years={years}
             btn={btn}
           />
@@ -262,6 +419,23 @@ export default function TableauBuilder({ projets }: Props) {
             setMode={changeMode}
             fields={fields}
             toggleField={toggleField}
+            orderedProjets={orderedProjets}
+            autoRowsPerPage={autoRowsPerPage}
+            setAutoRowsPerPage={setAutoRowsPerPage}
+            paginationAttempts={paginationAttempts}
+            setPaginationAttempts={setPaginationAttempts}
+            champLibreNom={champLibreConfigured ? champLibreNom : ''}
+            openChampLibreModal={() => setShowChampLibreModal(true)}
+          />
+        )}
+
+        {showChampLibreModal && (
+          <ChampLibreModal
+            orderedProjets={orderedProjets}
+            initialNom={champLibreNom}
+            initialValues={champLibreValues}
+            onCancel={() => setShowChampLibreModal(false)}
+            onConfirm={confirmChampLibre}
           />
         )}
       </div>
@@ -340,6 +514,18 @@ interface SelectStepProps {
   allStatuts: Statut[];
   selectedStatuts: Set<Statut>;
   toggleStatut: (s: Statut) => void;
+  rehabNeufOptions: string[];
+  selectedRehabNeuf: Set<string>;
+  toggleRehabNeuf: (v: string) => void;
+  setSelectedRehabNeuf: (s: Set<string>) => void;
+  programmes: string[];
+  selectedProgrammes: Set<string>;
+  toggleProgramme: (v: string) => void;
+  setSelectedProgrammes: (s: Set<string>) => void;
+  materiauxOptions: string[];
+  selectedMateriaux: Set<string>;
+  toggleMateriaux: (v: string) => void;
+  setSelectedMateriaux: (s: Set<string>) => void;
   yearMin: number; yearMax: number;
   setYearMin: (n: number) => void; setYearMax: (n: number) => void;
   years: { min: number; max: number };
@@ -358,9 +544,13 @@ function SelectStep(p: SelectStepProps) {
           border: '1px solid #DFE4E8', borderRadius: 2, outline: 'none', background: 'white', marginBottom: 16,
         }}
       />
+      {/* Filtres — layout aligné sur la page publique :
+          Row 1 : Pôle · Statut · Type
+          Row 2 : Programme (pleine largeur)
+          Row 3 : Matériaux (gauche, flex) · Année slider (droite) */}
       <div style={{ background: 'white', border: '1px solid #DFE4E8', borderRadius: 2, padding: '14px 16px', marginBottom: 20, display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'flex-start' }}>
         <div>
-          <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 6 }}>Pôle</div>
+          <div style={chipLabel}>Pôle</div>
           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
             <button onClick={() => p.setSelectedPoles(new Set())} style={p.btn(p.selectedPoles.size === 0)}>Tous</button>
             {p.poles.map(c => (
@@ -369,7 +559,7 @@ function SelectStep(p: SelectStepProps) {
           </div>
         </div>
         <div>
-          <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 6 }}>Statut</div>
+          <div style={chipLabel}>Statut</div>
           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
             {p.allStatuts.map(s => (
               <button key={s} onClick={() => p.toggleStatut(s)} style={{
@@ -381,14 +571,54 @@ function SelectStep(p: SelectStepProps) {
             ))}
           </div>
         </div>
-        {p.years.min < p.years.max && (
+
+        {p.rehabNeufOptions.length > 0 && (
           <div>
-            <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 6 }}>Année</div>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: '9pt' }}>
-              <input type="number" value={p.yearMin} onChange={e => p.setYearMin(Math.min(Number(e.target.value), p.yearMax))} style={{ width: 60, padding: '4px 6px', border: '1px solid #DFE4E8', borderRadius: 2 }} />
-              <span style={{ color: 'var(--ai-noir70)' }}>–</span>
-              <input type="number" value={p.yearMax} onChange={e => p.setYearMax(Math.max(Number(e.target.value), p.yearMin))} style={{ width: 60, padding: '4px 6px', border: '1px solid #DFE4E8', borderRadius: 2 }} />
+            <div style={chipLabel}>Type</div>
+            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+              <button onClick={() => p.setSelectedRehabNeuf(new Set())} style={p.btn(p.selectedRehabNeuf.size === 0)}>Tous</button>
+              {p.rehabNeufOptions.map(v => (
+                <button key={v} onClick={() => p.toggleRehabNeuf(v)} style={p.btn(p.selectedRehabNeuf.has(v))}>{v}</button>
+              ))}
             </div>
+          </div>
+        )}
+
+        {p.programmes.length > 0 && (
+          <div style={{ flex: '1 1 100%' }}>
+            <div style={chipLabel}>Programme</div>
+            <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+              <button onClick={() => p.setSelectedProgrammes(new Set())} style={p.btn(p.selectedProgrammes.size === 0)}>Tous</button>
+              {p.programmes.map(v => (
+                <button key={v} onClick={() => p.toggleProgramme(v)} style={p.btn(p.selectedProgrammes.has(v))}>{v}</button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {(p.materiauxOptions.length > 0 || p.years.min < p.years.max) && (
+          <div style={{ flex: '1 1 100%', display: 'flex', gap: 20, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+            {p.materiauxOptions.length > 0 && (
+              <div style={{ flex: '1 1 auto', minWidth: 240 }}>
+                <div style={chipLabel}>Matériaux</div>
+                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                  <button onClick={() => p.setSelectedMateriaux(new Set())} style={p.btn(p.selectedMateriaux.size === 0)}>Tous</button>
+                  {p.materiauxOptions.map(v => (
+                    <button key={v} onClick={() => p.toggleMateriaux(v)} style={p.btn(p.selectedMateriaux.has(v))}>{v}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {p.years.min < p.years.max && (
+              <div style={{ flex: '0 0 auto', marginLeft: 'auto' }}>
+                <div style={chipLabel}>Année de livraison</div>
+                <RangeSlider
+                  min={p.years.min} max={p.years.max}
+                  valueMin={p.yearMin} valueMax={p.yearMax}
+                  onChange={(mn, mx) => { p.setYearMin(mn); p.setYearMax(mx); }}
+                />
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -503,8 +733,20 @@ interface PreviewStepProps {
   setMode: (m: TableauMode) => void;
   fields: string[];
   toggleField: (k: string) => void;
+  orderedProjets: Projet[];
+  autoRowsPerPage: number | null;
+  setAutoRowsPerPage: React.Dispatch<React.SetStateAction<number | null>>;
+  paginationAttempts: number;
+  setPaginationAttempts: React.Dispatch<React.SetStateAction<number>>;
+  champLibreNom: string;
+  openChampLibreModal: () => void;
 }
-function PreviewStep({ html, orientation, setOrientation, mode, setMode, fields, toggleField }: PreviewStepProps) {
+function PreviewStep({
+  html, orientation, setOrientation, mode, setMode, fields, toggleField,
+  orderedProjets, autoRowsPerPage, setAutoRowsPerPage,
+  paginationAttempts, setPaginationAttempts,
+  champLibreNom, openChampLibreModal,
+}: PreviewStepProps) {
   // Affiche les colonnes dans l'ordre canonique du mode pour que la liste de
   // checkboxes corresponde à l'ordre du tableau rendu. "Lieu" reste à sa
   // place canonique (juste avant "Année").
@@ -513,33 +755,146 @@ function PreviewStep({ html, orientation, setOrientation, mode, setMode, fields,
     .filter((f): f is typeof TABLEAU_FIELDS[number] => Boolean(f));
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [overflow, setOverflow] = useState<OverflowMeasure | null>(null);
+  // Nombre de `.page` actuellement rendues dans l'iframe — sert à ajuster la
+  // hauteur du conteneur iframe quand l'auto-pagination produit plusieurs A4.
+  const [pageCount, setPageCount] = useState(1);
 
+  // Limite stricte sur le nombre d'itérations pour converger sur un
+  // rowsPerPage qui rentre — évite toute boucle infinie en cas d'overflow
+  // résiduel inexplicable (ex. ligne unique trop haute pour une A4).
+  const MAX_PAGINATION_ATTEMPTS = 8;
+
+  // Direction-lock : empêche d'osciller entre +1 et -1 quand on est sur la
+  // bonne valeur à 1 ligne près. Réinitialisé via le useEffect en aval.
+  const paginationDirection = useRef<null | 'down' | 'up'>(null);
+
+  // Reset du direction-lock quand le parent réinitialise la pagination
+  // (changement orientation / mode / colonnes / champ libre…).
+  useEffect(() => {
+    if (autoRowsPerPage === null && paginationAttempts === 0) {
+      paginationDirection.current = null;
+    }
+  }, [autoRowsPerPage, paginationAttempts]);
+
+  // ----- Mesure + auto-pagination paysage (effet unique) -----
+  // Critique : la décision de pagination doit se faire DANS le même cycle
+  // async que la mesure pour éviter la cascade de re-renders synchrones
+  // sur un state `overflow` périmé. À chaque changement de `html` :
+  //   1. iframe se recharge
+  //   2. on attend `load` + fonts.ready + 2× rAF (DOM stabilisé)
+  //   3. on mesure overflow + métriques DOM directes (hauteur ligne, etc.)
+  //   4. on décide : décrémenter / incrémenter / accepter / stop
+  //   5. setState → re-render → html change → cycle recommence avec un
+  //      DOM RÉACTUALISÉ
+  // Plus de bug de "fitRows lu sur l'ancien DOM avant que l'iframe ait
+  // rechargé".
   useEffect(() => {
     const iframe = iframeRef.current;
     if (!iframe) return;
     let cancelled = false;
-    async function measure() {
+
+    async function measureAndPaginate() {
       try {
         const doc = iframe?.contentDocument;
         if (!doc) return;
         try { await doc.fonts?.ready; } catch { /* noop */ }
         if (cancelled) return;
+
         requestAnimationFrame(() => {
           if (cancelled) return;
           requestAnimationFrame(() => {
             if (cancelled) return;
-            setOverflow(measureOverflow(doc));
+
+            // 1. Mesures DOM toujours faites (utilisé partout y compris pour
+            //    afficher le warning + le compteur de pages).
+            const m = measureOverflow(doc);
+            setOverflow(m);
+            const pages = doc.querySelectorAll('.tab-page').length;
+            setPageCount(Math.max(1, pages));
+
+            // 2. Décision pagination — paysage uniquement, limites de garde.
+            if (!m) return;
+            if (orientation !== 'paysage') return;
+            if (paginationAttempts >= MAX_PAGINATION_ATTEMPTS) return;
+            const N = orderedProjets.length;
+            if (N <= 1) return;
+
+            const firstPage = doc.querySelector<HTMLElement>('.tab-page');
+            const tbody = firstPage?.querySelector<HTMLElement>('tbody');
+            if (!firstPage || !tbody) return;
+            const rows = tbody.querySelectorAll<HTMLElement>('tr');
+            if (rows.length === 0) return;
+
+            const tbodyHeight = tbody.getBoundingClientRect().height;
+            const avgRowHeight = tbodyHeight / rows.length;
+            if (avgRowHeight <= 0) return;
+            const pageHeight = firstPage.clientHeight;
+            const scrollHeight = firstPage.scrollHeight;
+            // Non-tbody (titre + thead + footer + paddings + spacer-collapsed).
+            // En cas d'overflow le spacer fait 0 ; sans overflow il remplit.
+            const nonBodyHeight = scrollHeight - tbodyHeight;
+            const availableForBody = pageHeight - nonBodyHeight;
+            if (availableForBody <= 0) return;
+
+            const fitRows = Math.max(1, Math.floor(availableForBody / avgRowHeight));
+
+            if (m.overflowMm > 0) {
+              // Encore en débordement → réduire.
+              if (paginationDirection.current === 'up') {
+                // On venait d'incrémenter, ça déborde → revenir en arrière + stop.
+                if (autoRowsPerPage && autoRowsPerPage > 1) {
+                  setAutoRowsPerPage(autoRowsPerPage - 1);
+                }
+                setPaginationAttempts(MAX_PAGINATION_ATTEMPTS);
+                return;
+              }
+              paginationDirection.current = 'down';
+              if (autoRowsPerPage === null) {
+                // 1re passe : mesure DOM précise. On clamp à N-1 pour
+                // garantir qu'il y a effectivement chunking (sinon
+                // chunkSize >= N → pas de pagination → boucle infinie).
+                const target = Math.min(fitRows, N - 1);
+                setAutoRowsPerPage(Math.max(1, target));
+              } else if (autoRowsPerPage > 1) {
+                setAutoRowsPerPage(autoRowsPerPage - 1);
+              }
+              setPaginationAttempts(c => c + 1);
+            } else if (autoRowsPerPage !== null) {
+              // Pas d'overflow → reste-t-il de la place ? Mesure du spacer.
+              const spacer = firstPage.querySelector<HTMLElement>('.tab-spacer');
+              const spacerHeight = spacer ? spacer.getBoundingClientRect().height : 0;
+              if (spacerHeight > avgRowHeight && paginationDirection.current !== 'down') {
+                paginationDirection.current = 'up';
+                setAutoRowsPerPage(autoRowsPerPage + 1);
+                setPaginationAttempts(c => c + 1);
+              }
+            }
+            // Cas autoRowsPerPage === null && pas d'overflow : tout tient
+            // sur 1 page, rien à faire.
+            void fitRows;
           });
         });
       } catch { /* noop */ }
     }
-    function onLoad() { measure(); }
-    iframe.addEventListener('load', onLoad);
-    measure();
-    return () => { cancelled = true; iframe.removeEventListener('load', onLoad); };
-  }, [html]);
 
-  const overflowing = overflow !== null && overflow.overflowMm > 0;
+    function onLoad() { measureAndPaginate(); }
+    iframe.addEventListener('load', onLoad);
+    // On NE PAS appeler measureAndPaginate() immédiatement : sur changement
+    // de srcDoc, l'iframe est encore en "loading" et son contentDocument
+    // reflète l'ancien DOM. Le check `readyState === 'complete'` est
+    // également piégé car il peut renvoyer true pour l'ancienne srcDoc juste
+    // avant que la nouvelle ne commence à charger. Seul l'event `load`
+    // garantit qu'on mesure le DOM correspondant au state React courant.
+    return () => { cancelled = true; iframe.removeEventListener('load', onLoad); };
+  }, [html, orientation, orderedProjets.length, autoRowsPerPage, paginationAttempts, setAutoRowsPerPage, setPaginationAttempts]);
+
+  // L'overflow visuel n'est "réel" que si l'auto-pagination n'a pas réussi
+  // (paginationAttempts >= MAX). Sinon on est en cours de convergence et le
+  // warning rouge clignoterait à chaque itération — on l'attend stabilisé.
+  const stillOverflowing = overflow !== null
+    && overflow.overflowMm > 0
+    && (orientation !== 'paysage' || paginationAttempts >= MAX_PAGINATION_ATTEMPTS);
+  const paginated = orientation === 'paysage' && autoRowsPerPage !== null && pageCount > 1;
   const previewWidthMm = orientation === 'paysage' ? 297 : 210;
   const previewHeightMm = orientation === 'paysage' ? 210 : 297;
 
@@ -577,19 +932,45 @@ function PreviewStep({ html, orientation, setOrientation, mode, setMode, fields,
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           {orderedFieldDefs.map(f => {
             const checked = fields.includes(f.key);
+            const isChampLibre = f.key === 'champLibre';
+            // Label dynamique pour le champ libre : on affiche le nom choisi
+            // par l'utilisateur quand il est configuré, sinon le label statique.
+            const displayLabel = isChampLibre && champLibreNom
+              ? champLibreNom
+              : f.label;
             return (
-              <label key={f.key} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '9pt', cursor: 'pointer', padding: '2px 0' }}>
-                <input type="checkbox" checked={checked} onChange={() => toggleField(f.key)}
-                  style={{ accentColor: '#E30513' }} />
-                {f.label}
-              </label>
+              <div key={f.key} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '9pt', padding: '2px 0' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', flex: 1 }}>
+                  <input type="checkbox" checked={checked} onChange={() => toggleField(f.key)}
+                    style={{ accentColor: '#E30513' }} />
+                  <span>
+                    {displayLabel}
+                    {isChampLibre && champLibreNom && (
+                      <span style={{ color: 'var(--ai-noir70)', fontStyle: 'italic', fontSize: '8pt' }}> (champ libre)</span>
+                    )}
+                  </span>
+                </label>
+                {isChampLibre && (
+                  <button
+                    onClick={openChampLibreModal}
+                    title="Configurer le champ libre"
+                    style={{
+                      padding: '2px 6px', fontSize: '7.5pt', fontWeight: 700,
+                      background: 'white', border: '1px solid #DFE4E8', borderRadius: 2,
+                      color: 'var(--ai-noir70)', cursor: 'pointer',
+                    }}
+                  >
+                    {champLibreNom ? 'Éditer' : 'Configurer'}
+                  </button>
+                )}
+              </div>
             );
           })}
         </div>
       </aside>
       {/* Preview */}
       <main style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 8px' }}>
-        {overflowing && (
+        {stillOverflowing && (
           <div role="alert" style={{
             width: `${previewWidthMm}mm`, marginBottom: 12, padding: '10px 16px',
             background: 'var(--ai-rouge)', color: 'white', fontFamily: 'var(--sans)',
@@ -598,20 +979,176 @@ function PreviewStep({ html, orientation, setOrientation, mode, setMode, fields,
             Le tableau dépasse la page de {overflow!.overflowMm} mm — réduit le nombre de lignes/colonnes ou bascule en {orientation === 'portrait' ? 'paysage' : 'portrait'}.
           </div>
         )}
+        {paginated && (
+          <div style={{
+            width: `${previewWidthMm}mm`, marginBottom: 12, padding: '8px 14px',
+            background: 'var(--ai-violet)', color: 'white', fontFamily: 'var(--sans)',
+            fontSize: '9pt', fontWeight: 600, borderRadius: 2,
+          }}>
+            Tableau réparti automatiquement sur {pageCount} pages ({autoRowsPerPage} lignes par page).
+          </div>
+        )}
         <iframe
           ref={iframeRef}
           title="Aperçu tableau"
           srcDoc={html}
           style={{
             width: `${previewWidthMm}mm`,
-            minHeight: `${previewHeightMm}mm`,
+            // Hauteur dimensionnée selon le nb de pages auto-paginées. Les
+            // pages sont rendues flush (pas de gap) dans la preview iframe.
+            minHeight: `${previewHeightMm * pageCount}mm`,
             border: 'none', background: 'white',
-            boxShadow: overflowing
+            boxShadow: stillOverflowing
               ? '0 4px 24px rgba(227,5,19,0.35), 0 0 0 2px var(--ai-rouge)'
               : '0 4px 24px rgba(0,0,0,0.12)',
           }}
         />
       </main>
+    </div>
+  );
+}
+
+// ─── Modal "Champ libre" ────────────────────────────────────────────────────
+// Configuration en une étape : nom de colonne + description par référence.
+// Tant que l'utilisateur n'a pas cliqué sur "Confirmer", la colonne n'apparaît
+// pas dans le tableau (cf. champLibreConfigured / fields dans le parent).
+interface ChampLibreModalProps {
+  orderedProjets: Projet[];
+  initialNom: string;
+  initialValues: Record<string, string>;
+  onCancel: () => void;
+  onConfirm: (nom: string, values: Record<string, string>) => void;
+}
+function ChampLibreModal({
+  orderedProjets, initialNom, initialValues, onCancel, onConfirm,
+}: ChampLibreModalProps) {
+  const [nom, setNom] = useState(initialNom);
+  const [values, setValues] = useState<Record<string, string>>(initialValues);
+
+  const trimmedNom = nom.trim();
+  const canConfirm = trimmedNom.length > 0;
+
+  function updateValue(slug: string, v: string) {
+    setValues(prev => ({ ...prev, [slug]: v }));
+  }
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      onClick={onCancel}
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 200, padding: 24,
+      }}
+    >
+      <div
+        onClick={e => e.stopPropagation()}
+        style={{
+          background: 'white', borderRadius: 4, width: '100%',
+          maxWidth: 720, maxHeight: '90vh', display: 'flex',
+          flexDirection: 'column', boxShadow: '0 12px 48px rgba(0,0,0,0.25)',
+          fontFamily: 'var(--sans)',
+        }}
+      >
+        {/* Header */}
+        <div style={{ padding: '18px 24px', borderBottom: '1px solid #DFE4E8' }}>
+          <h2 style={{ margin: 0, fontSize: '14pt', fontWeight: 500, color: 'var(--ai-violet)' }}>
+            Configurer la colonne « Champ libre »
+          </h2>
+          <p style={{ margin: '4px 0 0', fontSize: '9pt', color: 'var(--ai-noir70)' }}>
+            Nomme la colonne puis renseigne une description par référence sélectionnée.
+          </p>
+        </div>
+
+        {/* Body */}
+        <div style={{ padding: '18px 24px', overflowY: 'auto', flex: 1 }}>
+          <label style={{ display: 'block', marginBottom: 16 }}>
+            <span style={{ display: 'block', fontSize: '8pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 6 }}>
+              Nom du champ
+            </span>
+            <input
+              type="text"
+              value={nom}
+              onChange={e => setNom(e.target.value)}
+              autoFocus
+              placeholder="ex. Lot Assemblage, Particularités…"
+              style={{
+                width: '100%', padding: '8px 12px', fontSize: '10pt',
+                border: '1px solid #DFE4E8', borderRadius: 2, outline: 'none',
+                fontFamily: 'var(--sans)',
+              }}
+            />
+          </label>
+
+          <div style={{ fontSize: '8pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 8 }}>
+            Descriptions par référence ({orderedProjets.length})
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {orderedProjets.map((p, i) => (
+              <div key={p.slug} style={{
+                border: '1px solid #DFE4E8', borderRadius: 2, padding: 10,
+                background: '#FAFAFA',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
+                  <span style={{ fontSize: '11pt', fontWeight: 700, color: 'var(--ai-rouge)' }}>{i + 1}.</span>
+                  <span style={{ fontFamily: 'var(--serif)', fontSize: '11pt', fontWeight: 500 }}>{p.nom}</span>
+                  {p.moa && <span style={{ fontSize: '8pt', color: 'var(--ai-noir70)' }}>· {p.moa}</span>}
+                </div>
+                <textarea
+                  value={values[p.slug] ?? ''}
+                  onChange={e => updateValue(p.slug, e.target.value)}
+                  rows={3}
+                  placeholder="Description pour cette référence…"
+                  style={{
+                    width: '100%', padding: '8px 10px', fontSize: '9.5pt',
+                    border: '1px solid #DFE4E8', borderRadius: 2, outline: 'none',
+                    resize: 'vertical', fontFamily: 'var(--sans)',
+                    minHeight: 60,
+                  }}
+                />
+              </div>
+            ))}
+            {orderedProjets.length === 0 && (
+              <p style={{ fontSize: '9pt', color: 'var(--ai-noir70)', fontStyle: 'italic' }}>
+                Aucune référence sélectionnée — retourne à l&apos;étape de sélection.
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div style={{
+          padding: '14px 24px', borderTop: '1px solid #DFE4E8',
+          display: 'flex', justifyContent: 'flex-end', gap: 8, background: '#FAFAFA',
+        }}>
+          <button
+            onClick={onCancel}
+            style={{
+              padding: '8px 16px', background: 'white', color: 'var(--ai-noir70)',
+              border: '1px solid #DFE4E8', borderRadius: 2,
+              fontFamily: 'var(--sans)', fontSize: '9.5pt', fontWeight: 600, cursor: 'pointer',
+            }}
+          >
+            Annuler
+          </button>
+          <button
+            onClick={() => onConfirm(trimmedNom, values)}
+            disabled={!canConfirm}
+            style={{
+              padding: '8px 18px',
+              background: canConfirm ? 'var(--ai-rouge)' : '#999',
+              color: 'white', border: 'none', borderRadius: 2,
+              fontFamily: 'var(--sans)', fontSize: '9.5pt', fontWeight: 700,
+              cursor: canConfirm ? 'pointer' : 'not-allowed',
+              letterSpacing: '0.03em',
+            }}
+          >
+            Confirmer
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

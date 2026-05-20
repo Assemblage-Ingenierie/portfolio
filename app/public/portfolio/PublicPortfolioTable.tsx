@@ -3,9 +3,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Statut } from '@/types/projet';
 import type { PublicProjet } from '@/app/api/public/portfolio/route';
+import { RangeSlider } from '@/components/portfolio/RangeSlider';
 
 const STATUT_BG: Record<string, string> = {
   'En étude': '#DFE4E8',
+  'Concours': '#F0E8F5',
   'En chantier': '#F9E1E3',
   'Livré': '#d4edda',
   'Abandonné': '#e2e3e5',
@@ -14,6 +16,7 @@ const STATUT_BG: Record<string, string> = {
 };
 const STATUT_COLOR: Record<string, string> = {
   'En étude': '#30323E',
+  'Concours': '#6B4F94',
   'En chantier': '#E30513',
   'Livré': '#155724',
   'Abandonné': '#6c757d',
@@ -21,7 +24,7 @@ const STATUT_COLOR: Record<string, string> = {
   'En consultation': '#0c5460',
 };
 
-const ALL_STATUTS: Statut[] = ['En étude', 'En chantier', 'Livré', 'Abandonné', 'En pause', 'En consultation'];
+const ALL_STATUTS: Statut[] = ['Livré', 'Concours', 'En chantier', 'En pause', 'En étude', 'En consultation'];
 const POLE_ORDER = ['STR', 'ENV', 'DEV'];
 const PAGE_SIZE = 25;
 
@@ -47,6 +50,9 @@ export default function PublicPortfolioTable() {
   const [selectedPoles, setSelectedPoles] = useState<Set<string>>(new Set());
   const [selectedProgrammes, setSelectedProgrammes] = useState<Set<string>>(new Set());
   const [selectedStatuts, setSelectedStatuts] = useState<Set<Statut>>(new Set());
+  // Matériaux & Rehab/Neuf : multi-select AND (cohérent avec page interne).
+  const [selectedMateriaux, setSelectedMateriaux] = useState<Set<string>>(new Set());
+  const [selectedRehabNeuf, setSelectedRehabNeuf] = useState<Set<string>>(new Set());
   const [anneeMin, setAnneeMin] = useState<number | null>(null);
   const [anneeMax, setAnneeMax] = useState<number | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>('anneeLivraison');
@@ -86,6 +92,18 @@ export default function PublicPortfolioTable() {
     });
   }, [items]);
 
+  const materiauxOptions = useMemo(() => {
+    const set = new Set<string>();
+    (items ?? []).forEach((p) => (p.materiaux ?? []).forEach((v) => { if (v) set.add(v); }));
+    return [...set].sort((a, b) => a.localeCompare(b, 'fr'));
+  }, [items]);
+
+  const rehabNeufOptions = useMemo(() => {
+    const set = new Set<string>();
+    (items ?? []).forEach((p) => (p.rehabNeufValues ?? []).forEach((v) => { if (v) set.add(v); }));
+    return [...set].sort((a, b) => a.localeCompare(b, 'fr'));
+  }, [items]);
+
   const programmes = useMemo(() => {
     const set = new Set<string>();
     (items ?? []).forEach((p) => {
@@ -103,7 +121,13 @@ export default function PublicPortfolioTable() {
         const fs = [p.nom, p.moa, p.architecte, p.programme, p.lieu, p.betAssocies, p.bailleur];
         if (!fs.some((v) => typeof v === 'string' && v.toLowerCase().includes(q))) return false;
       }
-      if (selectedStatuts.size > 0 && !selectedStatuts.has(p.statut)) return false;
+      // Statut : AND — le projet doit avoir TOUS les statuts cochés.
+      if (selectedStatuts.size > 0) {
+        const vals = new Set(p.statutValues ?? [p.statut]);
+        for (const s of selectedStatuts) {
+          if (!vals.has(s)) return false;
+        }
+      }
       if (selectedPoles.size > 0) {
         const pp = new Set((p.vignettePoles ?? []).map((v) => v.toUpperCase()));
         for (const code of selectedPoles) if (!pp.has(code)) return false;
@@ -111,6 +135,20 @@ export default function PublicPortfolioTable() {
       if (selectedProgrammes.size > 0) {
         const list = p.programmesPrincipaux ?? (p.programmePrincipal ? [p.programmePrincipal] : []);
         if (!list.some((v) => selectedProgrammes.has(v))) return false;
+      }
+      // Matériaux : AND.
+      if (selectedMateriaux.size > 0) {
+        const vals = new Set((p.materiaux ?? []).map((v) => v.toLowerCase()));
+        for (const sel of selectedMateriaux) {
+          if (!vals.has(sel.toLowerCase())) return false;
+        }
+      }
+      // Rehab / Neuf : AND.
+      if (selectedRehabNeuf.size > 0) {
+        const vals = (p.rehabNeufValues ?? []).map((v) => v.toLowerCase());
+        for (const sel of selectedRehabNeuf) {
+          if (!vals.includes(sel.toLowerCase())) return false;
+        }
       }
       if (anneeMin !== null && p.anneeLivraison && p.anneeLivraison < anneeMin) return false;
       if (anneeMax !== null && p.anneeLivraison && p.anneeLivraison > anneeMax) return false;
@@ -127,9 +165,9 @@ export default function PublicPortfolioTable() {
       return String(va).localeCompare(String(vb), 'fr') * dir;
     });
     return list;
-  }, [items, search, selectedStatuts, selectedPoles, selectedProgrammes, anneeMin, anneeMax, sortKey, sortDir]);
+  }, [items, search, selectedStatuts, selectedPoles, selectedProgrammes, selectedMateriaux, selectedRehabNeuf, anneeMin, anneeMax, sortKey, sortDir]);
 
-  useEffect(() => { setPage(1); }, [search, selectedStatuts, selectedPoles, selectedProgrammes, anneeMin, anneeMax]);
+  useEffect(() => { setPage(1); }, [search, selectedStatuts, selectedPoles, selectedProgrammes, selectedMateriaux, selectedRehabNeuf, anneeMin, anneeMax]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -241,17 +279,14 @@ export default function PublicPortfolioTable() {
                 </div>
               </div>
 
-              {years.min < years.max && (
+              {rehabNeufOptions.length > 0 && (
                 <div>
-                  <div style={chipLabel}>Année</div>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: '9pt' }}>
-                    <input type="number" placeholder={String(years.min)} value={anneeMin ?? ''}
-                      onChange={(e) => setAnneeMin(e.target.value ? Number(e.target.value) : null)}
-                      style={yearInput} />
-                    <span style={{ color: 'var(--ai-noir70)' }}>–</span>
-                    <input type="number" placeholder={String(years.max)} value={anneeMax ?? ''}
-                      onChange={(e) => setAnneeMax(e.target.value ? Number(e.target.value) : null)}
-                      style={yearInput} />
+                  <div style={chipLabel}>Type</div>
+                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                    <button onClick={() => setSelectedRehabNeuf(new Set())} style={chipBtn(selectedRehabNeuf.size === 0)}>Tous</button>
+                    {rehabNeufOptions.map((v) => (
+                      <button key={v} onClick={() => toggleSet(v, setSelectedRehabNeuf)} style={chipBtn(selectedRehabNeuf.has(v))}>{v}</button>
+                    ))}
                   </div>
                 </div>
               )}
@@ -265,6 +300,34 @@ export default function PublicPortfolioTable() {
                       <button key={p} onClick={() => toggleSet(p, setSelectedProgrammes)} style={chipBtn(selectedProgrammes.has(p))}>{p}</button>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {/* Matériaux (multi-select AND) + Année (slider) sur la même rangée. */}
+              {(materiauxOptions.length > 0 || years.min < years.max) && (
+                <div style={{ flex: '1 1 100%', display: 'flex', gap: 20, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+                  {materiauxOptions.length > 0 && (
+                    <div style={{ flex: '1 1 auto', minWidth: 240 }}>
+                      <div style={chipLabel}>Matériaux</div>
+                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                        <button onClick={() => setSelectedMateriaux(new Set())} style={chipBtn(selectedMateriaux.size === 0)}>Tous</button>
+                        {materiauxOptions.map((v) => (
+                          <button key={v} onClick={() => toggleSet(v, setSelectedMateriaux)} style={chipBtn(selectedMateriaux.has(v))}>{v}</button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {years.min < years.max && (
+                    <div style={{ flex: '0 0 auto' }}>
+                      <div style={chipLabel}>Année de livraison</div>
+                      <RangeSlider
+                        min={years.min} max={years.max}
+                        valueMin={anneeMin ?? years.min}
+                        valueMax={anneeMax ?? years.max}
+                        onChange={(mn, mx) => { setAnneeMin(mn); setAnneeMax(mx); }}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
             </div>

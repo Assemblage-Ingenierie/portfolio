@@ -4,6 +4,7 @@ import type { CropData } from '@/lib/pdf/photoCrop';
 
 export type Statut =
   | 'En étude'
+  | 'Concours'
   | 'En chantier'
   | 'Livré'
   | 'Abandonné'
@@ -48,13 +49,20 @@ export interface Projet {
    *  présentes = rouge (couleurs SVG d'origine), absentes = grisé. */
   vignettePoles?: string[];
   departement?: string;
+  /** Valeur jointe pour affichage/recherche textuelle (ex : "Neuf, Réhab"). */
   rehabNeuf?: string;
+  /** Valeurs brutes du multi-select Airtable "Rehab / Neuf" — pour les filtres AND. */
+  rehabNeufValues?: string[];
 
   /** Champ Airtable "Prestation Assemblage" (field id flddrMLBDxOc8r4lJ) — long
    *  text rich text (Markdown). Affiché dans un bloc dédié du template Dev. */
   prestationAssemblage?: string;
 
   statut: Statut;
+  /** Valeurs brutes du multi-select Airtable "Statut" (field fldxXNdE0uNaomeby) —
+   *  pour les filtres AND. Contient au moins `statut` si le champ multi-select
+   *  est absent (fallback sur `État avancement`). */
+  statutValues?: Statut[];
   template: TemplateChoice;
   visiblePortfolio: boolean;
 

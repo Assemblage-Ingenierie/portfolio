@@ -3,9 +3,11 @@
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import type { Projet, Statut } from '@/types/projet';
+import { RangeSlider } from './RangeSlider';
 
 const STATUT_BG: Record<string, string> = {
   'En étude': '#DFE4E8',
+  'Concours': '#F0E8F5',
   'En chantier': '#F9E1E3',
   'Livré': '#d4edda',
   'Abandonné': '#e2e3e5',
@@ -14,6 +16,7 @@ const STATUT_BG: Record<string, string> = {
 };
 const STATUT_COLOR: Record<string, string> = {
   'En étude': '#30323E',
+  'Concours': '#6B4F94',
   'En chantier': '#E30513',
   'Livré': '#155724',
   'Abandonné': '#6c757d',
@@ -35,52 +38,6 @@ function Badge({ statut }: { statut: Statut }) {
     }}>
       {statut}
     </span>
-  );
-}
-
-function RangeSlider({
-  min, max, valueMin, valueMax, onChange,
-}: {
-  min: number; max: number; valueMin: number; valueMax: number;
-  onChange: (min: number, max: number) => void;
-}) {
-  const range = max - min || 1;
-  const pctLeft = ((valueMin - min) / range) * 100;
-  const pctRight = ((max - valueMax) / range) * 100;
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '180px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '8pt', fontWeight: 700, color: '#E30513' }}>
-        <span>{valueMin}</span><span>{valueMax}</span>
-      </div>
-      <div className="range-slider">
-        {/* Track background */}
-        <div style={{
-          position: 'absolute', top: '50%', left: 0, right: 0,
-          height: '4px', background: '#DFE4E8', borderRadius: '2px',
-          transform: 'translateY(-50%)', pointerEvents: 'none',
-        }} />
-        {/* Active range fill */}
-        <div style={{
-          position: 'absolute', top: '50%',
-          left: `${pctLeft}%`, right: `${pctRight}%`,
-          height: '4px', background: '#E30513', borderRadius: '2px',
-          transform: 'translateY(-50%)', pointerEvents: 'none',
-        }} />
-        {/* Min thumb — higher z-index when at max to stay grabbable */}
-        <input
-          type="range" min={min} max={max} value={valueMin}
-          style={{ zIndex: valueMin >= valueMax ? 3 : 1 }}
-          onChange={e => onChange(Math.min(Number(e.target.value), valueMax), valueMax)}
-        />
-        {/* Max thumb */}
-        <input
-          type="range" min={min} max={max} value={valueMax}
-          style={{ zIndex: valueMin >= valueMax ? 2 : 3 }}
-          onChange={e => onChange(valueMin, Math.max(Number(e.target.value), valueMin))}
-        />
-      </div>
-    </div>
   );
 }
 
@@ -106,6 +63,20 @@ export default function PortfolioGrid({ projets }: Props) {
     });
   }, [projets]);
 
+  // Valeurs Neuf / Réhab disponibles dans les projets.
+  const rehabNeufOptions = useMemo(() => {
+    const set = new Set<string>();
+    projets.forEach(p => (p.rehabNeufValues ?? []).forEach(v => { if (v) set.add(v); }));
+    return [...set].sort((a, b) => a.localeCompare(b, 'fr'));
+  }, [projets]);
+
+  // Matériaux disponibles dans les projets.
+  const materiauxOptions = useMemo(() => {
+    const set = new Set<string>();
+    projets.forEach(p => (p.materiaux ?? []).forEach(v => { if (v) set.add(v); }));
+    return [...set].sort((a, b) => a.localeCompare(b, 'fr'));
+  }, [projets]);
+
   // Programmes principaux disponibles (union de tous les multi-select).
   const programmes = useMemo(() => {
     const set = new Set<string>();
@@ -116,11 +87,17 @@ export default function PortfolioGrid({ projets }: Props) {
     return [...set].sort((a, b) => a.localeCompare(b, 'fr'));
   }, [projets]);
 
-  const allStatuts: Statut[] = ['En étude', 'En chantier', 'Livré', 'Abandonné', 'En pause', 'En consultation'];
+  // Ordre demandé : Livré · Concours · En chantier · En pause · En étude · En consultation.
+  // "Abandonné" est volontairement omis du filtre UI (reste dans le type pour
+  // compatibilité avec d'anciens records).
+  const allStatuts: Statut[] = ['Livré', 'Concours', 'En chantier', 'En pause', 'En étude', 'En consultation'];
 
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [rehabNeuf, setRehabNeuf] = useState<'Tous' | 'Neuf' | 'Réhab'>('Tous');
+  // Rehab/Neuf : multi-sélection AND — sélection vide = tous.
+  const [selectedRehabNeuf, setSelectedRehabNeuf] = useState<Set<string>>(new Set());
+  // Matériaux : multi-sélection AND — sélection vide = tous.
+  const [selectedMateriaux, setSelectedMateriaux] = useState<Set<string>>(new Set());
   const [selectedStatuts, setSelectedStatuts] = useState<Set<Statut>>(new Set());
   // Pôles : multi-sélection cumulable. Semantique AND — un projet passe le
   // filtre s'il contient TOUS les pôles cochés (intersection non vide avec
@@ -132,6 +109,20 @@ export default function PortfolioGrid({ projets }: Props) {
   const [yearMin, setYearMin] = useState(years.min);
   const [yearMax, setYearMax] = useState(years.max);
 
+  const toggleRehabNeuf = (v: string) => {
+    setSelectedRehabNeuf(prev => {
+      const next = new Set(prev);
+      if (next.has(v)) next.delete(v); else next.add(v);
+      return next;
+    });
+  };
+  const toggleMateriaux = (v: string) => {
+    setSelectedMateriaux(prev => {
+      const next = new Set(prev);
+      if (next.has(v)) next.delete(v); else next.add(v);
+      return next;
+    });
+  };
   const togglePole = (code: string) => {
     setSelectedPoles(prev => {
       const next = new Set(prev);
@@ -172,13 +163,27 @@ export default function PortfolioGrid({ projets }: Props) {
         // plante avec "e?.toLowerCase is not a function". On filtre par type.
         if (!textFields.some(v => typeof v === 'string' && v.toLowerCase().includes(q))) return false;
       }
-      if (rehabNeuf !== 'Tous') {
-        if (!p.rehabNeuf) return false;
-        const rn = p.rehabNeuf.toLowerCase();
-        if (rehabNeuf === 'Neuf' && !rn.includes('neuf')) return false;
-        if (rehabNeuf === 'Réhab' && !rn.includes('réhab') && !rn.includes('rehab') && !rn.includes('réhabilitation')) return false;
+      // Rehab/Neuf : AND — le projet doit avoir TOUTES les valeurs cochées.
+      if (selectedRehabNeuf.size > 0) {
+        const vals = (p.rehabNeufValues ?? []).map(v => v.toLowerCase());
+        for (const sel of selectedRehabNeuf) {
+          if (!vals.includes(sel.toLowerCase())) return false;
+        }
       }
-      if (selectedStatuts.size > 0 && !selectedStatuts.has(p.statut)) return false;
+      // Matériaux : AND — le projet doit avoir TOUS les matériaux cochés.
+      if (selectedMateriaux.size > 0) {
+        const vals = new Set((p.materiaux ?? []).map(v => v.toLowerCase()));
+        for (const sel of selectedMateriaux) {
+          if (!vals.has(sel.toLowerCase())) return false;
+        }
+      }
+      // Statut : AND — le projet doit avoir TOUS les statuts cochés.
+      if (selectedStatuts.size > 0) {
+        const vals = new Set(p.statutValues ?? [p.statut]);
+        for (const s of selectedStatuts) {
+          if (!vals.has(s)) return false;
+        }
+      }
       if (selectedPoles.size > 0) {
         const projetPoles = new Set((p.vignettePoles ?? []).map(v => v.toUpperCase()));
         // AND : tous les pôles cochés doivent être présents sur le projet.
@@ -196,12 +201,13 @@ export default function PortfolioGrid({ projets }: Props) {
       if (p.anneeLivraison && (p.anneeLivraison < yearMin || p.anneeLivraison > yearMax)) return false;
       return true;
     });
-  }, [projets, search, rehabNeuf, selectedStatuts, selectedPoles, selectedProgrammes, yearMin, yearMax]);
+  }, [projets, search, selectedRehabNeuf, selectedMateriaux, selectedStatuts, selectedPoles, selectedProgrammes, yearMin, yearMax]);
 
-  const hasFilters = search || rehabNeuf !== 'Tous' || selectedStatuts.size > 0 || selectedPoles.size > 0 || selectedProgrammes.size > 0;
+  const hasFilters = search || selectedRehabNeuf.size > 0 || selectedMateriaux.size > 0 || selectedStatuts.size > 0 || selectedPoles.size > 0 || selectedProgrammes.size > 0 || yearMin !== years.min || yearMax !== years.max;
   const resetFilters = () => {
     setSearch('');
-    setRehabNeuf('Tous');
+    setSelectedRehabNeuf(new Set());
+    setSelectedMateriaux(new Set());
     setSelectedStatuts(new Set());
     setSelectedPoles(new Set());
     setSelectedProgrammes(new Set());
@@ -331,25 +337,44 @@ export default function PortfolioGrid({ projets }: Props) {
           </div>
         </div>
 
-        {/* Neuf / Réhab */}
-        <div>
-          <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: '6px' }}>Type</div>
-          <div style={{ display: 'flex', gap: '4px' }}>
-            {(['Tous', 'Neuf', 'Réhab'] as const).map(v => (
-              <button key={v} onClick={() => setRehabNeuf(v)} style={btn(rehabNeuf === v)}>{v}</button>
-            ))}
-          </div>
-        </div>
-
-        {/* Année */}
-        {years.min < years.max && (
+        {/* Neuf / Réhab — multi-sélection AND */}
+        {rehabNeufOptions.length > 0 && (
           <div>
-            <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: '6px' }}>Année de livraison</div>
-            <RangeSlider
-              min={years.min} max={years.max}
-              valueMin={yearMin} valueMax={yearMax}
-              onChange={(mn, mx) => { setYearMin(mn); setYearMax(mx); }}
-            />
+            <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: '6px' }}>Type</div>
+            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+              <button onClick={() => setSelectedRehabNeuf(new Set())} style={btn(selectedRehabNeuf.size === 0)}>Tous</button>
+              {rehabNeufOptions.map(v => (
+                <button key={v} onClick={() => toggleRehabNeuf(v)} style={btn(selectedRehabNeuf.has(v))}>{v}</button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Matériaux (multi-select AND) + Année slider sur la même rangée.
+            Matériaux flex à gauche, slider repoussé à droite via marginLeft auto. */}
+        {(materiauxOptions.length > 0 || years.min < years.max) && (
+          <div style={{ flex: '1 1 100%', display: 'flex', gap: '20px', alignItems: 'flex-end', flexWrap: 'wrap' }}>
+            {materiauxOptions.length > 0 && (
+              <div style={{ flex: '1 1 auto', minWidth: 240 }}>
+                <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: '6px' }}>Matériaux</div>
+                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                  <button onClick={() => setSelectedMateriaux(new Set())} style={btn(selectedMateriaux.size === 0)}>Tous</button>
+                  {materiauxOptions.map(v => (
+                    <button key={v} onClick={() => toggleMateriaux(v)} style={btn(selectedMateriaux.has(v))}>{v}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {years.min < years.max && (
+              <div style={{ flex: '0 0 auto', marginLeft: 'auto' }}>
+                <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: '6px' }}>Année de livraison</div>
+                <RangeSlider
+                  min={years.min} max={years.max}
+                  valueMin={yearMin} valueMax={yearMax}
+                  onChange={(mn, mx) => { setYearMin(mn); setYearMax(mx); }}
+                />
+              </div>
+            )}
           </div>
         )}
 
