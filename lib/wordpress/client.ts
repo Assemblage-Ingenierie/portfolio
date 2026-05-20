@@ -106,3 +106,53 @@ export function extractWpPostId(url: string): number | undefined {
   if (match) return parseInt(match[1], 10);
   return undefined;
 }
+
+/**
+ * Trouve un post publié par son slug exact. Renvoie `undefined` si aucun
+ * post ne matche.
+ *
+ * Note WP : l'endpoint `/posts?slug=...` est insensible au statut par défaut,
+ * mais on filtre explicitement `status=publish` pour ne récupérer que la
+ * version en production (et pas un draft homonyme par exemple).
+ */
+export async function findPublishedPostBySlug(
+  slug: string
+): Promise<{ id: number; url: string } | undefined> {
+  const url = `${wpApi()}/posts?slug=${encodeURIComponent(slug)}&status=publish&per_page=1`;
+  const res = await fetch(url, { headers: authHeaders() });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`WP findPublishedPostBySlug ${res.status}: ${err.slice(0, 200)}`);
+  }
+  const arr = await res.json();
+  if (!Array.isArray(arr) || arr.length === 0) return undefined;
+  const first = arr[0];
+  if (typeof first?.id !== 'number' || typeof first?.link !== 'string') return undefined;
+  return { id: first.id, url: first.link };
+}
+
+/**
+ * Récupère le contenu d'un post WP par son ID. Utilisé pour copier le
+ * contenu d'un brouillon validé vers le post de production.
+ *
+ * On force `context=edit` parce que `content.rendered` (context=view) est
+ * post-traité par WP (wpautop, shortcodes) alors qu'on veut le HTML brut
+ * tel qu'il a été enregistré.
+ */
+export async function getPostContent(
+  id: number
+): Promise<{ title: string; content: string; excerpt: string; featured_media?: number }> {
+  const url = `${wpApi()}/posts/${id}?context=edit`;
+  const res = await fetch(url, { headers: authHeaders() });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`WP getPostContent ${res.status}: ${err.slice(0, 200)}`);
+  }
+  const data = await res.json();
+  return {
+    title: data?.title?.raw ?? data?.title?.rendered ?? '',
+    content: data?.content?.raw ?? data?.content?.rendered ?? '',
+    excerpt: data?.excerpt?.raw ?? data?.excerpt?.rendered ?? '',
+    featured_media: typeof data?.featured_media === 'number' ? data.featured_media : undefined,
+  };
+}

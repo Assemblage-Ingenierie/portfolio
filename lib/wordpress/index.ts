@@ -1,1 +1,7 @@
-export { uploadMedia, createOrUpdatePost, extractWpPostId } from './client';
+export {
+  uploadMedia,
+  createOrUpdatePost,
+  extractWpPostId,
+  findPublishedPostBySlug,
+  getPostContent,
+} from './client';

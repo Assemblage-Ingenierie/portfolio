@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getProjet, updateProjetUrl } from '@/lib/airtable';
-import { uploadMedia, createOrUpdatePost, extractWpPostId } from '@/lib/wordpress';
+import { uploadMedia, createOrUpdatePost } from '@/lib/wordpress';
 import { buildWpContent } from '@/lib/wordpress/builders';
 import { buildWpContentV2 } from '@/lib/wordpress/buildersV2';
 import { requireApprovedUser } from '@/lib/supabase/requireApprovedUser';
@@ -66,22 +66,34 @@ export async function POST(
       ? buildWpContentV2(projet, coverUrl, photoUrls)
       : buildWpContent(projet, coverUrl, photoUrls);
 
-    // 4. Create or update post
-    const existingId = projet.urlWordpress ? extractWpPostId(projet.urlWordpress) : undefined;
-    const { id, url, status, type, author } = await createOrUpdatePost(
-      {
-        title: projet.nom,
-        slug: projet.slug,
-        content,
-        excerpt: projet.pitch,
-        status: 'draft',
-        featured_media: coverId,
-      },
-      existingId
-    );
-    console.log('[WP-PUBLISH]', { id, status, type, author, url, existingId });
+    // 4. TOUJOURS créer un nouveau draft.
+    //    On ne réutilise jamais l'ID d'un post existant (extractWpPostId est
+    //    volontairement abandonné ici), pour deux raisons :
+    //    - garantir que le nouveau post apparaît systématiquement dans
+    //      /wp-admin/edit.php (cf. cas "La maison sur le fleuve" où l'UPDATE
+    //      sur post existant retournait status=draft/type=post valides mais
+    //      le post restait invisible dans la liste — cause WP inconnue)
+    //    - immuniser les exports contre toute modification accidentelle
+    //      d'un post déjà publié en production (la mise à jour de la prod
+    //      se fait via la route dédiée /update-prod, sur action explicite)
+    //    Le code n'envoie JAMAIS status: 'trash' ni DELETE → impossibilité
+    //    par construction de mettre un post existant à la corbeille.
+    //    WP gère automatiquement les collisions de slug en suffixant
+    //    -2, -3, etc. — chaque draft est donc unique et visible.
+    const previousUrl = projet.urlWordpress;
+    const { id, url, status, type, author } = await createOrUpdatePost({
+      title: projet.nom,
+      slug: projet.slug,
+      content,
+      excerpt: projet.pitch,
+      status: 'draft',
+      featured_media: coverId,
+    });
+    console.log('[WP-PUBLISH]', { id, status, type, author, url, previousUrl });
 
-    // 5. Write back URL to Airtable (non-blocking)
+    // 5. Write back URL to Airtable (non-blocking). urlWordpress reflète
+    //    désormais le DERNIER draft créé — utile à /update-prod pour
+    //    retrouver le draft à promouvoir.
     let airtableWarning: string | undefined;
     try {
       await updateProjetUrl(slug, url);
@@ -90,7 +102,7 @@ export async function POST(
       airtableWarning = 'URL non sauvegardée dans Airtable';
     }
 
-    return NextResponse.json({ id, url, status, type, author, warning: airtableWarning });
+    return NextResponse.json({ id, url, status, type, author, previousUrl, warning: airtableWarning });
   } catch (err) {
     console.error('Publish error:', err);
     return NextResponse.json(
