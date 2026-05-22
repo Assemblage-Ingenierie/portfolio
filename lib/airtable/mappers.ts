@@ -292,6 +292,7 @@ export function recordToProjet(record: any, aux?: AuxValues): Projet {
               dateFinEstimee: portfolio?.date_fin_estimee,
             }
           : undefined,
+        ficheStatus: cfg?.ficheStatus,
       };
     })(),
   };

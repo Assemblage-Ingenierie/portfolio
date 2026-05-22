@@ -28,6 +28,9 @@ const FICHE_ONLY_FIELDS: ReadonlySet<keyof ProjetEditableFields> = new Set([
   'entreprise',
   'departement',
   'motsCles',
+  // `ficheStatus` NE figure PAS ici : le sidebar de la home dénombre les
+  // fiches par status (workflow), donc tout changement doit invalider la
+  // liste.
 ]);
 
 function affectsList(body: ProjetEditableFields): boolean {
@@ -49,6 +52,19 @@ export async function PATCH(
     body = await req.json();
   } catch {
     return NextResponse.json({ error: 'Corps de requête invalide' }, { status: 400 });
+  }
+
+  // Gate admin sur le status "Prête pour publication" : seul un admin peut
+  // verrouiller une fiche (les utilisateurs réguliers peuvent passer aux
+  // autres status mais pas à celui-ci).
+  if (
+    body.ficheStatus === 'Prête pour publication' &&
+    auth.profile.role !== 'admin'
+  ) {
+    return NextResponse.json(
+      { error: 'Seul un administrateur peut marquer une fiche comme prête pour publication' },
+      { status: 403 }
+    );
   }
 
   try {

@@ -1,14 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Projet, TemplateChoice } from '@/types/projet';
 import TemplatePreview from '@/components/TemplatePreview';
 import LayoutSidebar from '@/components/projet/LayoutSidebar';
 import PhotoCropOverlay from '@/components/projet/PhotoCropOverlay';
+import FicheStatusPopup from '@/components/projet/FicheStatusPopup';
 import { authedFetch } from '@/lib/supabase/authHeaders';
 import { DEFAULT_MANUAL_CONFIG, ManualConfig } from '@/lib/pdf/manualConfig';
 import type { BandeauConfig } from '@/lib/pdf/bandeauConfig';
 import type { CropData } from '@/lib/pdf/photoCrop';
+import { DEFAULT_FICHE_STATUS, type FicheStatus } from '@/lib/pdf/projectConfig';
 import ProjetToolbar from './ProjetToolbar';
 
 interface Props {
@@ -29,6 +31,25 @@ export default function ProjetView({ projet, isPrint }: Props) {
   );
   const [cropEditMode, setCropEditMode] = useState(false);
   const [measureTrigger, setMeasureTrigger] = useState(0);
+  const [ficheStatus, setFicheStatus] = useState<FicheStatus>(
+    projet.ficheStatus ?? DEFAULT_FICHE_STATUS
+  );
+
+  // Popup visible à l'ouverture de la fiche (sauf en mode print).
+  const [showPopup, setShowPopup] = useState(!isPrint);
+  // Verrouillage de la mise en page : actif quand la fiche est "Prête pour
+  // publication" ET que l'utilisateur n'a pas cliqué "Editer tout de même".
+  // Re-verrouille automatiquement si le statut change vers "Prête pour
+  // publication" via le sélecteur (et rouvre le popup).
+  const [forceEdit, setForceEdit] = useState(false);
+  useEffect(() => {
+    if (ficheStatus === 'Prête pour publication') {
+      setForceEdit(false);
+      if (!isPrint) setShowPopup(true);
+    }
+  }, [ficheStatus, isPrint]);
+
+  const readOnly = ficheStatus === 'Prête pour publication' && !forceEdit;
 
   async function handleTemplateChange(newTemplate: TemplateChoice) {
     setTemplate(newTemplate);
@@ -54,6 +75,13 @@ export default function ProjetView({ projet, isPrint }: Props) {
 
   return (
     <>
+      {!isPrint && showPopup && (
+        <FicheStatusPopup
+          status={ficheStatus}
+          onClose={() => setShowPopup(false)}
+          onForceEdit={() => setForceEdit(true)}
+        />
+      )}
       {!isPrint && (
         <ProjetToolbar
           projet={projet}
@@ -65,6 +93,9 @@ export default function ProjetView({ projet, isPrint }: Props) {
           onCropEditModeChange={setCropEditMode}
           onTemplateChange={handleTemplateChange}
           onSave={() => setMeasureTrigger(t => t + 1)}
+          ficheStatus={ficheStatus}
+          onFicheStatusChange={setFicheStatus}
+          readOnly={readOnly}
         />
       )}
       {isManualLayout ? (

@@ -7,6 +7,7 @@ import {
   deserializeProjectConfig,
   serializeProjectConfig,
   type ProjectConfig,
+  type FicheStatus,
 } from '@/lib/pdf/projectConfig';
 
 export interface ProjetEditableFields {
@@ -36,6 +37,8 @@ export interface ProjetEditableFields {
   savedManualConfig?: ManualConfig;
   bandeauConfig?: BandeauConfig;
   photoCrops?: Record<string, CropData>;
+  /** Statut interne de production. Mergé dans `ProjectConfig.ficheStatus`. */
+  ficheStatus?: FicheStatus;
 }
 
 export async function updateProjetFields(slug: string, fields: ProjetEditableFields): Promise<{ slug: string }> {
@@ -76,7 +79,8 @@ export async function updateProjetFields(slug: string, fields: ProjetEditableFie
   if (
     fields.savedManualConfig !== undefined ||
     fields.bandeauConfig !== undefined ||
-    fields.photoCrops !== undefined
+    fields.photoCrops !== undefined ||
+    fields.ficheStatus !== undefined
   ) {
     const existing = deserializeProjectConfig(records[0].fields[PROJECT_CONFIG_FIELD]) ?? {};
     const merged: ProjectConfig = {
@@ -84,6 +88,7 @@ export async function updateProjetFields(slug: string, fields: ProjetEditableFie
       ...(fields.bandeauConfig !== undefined ? { bandeau: fields.bandeauConfig } : {}),
       ...(fields.savedManualConfig !== undefined ? { manuel: fields.savedManualConfig } : {}),
       ...(fields.photoCrops !== undefined ? { photoCrops: fields.photoCrops } : {}),
+      ...(fields.ficheStatus !== undefined ? { ficheStatus: fields.ficheStatus } : {}),
     };
     update[PROJECT_CONFIG_FIELD] = serializeProjectConfig(merged);
   }
