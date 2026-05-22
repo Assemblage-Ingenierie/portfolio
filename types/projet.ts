@@ -1,6 +1,7 @@
 import type { ManualConfig } from '@/lib/pdf/manualConfig';
 import type { BandeauConfig } from '@/lib/pdf/bandeauConfig';
 import type { CropData } from '@/lib/pdf/photoCrop';
+import type { FicheStatus } from '@/lib/pdf/projectConfig';
 
 export type Statut =
   | 'En étude'
@@ -101,4 +102,9 @@ export interface Projet {
     dateDemarrage?: string;
     dateFinEstimee?: string;
   };
+
+  /** Statut interne de production de la fiche (workflow). Stocké dans le
+   *  ProjectConfig (champ Airtable "Config template manuel"). Par défaut
+   *  "Pas faite" si absent. Distinct de `statut` qui est le statut métier. */
+  ficheStatus?: FicheStatus;
 }

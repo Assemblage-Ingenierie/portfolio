@@ -5,9 +5,11 @@ import Link from 'next/link';
 import type { Projet, TemplateChoice } from '@/types/projet';
 import { TEMPLATE_OPTIONS } from '@/types/projet';
 import { authedFetch } from '@/lib/supabase/authHeaders';
+import { useAuth } from '@/lib/supabase/useAuth';
 import { encodeConfig, ManualConfig } from '@/lib/pdf/manualConfig';
 import type { BandeauConfig } from '@/lib/pdf/bandeauConfig';
 import type { CropData } from '@/lib/pdf/photoCrop';
+import { FICHE_STATUS_VALUES, type FicheStatus } from '@/lib/pdf/projectConfig';
 
 interface Props {
   projet: Projet;
@@ -19,6 +21,11 @@ interface Props {
   onCropEditModeChange?: (next: boolean) => void;
   onTemplateChange: (template: TemplateChoice) => void;
   onSave?: () => void;
+  ficheStatus: FicheStatus;
+  onFicheStatusChange: (next: FicheStatus) => void;
+  /** Si vrai : sauvegarde mise en page désactivée (fiche verrouillée et user
+   *  n'a pas cliqué "Editer tout de même"). */
+  readOnly?: boolean;
 }
 
 export default function ProjetToolbar({
@@ -31,13 +38,43 @@ export default function ProjetToolbar({
   onCropEditModeChange,
   onTemplateChange,
   onSave,
+  ficheStatus,
+  onFicheStatusChange,
+  readOnly,
 }: Props) {
   const [publishing, setPublishing] = useState(false);
   const [result, setResult] = useState<{ url?: string; error?: string; warning?: string; status?: string; type?: string; author?: number; id?: number; previousUrl?: string } | null>(null);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [statusSaveState, setStatusSaveState] = useState<'idle' | 'saving' | 'error'>('idle');
   // Promotion du dernier draft vers la prod (route /update-prod).
   const [promoting, setPromoting] = useState(false);
   const [promoteResult, setPromoteResult] = useState<{ prodUrl?: string; prodId?: number; draftUrl?: string; error?: string } | null>(null);
+
+  const { profile } = useAuth();
+  const isAdmin = profile?.role === 'admin';
+
+  async function handleStatusChange(next: FicheStatus) {
+    const previous = ficheStatus;
+    onFicheStatusChange(next); // optimiste
+    setStatusSaveState('saving');
+    try {
+      const res = await authedFetch(`/api/projet/${projet.slug}/fields`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ficheStatus: next }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? 'Erreur serveur');
+      }
+      setStatusSaveState('idle');
+    } catch (err) {
+      console.error('[ficheStatus]', err);
+      onFicheStatusChange(previous); // rollback
+      setStatusSaveState('error');
+      setTimeout(() => setStatusSaveState('idle'), 4000);
+    }
+  }
 
   async function handlePublish(variant: 'v1' | 'v2') {
     const label = variant === 'v2' ? 'Export WP 2' : 'Export WP 1';
@@ -133,6 +170,30 @@ export default function ProjetToolbar({
         ))}
       </select>
 
+      <label style={{ color: 'white', fontWeight: 600, marginLeft: 4, marginRight: 4 }}>Statut fiche :</label>
+      <select
+        value={ficheStatus}
+        onChange={(e) => handleStatusChange(e.target.value as FicheStatus)}
+        disabled={statusSaveState === 'saving'}
+        title={!isAdmin ? 'Seul un administrateur peut sélectionner "Prête pour publication"' : undefined}
+        style={{
+          ...btn,
+          background: statusSaveState === 'error' ? '#ffaaaa' : 'white',
+          color: 'var(--ai-violet)',
+          border: 'none',
+        }}
+      >
+        {FICHE_STATUS_VALUES.map((s) => (
+          <option
+            key={s}
+            value={s}
+            disabled={s === 'Prête pour publication' && !isAdmin && ficheStatus !== s}
+          >
+            {s}{s === 'Prête pour publication' && !isAdmin ? ' (admin uniquement)' : ''}
+          </option>
+        ))}
+      </select>
+
       <Link
         href={`/projet/${projet.slug}/edit`}
         style={{ ...btn, background: 'transparent', border: '1px solid var(--ai-gris)', color: 'white', textDecoration: 'none' }}
@@ -158,15 +219,22 @@ export default function ProjetToolbar({
       {(template === 'Str-Env' || template === 'Dev') && (
         <button
           onClick={handleSaveLayout}
-          disabled={saveState === 'saving'}
+          disabled={saveState === 'saving' || readOnly}
+          title={readOnly ? 'Fiche verrouillée — passez en mode édition pour modifier la mise en page' : undefined}
           style={{
             ...btn,
             background: saveState === 'saved' ? '#4caf50' : saveState === 'error' ? '#e53935' : 'white',
             color: saveState === 'idle' ? 'var(--ai-violet)' : 'white',
             border: 'none',
+            opacity: readOnly ? 0.5 : 1,
+            cursor: readOnly ? 'not-allowed' : 'pointer',
           }}
         >
-          {saveState === 'saving' ? 'Sauvegarde…' : saveState === 'saved' ? '✓ Mise en page sauvegardée' : saveState === 'error' ? '✗ Erreur' : 'Sauvegarder la mise en page'}
+          {readOnly ? '🔒 Mise en page verrouillée'
+            : saveState === 'saving' ? 'Sauvegarde…'
+            : saveState === 'saved' ? '✓ Mise en page sauvegardée'
+            : saveState === 'error' ? '✗ Erreur'
+            : 'Sauvegarder la mise en page'}
         </button>
       )}
 

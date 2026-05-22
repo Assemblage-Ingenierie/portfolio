@@ -19,6 +19,34 @@ import type { CropData } from './photoCrop';
  * ManualConfig "à plat" (legacy), le deserializer l'enveloppe automatiquement
  * dans `{ manuel: … }` à la lecture.
  */
+/** Workflow interne de production d'une fiche. Stocké dans `ProjectConfig`
+ *  (champ Airtable « Config template manuel ») pour éviter d'ajouter une
+ *  colonne dédiée. Distinct du `Statut` métier (En chantier / Livré / …). */
+export type FicheStatus =
+  | 'Pas faite'
+  | 'En cours'
+  | 'En attente de validation'
+  | 'Prête pour publication';
+
+export const FICHE_STATUS_VALUES: FicheStatus[] = [
+  'Pas faite',
+  'En cours',
+  'En attente de validation',
+  'Prête pour publication',
+];
+
+export const DEFAULT_FICHE_STATUS: FicheStatus = 'Pas faite';
+
+export const FICHE_STATUS_MESSAGES: Record<FicheStatus, string> = {
+  'Pas faite':
+    "Cette fiche n'a pas encore été travaillée, la mise en page n'est pas représentative d'une fiche terminée.",
+  'En cours': 'La mise en page de cette fiche est en cours.',
+  'En attente de validation':
+    'La mise en page de cette fiche est en attente de validation.',
+  'Prête pour publication':
+    "Cette fiche est prête pour être publiée dans le portfolio. Il n'est plus possible de modifier la mise en page.",
+};
+
 export interface ProjectConfig {
   bandeau?: BandeauConfig;
   manuel?: ManualConfig;
@@ -31,6 +59,8 @@ export interface ProjectConfig {
     date_demarrage?: string;
     date_fin_estimee?: string;
   };
+  /** Statut de production interne (workflow). Par défaut : 'Pas faite'. */
+  ficheStatus?: FicheStatus;
 }
 
 export const PROJECT_CONFIG_FIELD = 'Config template manuel';
