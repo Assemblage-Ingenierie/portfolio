@@ -254,67 +254,7 @@ export default function PortfolioGrid({ projets }: Props) {
   };
 
   return (
-    <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '32px 24px', fontFamily: 'var(--sans)', display: 'flex', gap: 24, alignItems: 'flex-start' }}>
-
-      {/* Sidebar Workflow — compteurs par statut interne + liste des fiches
-          en attente de validation (cliquables). Collapsable. */}
-      <aside style={{ flex: '0 0 220px', position: 'sticky', top: 24, alignSelf: 'flex-start' }}>
-        <div style={{ background: 'white', border: '1px solid #DFE4E8', borderRadius: 2, overflow: 'hidden' }}>
-          <button
-            onClick={() => setWorkflowOpen((v) => !v)}
-            style={{
-              width: '100%', padding: '10px 12px', textAlign: 'left',
-              background: 'var(--ai-violet)', color: 'white', border: 'none', cursor: 'pointer',
-              fontFamily: 'var(--sans)', fontSize: '8pt', fontWeight: 700,
-              letterSpacing: '0.1em', textTransform: 'uppercase',
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            }}
-          >
-            Workflow ({totalProjets})
-            <span style={{ fontSize: '10pt' }}>{workflowOpen ? '▾' : '▸'}</span>
-          </button>
-          {workflowOpen && (
-            <div style={{ padding: '10px 12px' }}>
-              {FICHE_STATUS_VALUES.map((s) => (
-                <div key={s} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0', fontSize: '8.5pt' }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--ai-noir70)' }}>
-                    <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: statusColor[s] }} />
-                    {s}
-                  </span>
-                  <span style={{ fontWeight: 700, color: 'var(--ai-noir)' }}>
-                    {workflowCounts[s]} / {totalProjets}
-                  </span>
-                </div>
-              ))}
-              {enAttente.length > 0 && (
-                <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #DFE4E8' }}>
-                  <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 6 }}>
-                    À valider
-                  </div>
-                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    {enAttente.map((p) => (
-                      <li key={p.slug}>
-                        <Link
-                          href={`/projet/${p.slug}`}
-                          style={{
-                            display: 'block', fontSize: '8.5pt', color: 'var(--ai-violet)',
-                            textDecoration: 'none', lineHeight: 1.3,
-                          }}
-                          title={p.nom}
-                        >
-                          → {p.nom}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </aside>
-
-      <div style={{ flex: 1, minWidth: 0 }}>
+    <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '32px 24px', fontFamily: 'var(--sans)' }}>
 
       {/* Header */}
       <header style={{ marginBottom: '20px', borderBottom: '2px solid var(--ai-rouge)', paddingBottom: '16px' }}>
@@ -391,6 +331,68 @@ export default function PortfolioGrid({ projets }: Props) {
           </button>
         )}
       </div>
+
+      {/* Ligne flex [sidebar État de publication | filtres + résultats].
+          Sidebar sticky alignée avec le haut du bandeau de filtres. */}
+      <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
+
+      <aside style={{ flex: '0 0 220px', position: 'sticky', top: 24, alignSelf: 'flex-start' }}>
+        <div style={{ background: 'white', border: '1px solid #DFE4E8', borderRadius: 2, overflow: 'hidden' }}>
+          <button
+            onClick={() => setWorkflowOpen((v) => !v)}
+            style={{
+              width: '100%', padding: '10px 12px', textAlign: 'left',
+              background: 'var(--ai-violet)', color: 'white', border: 'none', cursor: 'pointer',
+              fontFamily: 'var(--sans)', fontSize: '8pt', fontWeight: 700,
+              letterSpacing: '0.1em', textTransform: 'uppercase',
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            }}
+          >
+            État de publication ({totalProjets})
+            <span style={{ fontSize: '10pt' }}>{workflowOpen ? '▾' : '▸'}</span>
+          </button>
+          {workflowOpen && (
+            <div style={{ padding: '10px 12px' }}>
+              {FICHE_STATUS_VALUES.map((s) => (
+                <div key={s} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0', fontSize: '8.5pt' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--ai-noir70)' }}>
+                    <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: statusColor[s] }} />
+                    {s}
+                  </span>
+                  <span style={{ fontWeight: 700, color: 'var(--ai-noir)' }}>
+                    {workflowCounts[s]} / {totalProjets}
+                  </span>
+                </div>
+              ))}
+              {enAttente.length > 0 && (
+                <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #DFE4E8' }}>
+                  <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 6 }}>
+                    À valider
+                  </div>
+                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {enAttente.map((p) => (
+                      <li key={p.slug}>
+                        <Link
+                          href={`/projet/${p.slug}`}
+                          style={{
+                            display: 'block', fontSize: '8.5pt', color: 'var(--ai-violet)',
+                            textDecoration: 'none', lineHeight: 1.3,
+                          }}
+                          title={p.nom}
+                        >
+                          → {p.nom}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </aside>
+
+      <div style={{ flex: 1, minWidth: 0 }}>
 
       {/* Filters bar — disposition compacte : les petits filtres (Pôle ·
           Statut · Type · Année) tiennent sur la 1re rangée ; Programme
@@ -555,6 +557,7 @@ export default function PortfolioGrid({ projets }: Props) {
           Aucun projet ne correspond aux filtres.
         </div>
       )}
+      </div>
       </div>
     </div>
   );
