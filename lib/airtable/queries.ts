@@ -4,7 +4,21 @@ import { base, TABLE } from './client';
 import { recordToProjet, type AuxValues, FIELD_PROGRAMME_PRINCIPAL, FIELD_PROGRAMME_SECONDAIRE, FIELD_POLE, FIELD_VIGNETTE_POLE, FIELD_PRESTATION_ASSEMBLAGE, FIELD_REHAB_NEUF, FIELD_MATERIAUX, FIELD_STATUT } from './mappers';
 import { fetchCrmNames } from './crm';
 
-export const PROJETS_TAG = 'projets';
+/** Tag de la liste complète (`getProjets`) — invalidé seulement quand un
+ *  champ "indexé" change (nom, statut, programme, année, pôle, etc.). Les
+ *  édits qui ne touchent qu'une fiche (description, mise en page, crops…)
+ *  ne doivent PAS invalider ce tag — sinon on rebuild N entrées de cache
+ *  pour rien à chaque save (cf. quota ISR Vercel). */
+export const PROJETS_LIST_TAG = 'projets:list';
+
+/** Tag par fiche individuelle (`getProjet(slug)`). Toujours invalidé à
+ *  la sauvegarde de la fiche correspondante. */
+export function projetTag(slug: string): string {
+  return `projet:${slug}`;
+}
+
+/** @deprecated Conservé pour rétro-compat — préférer PROJETS_LIST_TAG. */
+export const PROJETS_TAG = PROJETS_LIST_TAG;
 
 const STRING_FORMAT = {
   cellFormat: 'string' as const,
@@ -126,7 +140,7 @@ async function fetchAuxByFieldId(
 
 export async function getProjets(): Promise<Projet[]> {
   'use cache';
-  cacheTag(PROJETS_TAG);
+  cacheTag(PROJETS_LIST_TAG);
   if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) return [];
   try {
     const filter = '{Visible portfolio} = TRUE()';
@@ -186,7 +200,7 @@ export async function getProjets(): Promise<Projet[]> {
 
 export async function getProjet(slug: string): Promise<Projet | null> {
   'use cache';
-  cacheTag(PROJETS_TAG);
+  cacheTag(projetTag(slug));
   if (!/^[a-zA-Z0-9_-]+$/.test(slug)) return null;
   if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) return null;
   try {

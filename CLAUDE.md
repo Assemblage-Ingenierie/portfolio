@@ -87,8 +87,13 @@ Airtable ──► lib/airtable/queries.ts (getProjets / getProjet)
                                 └─► composants / API routes
 ```
 
-- `getProjets` et `getProjet` sont cachées avec `'use cache'` (Next.js 16) **et taggées** `cacheTag(PROJETS_TAG)`. Le tag `'projets'` est exporté depuis `queries.ts`.
-- **Toute mutation Airtable doit appeler `revalidateTag(PROJETS_TAG, 'max')`** depuis le route handler — sinon la home et les autres fiches restent sur les anciennes données après un renommage (résultat : 404 sur l'ancien slug).
+- `getProjets` et `getProjet` sont cachées avec `'use cache'` (Next.js 16) avec des **tags granulaires** :
+  - `getProjets()` → `cacheTag(PROJETS_LIST_TAG)` (`'projets:list'`) — partagé par toutes les vues liste (home, builder, tableau, API publique).
+  - `getProjet(slug)` → `cacheTag(projetTag(slug))` (`'projet:<slug>'`) — un tag par fiche.
+- **Stratégie d'invalidation** dans `/api/projet/[slug]/fields` :
+  - Toujours `revalidateTag(projetTag(slug))` (et `revalidateTag(projetTag(newSlug))` si renommage).
+  - `revalidateTag(PROJETS_LIST_TAG)` uniquement si un champ "indexé" change (nom, statut, programme, année, pôle, MOA, lieu, surface, budget…) ou si renommage. Pour un édit qui ne touche qu'une fiche (description, mise en page Str-Env, photoCrops, bandeauConfig, etc. — cf. `FICHE_ONLY_FIELDS` dans `route.ts`), la liste n'est PAS invalidée. C'est ce qui évite de brûler le quota ISR Vercel (avant : 1 save = N writes pour N fiches en cache ; après : 1 save = 1-2 writes dans le cas typique).
+  - `PROJETS_TAG` reste exporté en alias deprecated de `PROJETS_LIST_TAG` pour rétro-compat.
 - `formulaValue` / `linkedValue` / `selectValue` dans `lib/airtable/client.ts` gèrent les types de champs Airtable (formules, liaisons, sélecteurs) qui retournent des shapes différentes selon le contexte.
 - `recordToProjet` est le seul endroit qui mappe les noms de colonnes Airtable → champs TypeScript. C'est ici qu'ajouter ou renommer un champ.
 
