@@ -108,12 +108,34 @@ export default function PortfolioGrid({ projets }: Props) {
     return counts;
   }, [projets]);
 
-  const enAttente = useMemo(
-    () => projets.filter((p) => p.ficheStatus === 'En attente de validation'),
-    [projets]
-  );
-
   const [workflowOpen, setWorkflowOpen] = useState(true);
+  // Statuts dont la liste déroulante de projets est ouverte. Cliquer sur la
+  // ligne d'un statut (hors "Pas faite") toggle la liste.
+  const [expandedStatuses, setExpandedStatuses] = useState<Set<FicheStatus>>(
+    new Set(['En attente de validation'])
+  );
+  const toggleStatusExpanded = (s: FicheStatus) => {
+    setExpandedStatuses((prev) => {
+      const next = new Set(prev);
+      if (next.has(s)) next.delete(s); else next.add(s);
+      return next;
+    });
+  };
+
+  // Map status → projets correspondants (calculé une fois par render).
+  const projetsByStatus = useMemo(() => {
+    const map: Record<FicheStatus, Projet[]> = {
+      'Pas faite': [],
+      'En cours': [],
+      'En attente de validation': [],
+      'Prête pour publication': [],
+    };
+    projets.forEach((p) => {
+      map[p.ficheStatus ?? DEFAULT_FICHE_STATUS].push(p);
+    });
+    return map;
+  }, [projets]);
+
   const [search, setSearch] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   // Rehab/Neuf : multi-sélection AND — sélection vide = tous.
@@ -352,41 +374,62 @@ export default function PortfolioGrid({ projets }: Props) {
             <span style={{ fontSize: '10pt' }}>{workflowOpen ? '▾' : '▸'}</span>
           </button>
           {workflowOpen && (
-            <div style={{ padding: '10px 12px' }}>
-              {FICHE_STATUS_VALUES.map((s) => (
-                <div key={s} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 0', fontSize: '8.5pt' }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--ai-noir70)' }}>
-                    <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: statusColor[s] }} />
-                    {s}
-                  </span>
-                  <span style={{ fontWeight: 700, color: 'var(--ai-noir)' }}>
-                    {workflowCounts[s]} / {totalProjets}
-                  </span>
-                </div>
-              ))}
-              {enAttente.length > 0 && (
-                <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #DFE4E8' }}>
-                  <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 6 }}>
-                    À valider
+            <div style={{ padding: '6px 12px 10px' }}>
+              {FICHE_STATUS_VALUES.map((s) => {
+                // "Pas faite" reste non-cliquable : pas de liste à dérouler
+                // (la majorité des fiches y sont par défaut, peu utile).
+                const isClickable = s !== 'Pas faite' && workflowCounts[s] > 0;
+                const isOpen = expandedStatuses.has(s);
+                const list = projetsByStatus[s];
+                return (
+                  <div key={s} style={{ borderBottom: '1px solid #F0F0F0' }}>
+                    <div
+                      onClick={isClickable ? () => toggleStatusExpanded(s) : undefined}
+                      style={{
+                        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                        padding: '6px 0', fontSize: '8.5pt',
+                        cursor: isClickable ? 'pointer' : 'default',
+                        userSelect: 'none',
+                      }}
+                      title={isClickable ? (isOpen ? 'Replier' : 'Voir les fiches') : undefined}
+                    >
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--ai-noir70)' }}>
+                        <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: statusColor[s] }} />
+                        {s}
+                        {isClickable && (
+                          <span style={{ fontSize: '9pt', color: 'var(--ai-noir70)', marginLeft: 2 }}>
+                            {isOpen ? '▾' : '▸'}
+                          </span>
+                        )}
+                      </span>
+                      <span style={{ fontWeight: 700, color: 'var(--ai-noir)' }}>
+                        {workflowCounts[s]} / {totalProjets}
+                      </span>
+                    </div>
+                    {isClickable && isOpen && (
+                      <ul style={{
+                        listStyle: 'none', padding: '2px 0 8px 14px', margin: 0,
+                        display: 'flex', flexDirection: 'column', gap: 3,
+                      }}>
+                        {list.map((p) => (
+                          <li key={p.slug}>
+                            <Link
+                              href={`/projet/${p.slug}`}
+                              style={{
+                                display: 'block', fontSize: '8.5pt', color: 'var(--ai-violet)',
+                                textDecoration: 'none', lineHeight: 1.3,
+                              }}
+                              title={p.nom}
+                            >
+                              → {p.nom}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
-                  <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    {enAttente.map((p) => (
-                      <li key={p.slug}>
-                        <Link
-                          href={`/projet/${p.slug}`}
-                          style={{
-                            display: 'block', fontSize: '8.5pt', color: 'var(--ai-violet)',
-                            textDecoration: 'none', lineHeight: 1.3,
-                          }}
-                          title={p.nom}
-                        >
-                          → {p.nom}
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+                );
+              })}
             </div>
           )}
         </div>
