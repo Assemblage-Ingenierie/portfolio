@@ -55,16 +55,16 @@ export async function PATCH(
     const result = await updateProjetFields(slug, body);
 
     // Toujours invalider la fiche elle-même (ancien slug).
-    revalidateTag(projetTag(slug));
+    revalidateTag(projetTag(slug), 'max');
     // Si renommée → invalider aussi sous le nouveau slug (le formula Slug
     // change quand "Nom du projet" change).
     if (result.slug !== slug) {
-      revalidateTag(projetTag(result.slug));
+      revalidateTag(projetTag(result.slug), 'max');
     }
     // Liste invalidée uniquement si un champ indexé change OU si renommée
     // (le nom apparaît dans la grille / les filtres recherche).
     if (affectsList(body) || result.slug !== slug) {
-      revalidateTag(PROJETS_LIST_TAG);
+      revalidateTag(PROJETS_LIST_TAG, 'max');
     }
 
     return NextResponse.json({ ok: true, slug: result.slug });
