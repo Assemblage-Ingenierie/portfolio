@@ -12,6 +12,8 @@
  */
 
 export type FontFamilyChoice = 'sans' | 'serif';
+export type TextAlignChoice = 'left' | 'center' | 'right' | 'justify';
+export type TextTransformChoice = 'none' | 'uppercase' | 'lowercase' | 'capitalize';
 
 export interface BandeauStyle {
   fontFamily?: FontFamilyChoice;
@@ -24,6 +26,24 @@ export interface BandeauStyle {
   color?: string;
   /** Surlignage : couleur de fond derrière le texte. */
   background?: string;
+  /** Interligne sans unité. Ex. 1.15, 1.3, 1.5. Défaut = hérité du template. */
+  lineHeight?: number;
+  /** Espacement entre lettres en em. Ex. 0.02, 0.05. Négatif resserre. */
+  letterSpacing?: number;
+  /** Espacement entre mots en em. */
+  wordSpacing?: number;
+  /** Alignement du texte. Défaut = hérité du template (left dans la charte). */
+  textAlign?: TextAlignChoice;
+  /** Transformation de casse. */
+  textTransform?: TextTransformChoice;
+  /** Marge supérieure en mm (peut être négative pour rapprocher). */
+  marginTop?: number;
+  /** Marge inférieure en mm. */
+  marginBottom?: number;
+  /** Padding horizontal en mm (gauche + droite). Utile avec `background`. */
+  paddingX?: number;
+  /** Padding vertical en mm (haut + bas). Utile avec `background`. */
+  paddingY?: number;
 }
 
 /** Style des deux lignes horizontales encadrant le bandeau métadonnées. */
@@ -133,6 +153,31 @@ export function styleToCss(style?: BandeauStyle): string {
   if (style.underline) parts.push('text-decoration:underline');
   if (style.color) parts.push(`color:${style.color}`);
   if (style.background) parts.push(`background:${style.background}`);
+  if (style.lineHeight !== undefined && Number.isFinite(style.lineHeight)) {
+    parts.push(`line-height:${style.lineHeight}`);
+  }
+  if (style.letterSpacing !== undefined && Number.isFinite(style.letterSpacing)) {
+    parts.push(`letter-spacing:${style.letterSpacing}em`);
+  }
+  if (style.wordSpacing !== undefined && Number.isFinite(style.wordSpacing)) {
+    parts.push(`word-spacing:${style.wordSpacing}em`);
+  }
+  if (style.textAlign) parts.push(`text-align:${style.textAlign}`);
+  if (style.textTransform) parts.push(`text-transform:${style.textTransform}`);
+  if (style.marginTop !== undefined && Number.isFinite(style.marginTop)) {
+    parts.push(`margin-top:${style.marginTop}mm`);
+  }
+  if (style.marginBottom !== undefined && Number.isFinite(style.marginBottom)) {
+    parts.push(`margin-bottom:${style.marginBottom}mm`);
+  }
+  if (style.paddingX !== undefined && Number.isFinite(style.paddingX)) {
+    parts.push(`padding-left:${style.paddingX}mm`);
+    parts.push(`padding-right:${style.paddingX}mm`);
+  }
+  if (style.paddingY !== undefined && Number.isFinite(style.paddingY)) {
+    parts.push(`padding-top:${style.paddingY}mm`);
+    parts.push(`padding-bottom:${style.paddingY}mm`);
+  }
   return parts.join(';');
 }
 
