@@ -98,10 +98,10 @@ export interface BandeauConfig {
 }
 
 export interface ProgrammeCellOptions {
-  /** Si `true`, le Programme principal est masqué. Le Programme secondaire
-   *  prend alors la place principale (et il n'y a plus de sous-titre).
-   *  Si aucun secondaire n'est rempli, la cellule Programme entière disparaît. */
-  hidePrincipal?: boolean;
+  /** Si `true`, le Programme secondaire est masqué — la cellule Programme
+   *  n'affiche plus que le Programme principal (sans sous-titre).
+   *  Si aucun principal n'est rempli, la cellule Programme entière disparaît. */
+  hideSecondaire?: boolean;
 }
 
 /** Demi-amplitude (en mm) du slider `titleMetaGap`. À 0% → -RANGE, à 100% → +RANGE. */

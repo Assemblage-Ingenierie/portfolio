@@ -365,16 +365,17 @@ export function metaGridHtml(projet: Projet, options?: { isDev?: boolean }): str
 
   // Programme : principal en valeur principale, secondaire en sous-titre.
   // Helper utilisé par les deux templates.
-  // L'utilisateur peut choisir de masquer le principal via
-  // `bandeauConfig.programme.hidePrincipal` — dans ce cas le secondaire
-  // remonte en valeur principale et il n'y a plus de sous-titre.
-  const hidePrincipal = projet.bandeauConfig?.programme?.hidePrincipal === true;
-  const effectivePrincipal = hidePrincipal ? undefined : projet.programmePrincipal;
-  const programmeItem = (effectivePrincipal || projet.programmeSecondaire)
+  // L'utilisateur peut choisir de masquer le secondaire via
+  // `bandeauConfig.programme.hideSecondaire` — la cellule n'affiche alors
+  // que le principal, sans sous-titre. Si aucun principal n'est rempli
+  // dans ce cas, la cellule disparaît entièrement.
+  const hideSecondaire = projet.bandeauConfig?.programme?.hideSecondaire === true;
+  const effectiveSecondaire = hideSecondaire ? undefined : projet.programmeSecondaire;
+  const programmeItem = (projet.programmePrincipal || effectiveSecondaire)
     ? {
         label: 'Programme',
-        value: effectivePrincipal ?? projet.programmeSecondaire ?? '',
-        sub: effectivePrincipal ? projet.programmeSecondaire : undefined,
+        value: projet.programmePrincipal ?? effectiveSecondaire ?? '',
+        sub: projet.programmePrincipal ? effectiveSecondaire : undefined,
       }
     : null;
 

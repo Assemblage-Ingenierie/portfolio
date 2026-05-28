@@ -286,7 +286,7 @@ export default function BandeauConfigPanel({ value, onChange }: Props) {
           const next = { ...value };
           // Si toutes les options sont à leur valeur par défaut, on retire
           // la clé pour garder un JSON minimal.
-          if (!p || (p.hidePrincipal !== true)) {
+          if (!p || (p.hideSecondaire !== true)) {
             delete next.programme;
           } else {
             next.programme = p;
@@ -392,7 +392,7 @@ function ProgrammeOptionsRow({
   value: ProgrammeCellOptions | undefined;
   onChange: (v: ProgrammeCellOptions | undefined) => void;
 }) {
-  const hidePrincipal = value?.hidePrincipal === true;
+  const hideSecondaire = value?.hideSecondaire === true;
   return (
     <div style={{ marginBottom: '14px', paddingBottom: '14px' }}>
       <label style={LABEL_S}>Cellule Programme</label>
@@ -402,11 +402,11 @@ function ProgrammeOptionsRow({
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
         <button
           type="button"
-          onClick={() => onChange({ ...(value ?? {}), hidePrincipal: !hidePrincipal })}
-          style={hidePrincipal ? TOGGLE_ON : TOGGLE}
-          title={hidePrincipal ? 'Le Programme principal est masqué — le secondaire occupe la cellule.' : 'Le Programme principal s’affiche normalement.'}
+          onClick={() => onChange({ ...(value ?? {}), hideSecondaire: !hideSecondaire })}
+          style={hideSecondaire ? TOGGLE_ON : TOGGLE}
+          title={hideSecondaire ? 'Le Programme secondaire est masqué — seul le principal s’affiche.' : 'Le Programme secondaire s’affiche en sous-titre.'}
         >
-          {hidePrincipal ? '✓ Programme principal masqué' : '✕ Programme principal visible'}
+          {hideSecondaire ? '✓ Programme secondaire masqué' : '✕ Programme secondaire visible'}
         </button>
       </div>
     </div>
