@@ -15,9 +15,11 @@ import { requireApprovedUser } from '@/lib/supabase/requireApprovedUser';
  * Pré-requis : le PAT (AIRTABLE_API_KEY) doit avoir le scope
  * `schema.bases:read`.
  *
- * Cache : `revalidate: 300` (5 min) — les listes d'options bougent rarement.
+ * Cache : 5 min, géré directement sur le `fetch` interne via
+ * `next: { revalidate: 300 }`. On n'utilise pas `export const revalidate`
+ * au niveau de la route segment config car incompatible avec
+ * `nextConfig.cacheComponents` activé sur ce projet.
  */
-export const revalidate = 300;
 
 const FIELD_IDS = {
   missionAi:             'fldgkpweXw9BypQfX',
