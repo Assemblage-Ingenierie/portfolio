@@ -2,8 +2,10 @@
 
 import type {
   BandeauConfig, BandeauStyle, BandeauLinesStyle, ProgrammeCellOptions,
+  BandeauCellsConfig, CellsLayout, MetaLabel,
   FontFamilyChoice, TextAlignChoice, TextTransformChoice,
 } from '@/lib/pdf/bandeauConfig';
+import { CANONICAL_META_LABELS } from '@/lib/pdf/bandeauConfig';
 import ColorSelector from './ColorSelector';
 
 interface Props {
@@ -11,7 +13,7 @@ interface Props {
   onChange: (next: BandeauConfig) => void;
 }
 
-type StyleSectionKey = Exclude<keyof BandeauConfig, 'lines' | 'titleMetaGap' | 'photoTextGap' | 'programme'>;
+type StyleSectionKey = Exclude<keyof BandeauConfig, 'lines' | 'titleMetaGap' | 'photoTextGap' | 'programme' | 'cells'>;
 
 const SECTIONS: { key: StyleSectionKey; label: string; help: string }[] = [
   { key: 'titre',       label: 'Titre de la fiche',           help: 'Le nom du projet (titre principal h1).' },
@@ -280,6 +282,18 @@ export default function BandeauConfigPanel({ value, onChange }: Props) {
           <StyleRow style={value[s.key] ?? {}} onChange={(st) => updateSection(s.key, st)} />
         </div>
       ))}
+      <CellsLayoutRow
+        value={value.cells}
+        onChange={(c) => {
+          const next = { ...value };
+          if (!c || (!c.layout && !c.gap && (!c.weights || Object.keys(c.weights).length === 0))) {
+            delete next.cells;
+          } else {
+            next.cells = c;
+          }
+          onChange(next);
+        }}
+      />
       <ProgrammeOptionsRow
         value={value.programme}
         onChange={(p) => {
@@ -381,6 +395,123 @@ function TitleMetaGapRow({ value, onChange }: { value: number | undefined; onCha
           Reset
         </button>
       </div>
+    </div>
+  );
+}
+
+function CellsLayoutRow({
+  value,
+  onChange,
+}: {
+  value: BandeauCellsConfig | undefined;
+  onChange: (v: BandeauCellsConfig | undefined) => void;
+}) {
+  const layout: CellsLayout = value?.layout ?? 'content';
+  const gap = value?.gap;
+  const weights: Partial<Record<MetaLabel, number>> = value?.weights ?? {};
+
+  const setLayout = (next: CellsLayout) => {
+    // Pas la peine de persister 'content' (= défaut) si rien d'autre n'est défini.
+    const out: BandeauCellsConfig = { ...(value ?? {}) };
+    if (next === 'content') delete out.layout;
+    else out.layout = next;
+    onChange(out);
+  };
+  const setGap = (next: number | undefined) => {
+    const out: BandeauCellsConfig = { ...(value ?? {}) };
+    if (next === undefined || !Number.isFinite(next) || next <= 0) delete out.gap;
+    else out.gap = next;
+    onChange(out);
+  };
+  const setWeight = (label: MetaLabel, next: number | undefined) => {
+    const out: BandeauCellsConfig = { ...(value ?? {}) };
+    const nextWeights: Partial<Record<MetaLabel, number>> = { ...weights };
+    if (next === undefined || !Number.isFinite(next) || next === 1 || next <= 0) {
+      delete nextWeights[label];
+    } else {
+      nextWeights[label] = next;
+    }
+    if (Object.keys(nextWeights).length === 0) delete out.weights;
+    else out.weights = nextWeights;
+    onChange(out);
+  };
+
+  const layoutBtn = (active: boolean): React.CSSProperties => ({
+    padding: '6px 12px', borderRadius: 2, cursor: 'pointer',
+    fontFamily: 'var(--sans)', fontSize: '9pt', fontWeight: 600,
+    background: active ? 'var(--ai-violet)' : 'white',
+    color: active ? 'white' : 'var(--ai-noir70)',
+    border: active ? '1px solid var(--ai-violet)' : '1px solid #DFE4E8',
+  });
+
+  return (
+    <div style={{ marginBottom: '14px', paddingBottom: '14px' }}>
+      <label style={LABEL_S}>Cellules du bandeau</label>
+      <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', margin: '0 0 6px' }}>
+        Contrôle la largeur des cellules et l&apos;espace entre elles. « Adaptée au contenu » = chaque cellule prend la place qu&apos;elle a besoin (recommandé). « Équirépartie » = toutes les cellules sont de même largeur (ancien comportement).
+      </p>
+
+      <div style={{ display: 'flex', gap: '6px', marginBottom: '10px' }}>
+        <button type="button" onClick={() => setLayout('content')} style={layoutBtn(layout === 'content')}>
+          Adaptée au contenu
+        </button>
+        <button type="button" onClick={() => setLayout('equal')} style={layoutBtn(layout === 'equal')}>
+          Équirépartie
+        </button>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+        <span style={{ fontSize: '8pt', color: 'var(--ai-noir70)', minWidth: '110px' }}>Espace entre cellules</span>
+        <input
+          type="range" min={0} max={15} step={0.5}
+          value={gap ?? 0}
+          onChange={(e) => setGap(Number(e.target.value))}
+          style={{ flex: '1 1 100px', accentColor: '#E30513' }}
+        />
+        <input
+          type="number" min={0} max={20} step={0.5}
+          value={gap ?? ''}
+          onChange={(e) => setGap(e.target.value === '' ? undefined : Number(e.target.value))}
+          placeholder="mm"
+          style={{ ...INPUT_S, width: '70px', flex: '0 0 70px', textAlign: 'right' }}
+        />
+      </div>
+
+      <details style={{ marginTop: '4px' }}>
+        <summary
+          style={{
+            cursor: 'pointer',
+            fontFamily: 'var(--sans)', fontSize: '8pt', fontWeight: 700,
+            letterSpacing: '0.06em', textTransform: 'uppercase',
+            color: Object.keys(weights).length > 0 ? 'var(--ai-rouge)' : 'var(--ai-noir70)',
+            padding: '6px 0',
+            userSelect: 'none', listStyle: 'none',
+          }}
+        >
+          ▸ Largeur par cellule{Object.keys(weights).length > 0 ? ` • ${Object.keys(weights).length}` : ''}
+        </summary>
+        <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', margin: '6px 0' }}>
+          Poids relatif de chaque cellule (1 = défaut). En mode « Adaptée au contenu », le poids impose une largeur minimum (poids × 20 mm). En mode « Équirépartie », le poids multiplie la part de chaque cellule (2 = double largeur).
+        </p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px 12px' }}>
+          {CANONICAL_META_LABELS.map((label) => {
+            const w = weights[label];
+            return (
+              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '8pt', color: 'var(--ai-noir70)', minWidth: '90px' }}>{label}</span>
+                <input
+                  type="number" min={0.3} max={4} step={0.1}
+                  value={w ?? ''}
+                  onChange={(e) => setWeight(label, e.target.value === '' ? undefined : Number(e.target.value))}
+                  placeholder="1.0"
+                  title={`Poids relatif de la cellule ${label}. Vide ou 1 = défaut.`}
+                  style={{ ...INPUT_S, width: '70px', flex: '0 0 70px', textAlign: 'right' }}
+                />
+              </div>
+            );
+          })}
+        </div>
+      </details>
     </div>
   );
 }

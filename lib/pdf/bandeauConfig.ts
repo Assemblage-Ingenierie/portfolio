@@ -95,6 +95,9 @@ export interface BandeauConfig {
    *  Permet par exemple de ne montrer que le Programme secondaire si on
    *  juge le principal redondant ou peu pertinent. */
   programme?: ProgrammeCellOptions;
+  /** Distribution horizontale des cellules du bandeau (largeur par cellule,
+   *  espacement entre cellules). Voir `BandeauCellsConfig`. */
+  cells?: BandeauCellsConfig;
 }
 
 export interface ProgrammeCellOptions {
@@ -102,6 +105,40 @@ export interface ProgrammeCellOptions {
    *  n'affiche plus que le Programme principal (sans sous-titre).
    *  Si aucun principal n'est rempli, la cellule Programme entière disparaît. */
   hideSecondaire?: boolean;
+}
+
+/** Libellés canoniques des cellules potentiellement présentes dans le bandeau
+ *  métadonnées, tous templates confondus (union Str-Env + Dev). L'ordre n'est
+ *  pas significatif ici — il est défini par le template lui-même. */
+export const CANONICAL_META_LABELS = [
+  'MOA',
+  'Bailleur',
+  'Architecte',
+  'BET associés',
+  'Budget',
+  'Surface',
+  'Entreprise',
+  'Mission AI',
+  'Programme',
+] as const;
+
+export type MetaLabel = typeof CANONICAL_META_LABELS[number];
+
+export type CellsLayout = 'equal' | 'content';
+
+export interface BandeauCellsConfig {
+  /** Distribution horizontale des cellules dans le bandeau.
+   *  - `'content'` (défaut) : chaque cellule prend la largeur naturelle de
+   *    son contenu, l'espace libre se distribue entre les cellules.
+   *  - `'equal'` : chaque cellule occupe une part égale, modulée par `weights`. */
+  layout?: CellsLayout;
+  /** Espace minimum entre cellules en mm (s'ajoute au padding existant). */
+  gap?: number;
+  /** Poids par cellule, clé = libellé (cf. `CANONICAL_META_LABELS`).
+   *  - En mode `'equal'` : multiplicateur de la part `fr` (1 = défaut, 2 = double).
+   *  - En mode `'content'` : `weight × 20mm` devient le `min-width` de la cellule.
+   *  Une valeur ≤ 0 ou non finie est ignorée (= défaut 1). */
+  weights?: Partial<Record<MetaLabel, number>>;
 }
 
 /** Demi-amplitude (en mm) du slider `titleMetaGap`. À 0% → -RANGE, à 100% → +RANGE. */

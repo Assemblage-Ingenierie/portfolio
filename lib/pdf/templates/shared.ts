@@ -418,11 +418,37 @@ export function metaGridHtml(projet: Projet, options?: { isDev?: boolean }): str
   const linesCss = linesToCss(projet.bandeauConfig?.lines);
   // Espacement titre ↔ bandeau (slider 0..100, 50 = neutre). Appliqué en
   // margin-top sur la grille — négatif rapproche, positif éloigne.
-  const gapCss = titleMetaGapCss(projet.bandeauConfig);
+  const titleGapCss = titleMetaGapCss(projet.bandeauConfig);
+
+  // Distribution horizontale des cellules.
+  // Défaut = 'content' depuis 2026 : chaque cellule prend la largeur de son
+  // contenu, l'espace libre se répartit (justify-content: space-between).
+  // L'utilisateur peut basculer vers 'equal' (cellules de même largeur) via
+  // `bandeauConfig.cells.layout`. Les `weights` modulent la part par cellule.
+  const cellsCfg = projet.bandeauConfig?.cells;
+  const layout = cellsCfg?.layout ?? 'content';
+  const weightOf = (label: string): number => {
+    const w = cellsCfg?.weights?.[label as keyof NonNullable<typeof cellsCfg.weights>];
+    return (typeof w === 'number' && Number.isFinite(w) && w > 0) ? w : 1;
+  };
+  const gridCols = layout === 'content'
+    ? items.map(i => {
+        const w = weightOf(i.label);
+        return w !== 1 ? `minmax(${(w * 20).toFixed(1)}mm,max-content)` : 'max-content';
+      }).join(' ')
+    : items.map(i => `${weightOf(i.label)}fr`).join(' ');
+  const justifyCss = layout === 'content' ? 'justify-content:space-between' : '';
+  const gapMm = cellsCfg?.gap;
+  const cellGapCss = (typeof gapMm === 'number' && Number.isFinite(gapMm) && gapMm > 0)
+    ? `column-gap:${gapMm}mm`
+    : '';
+
   const gridStyle = [
-    `grid-template-columns:repeat(${items.length},1fr)`,
+    `grid-template-columns:${gridCols}`,
+    justifyCss,
+    cellGapCss,
     linesCss,
-    gapCss,
+    titleGapCss,
   ].filter(Boolean).join(';');
 
   return `<div class="t-meta-grid" style="${gridStyle}">
