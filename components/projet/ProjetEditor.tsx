@@ -1,13 +1,28 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import type { Projet, TemplateChoice } from '@/types/projet';
+import type { Projet, Statut, TemplateChoice } from '@/types/projet';
 import { TEMPLATE_OPTIONS } from '@/types/projet';
 import TemplatePreview from '@/components/TemplatePreview';
 import Link from 'next/link';
 import { authedFetch } from '@/lib/supabase/authHeaders';
 import RichTextEditor from './RichTextEditor';
+import MultiSelectField from './MultiSelectField';
+
+/** Shape de la réponse de /api/airtable/select-options. */
+interface SelectOptions {
+  missionAi: string[];
+  programmesPrincipaux: string[];
+  programmesSecondaires: string[];
+  etatAvancement: string[];
+  materiaux: string[];
+  rehabNeuf: string[];
+}
+const EMPTY_OPTIONS: SelectOptions = {
+  missionAi: [], programmesPrincipaux: [], programmesSecondaires: [],
+  etatAvancement: [], materiaux: [], rehabNeuf: [],
+};
 
 interface Props { projet: Projet; }
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
@@ -28,6 +43,28 @@ const STITLE: React.CSSProperties = {
 };
 const GRID2: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' };
 
+// Style d'un champ lecture seule (CRM ou formule Airtable).
+const READONLY_INPUT: React.CSSProperties = {
+  ...INPUT, background: '#F2F2F2', color: '#888', cursor: 'not-allowed',
+};
+const HINT: React.CSSProperties = {
+  fontSize: '7pt', color: 'var(--ai-noir70)', marginTop: '4px',
+};
+
+/** Champ en lecture seule lie a la base Sync CRM. La valeur affichee est
+ *  le nom resolu depuis le CRM (cf. lib/airtable/crm.ts). Pour modifier la
+ *  valeur, l'utilisateur doit passer par la base CRM directement — toute
+ *  ecriture depuis le portfolio casserait la relation linked record. */
+function CrmField({ label, value }: { label: string; value: string | undefined }) {
+  return (
+    <div>
+      <label style={LABEL}>{label}</label>
+      <input value={value ?? ''} readOnly style={READONLY_INPUT} />
+      <p style={HINT}>Champ lie a Sync CRM (lecture seule depuis le portfolio).</p>
+    </div>
+  );
+}
+
 export default function ProjetEditor({ projet }: Props) {
   const router = useRouter();
 
@@ -36,21 +73,58 @@ export default function ProjetEditor({ projet }: Props) {
   const [pitch, setPitch] = useState(projet.pitch ?? '');
   const [description, setDescription] = useState(projet.description);
   const [prestationAssemblage, setPrestationAssemblage] = useState(projet.prestationAssemblage ?? '');
-  const [moa, setMoa] = useState(projet.moa ?? '');
-  const [mandataire, setMandataire] = useState(projet.mandataire ?? '');
-  const [betAssocies, setBetAssocies] = useState(projet.betAssocies ?? '');
-  const [entreprise, setEntreprise] = useState(projet.entreprise ?? '');
-  const [bailleur, setBailleur] = useState(projet.bailleur ?? '');
+  // MOA / Architecte / Mandataire / Entreprise / BET associes / Bailleur :
+  // tous des linked records vers la base Sync CRM. Lecture seule ici — voir
+  // composant <CrmField/>. Pas de state local : la valeur affichee vient
+  // directement du Projet.
   const [referentAi, setReferentAi] = useState(projet.referentAi ?? '');
-  const [missionAi, setMissionAi] = useState(projet.missionAi ?? '');
   const [surface, setSurface] = useState(projet.surface?.toString() ?? '');
   const [budget, setBudget] = useState(projet.budgetRaw?.toString() ?? '');
   const [annee, setAnnee] = useState(projet.anneeLivraison?.toString() ?? '');
-  const [programme, setProgramme] = useState(projet.programme ?? '');
+  // Champ "Programme" (texte libre) deprecated en 2026 — remplace par
+  // "Programmes principaux" / "Programmes secondaires" (multi-selects).
   const [pole, setPole] = useState(projet.pole ?? '');
   const [departement, setDepartement] = useState(projet.departement ?? '');
-  const [rehabNeuf, setRehabNeuf] = useState(projet.rehabNeuf ?? '');
-  const [statut, setStatut] = useState(projet.statut);
+
+  // Multi-selects : array d'options. Default initialisé depuis le Projet.
+  // Pour `statutValues`, fallback sur [statut] si l'array est vide (rétro-compat
+  // avec les anciennes fiches qui n'ont qu'un statut canonique).
+  const [missionAiValues, setMissionAiValues] = useState<string[]>(projet.missionAiValues ?? []);
+  const [programmesPrincipaux, setProgrammesPrincipaux] = useState<string[]>(projet.programmesPrincipaux ?? []);
+  const [programmesSecondaires, setProgrammesSecondaires] = useState<string[]>(projet.programmesSecondaires ?? []);
+  const [statutValues, setStatutValues] = useState<string[]>(
+    (projet.statutValues && projet.statutValues.length > 0)
+      ? projet.statutValues
+      : (projet.statut ? [projet.statut] : [])
+  );
+  const [materiaux, setMateriaux] = useState<string[]>(projet.materiaux ?? []);
+  const [rehabNeufValues, setRehabNeufValues] = useState<string[]>(projet.rehabNeufValues ?? []);
+
+  // Options canoniques chargées depuis la metadata Airtable.
+  const [selectOptions, setSelectOptions] = useState<SelectOptions>(EMPTY_OPTIONS);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await authedFetch('/api/airtable/select-options');
+        if (!res.ok) return;
+        const data = (await res.json()) as Partial<SelectOptions>;
+        if (cancelled) return;
+        setSelectOptions({
+          missionAi: data.missionAi ?? [],
+          programmesPrincipaux: data.programmesPrincipaux ?? [],
+          programmesSecondaires: data.programmesSecondaires ?? [],
+          etatAvancement: data.etatAvancement ?? [],
+          materiaux: data.materiaux ?? [],
+          rehabNeuf: data.rehabNeuf ?? [],
+        });
+      } catch {
+        // En mode dégradé : l'utilisateur peut quand même taper des valeurs
+        // libres (création automatique côté Airtable via typecast).
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
   const [template, setTemplate] = useState<TemplateChoice>(projet.template);
   // Certifications et mots-clés : même format de saisie (séparateur virgule)
   // pour une UX cohérente — les deux sont des listes plates de tags.
@@ -98,21 +172,21 @@ export default function ProjetEditor({ projet }: Props) {
           adresse: adresse || undefined,
           description: description || undefined,
           prestationAssemblage: prestationAssemblage || undefined,
-          moa: moa || undefined,
-          mandataire: mandataire || undefined,
-          betAssocies: betAssocies || undefined,
-          entreprise: entreprise || undefined,
-          bailleur: bailleur || undefined,
+          // MOA / Mandataire / BET associes / Entreprise / Bailleur :
+          // linked records vers Sync CRM, jamais ecrits depuis le portfolio.
           referentAi: referentAi || undefined,
-          missionAi: missionAi || undefined,
+          // Multi-selects → arrays
+          missionAiValues,
+          programmesPrincipaux,
+          programmesSecondaires,
+          statutValues,
+          materiaux,
+          rehabNeufValues,
           surface: surface ? Number(surface) : undefined,
           budgetRaw: budget ? Number(budget) : undefined,
           anneeLivraison: annee ? Number(annee) : undefined,
-          programme: programme || undefined,
           pole: pole || undefined,
           departement: departement || undefined,
-          rehabNeuf: rehabNeuf || undefined,
-          statut,
           template,
           certifications: certifications.split(/[,;]+/).map(s => s.trim()).filter(Boolean),
           motsCles: motsCles.split(/[,;]+/).map(s => s.trim()).filter(Boolean),
@@ -171,20 +245,27 @@ export default function ProjetEditor({ projet }: Props) {
       pitch: pitch || undefined,
       description,
       prestationAssemblage: prestationAssemblage || undefined,
-      moa: moa || undefined,
-      mandataire: mandataire || undefined,
-      betAssocies: betAssocies || undefined,
-      entreprise: entreprise || undefined,
-      bailleur: bailleur || undefined,
+      // CRM (read-only) : on garde la valeur courante de la fiche
       referentAi: referentAi || undefined,
-      missionAi: missionAi || undefined,
+      // Multi-selects édités : on reflète les arrays + valeurs jointes
+      // pour le rendu legacy (templates qui consomment encore les CSV).
+      missionAi: missionAiValues.length > 0 ? missionAiValues.join(', ') : undefined,
+      missionAiValues,
+      programmesPrincipaux,
+      programmesSecondaires,
+      programmePrincipal: programmesPrincipaux[0],
+      programmeSecondaire: programmesSecondaires[0],
+      materiaux,
+      rehabNeufValues,
+      rehabNeuf: rehabNeufValues.length > 0 ? rehabNeufValues.join(', ') : undefined,
       surface: surface ? Number(surface) : undefined,
       anneeLivraison: annee ? Number(annee) : undefined,
-      programme: programme || undefined,
       pole: pole || undefined,
       departement: departement || undefined,
-      rehabNeuf: rehabNeuf || undefined,
-      statut,
+      // statut (single) reste utilisé par certains rendus historiques :
+      // on prend la première valeur cochée comme valeur canonique.
+      statut: (statutValues[0] ?? projet.statut) as Statut,
+      statutValues: statutValues as Statut[],
       chiffresCles: parseChiffres(),
       certifications: certifications.split(/[,;]+/).map(s => s.trim()).filter(Boolean),
       motsCles: motsCles.split(',').map(s => s.trim()).filter(Boolean),
@@ -257,17 +338,24 @@ export default function ProjetEditor({ projet }: Props) {
         <div style={SECTION}>
           <div style={STITLE}>Intervenants</div>
           <div style={GRID2}>
-            <div><label style={LABEL}>MOA</label><input value={moa} onChange={e => setMoa(e.target.value)} style={INPUT} /></div>
-            <div><label style={LABEL}>Mission AI</label><input value={missionAi} onChange={e => setMissionAi(e.target.value)} style={INPUT} /></div>
-            <div><label style={LABEL}>Mandataire</label><input value={mandataire} onChange={e => setMandataire(e.target.value)} style={INPUT} /></div>
-            <div><label style={LABEL}>BET associés</label><input value={betAssocies} onChange={e => setBetAssocies(e.target.value)} style={INPUT} /></div>
-            <div><label style={LABEL}>Entreprise</label><input value={entreprise} onChange={e => setEntreprise(e.target.value)} style={INPUT} /></div>
-            <div><label style={LABEL}>Bailleur</label><input value={bailleur} onChange={e => setBailleur(e.target.value)} style={INPUT} /></div>
-            <div><label style={LABEL}>Référent AI</label><input value={referentAi} onChange={e => setReferentAi(e.target.value)} style={INPUT} /></div>
+            <CrmField label="Maître d'ouvrage" value={projet.moa} />
+            <CrmField label="Architecte"        value={projet.architecte} />
+            <CrmField label="Mandataire"        value={projet.mandataire} />
+            <CrmField label="BET associés"      value={projet.betAssocies} />
+            <CrmField label="Entreprise"        value={projet.entreprise} />
+            <CrmField label="Bailleur"          value={projet.bailleur} />
             <div>
-              <label style={LABEL}>Architecte (lecture seule)</label>
-              <input value={projet.architecte ?? ''} readOnly style={{ ...INPUT, background: '#F2F2F2', color: '#888', cursor: 'not-allowed' }} />
+              <label style={LABEL}>Référent AI</label>
+              <input value={referentAi} onChange={e => setReferentAi(e.target.value)} style={INPUT} />
             </div>
+            <MultiSelectField
+              label="Mission AI"
+              values={missionAiValues}
+              onChange={setMissionAiValues}
+              options={selectOptions.missionAi}
+              placeholder="Ajouter une mission…"
+              hint="Multi-select Airtable. Tape pour filtrer, Entrée pour créer une nouvelle option."
+            />
           </div>
         </div>
 
@@ -277,29 +365,48 @@ export default function ProjetEditor({ projet }: Props) {
             <div><label style={LABEL}>Surface (m²)</label><input type="number" value={surface} onChange={e => setSurface(e.target.value)} style={INPUT} /></div>
             <div><label style={LABEL}>Budget HT (€ brut)</label><input type="number" value={budget} onChange={e => setBudget(e.target.value)} style={INPUT} placeholder="ex: 8200000" /></div>
             <div><label style={LABEL}>Année de livraison</label><input type="number" value={annee} onChange={e => setAnnee(e.target.value)} style={INPUT} /></div>
-            <div><label style={LABEL}>Programme</label><input value={programme} onChange={e => setProgramme(e.target.value)} style={INPUT} /></div>
             <div><label style={LABEL}>Pôle</label><input value={pole} onChange={e => setPole(e.target.value)} style={INPUT} /></div>
             <div><label style={LABEL}>Département</label><input value={departement} onChange={e => setDepartement(e.target.value)} style={INPUT} /></div>
-            <div>
-              <label style={LABEL}>Réhab / Neuf</label>
-              <select value={rehabNeuf} onChange={e => setRehabNeuf(e.target.value)} style={INPUT}>
-                <option value="">—</option>
-                <option>Neuf</option>
-                <option>Réhabilitation</option>
-                <option>Réhab + Extension</option>
-              </select>
-            </div>
-            <div>
-              <label style={LABEL}>Statut</label>
-              <select value={statut} onChange={e => setStatut(e.target.value as typeof statut)} style={INPUT}>
-                <option>En étude</option>
-                <option>En consultation</option>
-                <option>En chantier</option>
-                <option>Livré</option>
-                <option>En pause</option>
-                <option>Abandonné</option>
-              </select>
-            </div>
+            <MultiSelectField
+              label="Réhab / Neuf"
+              values={rehabNeufValues}
+              onChange={setRehabNeufValues}
+              options={selectOptions.rehabNeuf}
+              placeholder="Choisir…"
+              hint="Multi-select Airtable. Plusieurs valeurs autorisées."
+            />
+            <MultiSelectField
+              label="État avancement (statut)"
+              values={statutValues}
+              onChange={setStatutValues}
+              options={selectOptions.etatAvancement}
+              placeholder="Choisir un ou plusieurs statuts…"
+              hint="Multi-select Airtable. La première valeur reste le statut canonique pour le bandeau."
+            />
+            <MultiSelectField
+              label="Programmes principaux"
+              values={programmesPrincipaux}
+              onChange={setProgrammesPrincipaux}
+              options={selectOptions.programmesPrincipaux}
+              placeholder="Ajouter un programme principal…"
+              hint="Multi-select Airtable. Le premier élément alimente le bandeau « Programme »."
+            />
+            <MultiSelectField
+              label="Programmes secondaires"
+              values={programmesSecondaires}
+              onChange={setProgrammesSecondaires}
+              options={selectOptions.programmesSecondaires}
+              placeholder="Ajouter un programme secondaire…"
+              hint="Multi-select Airtable. Affiché en sous-titre du « Programme » dans le bandeau."
+            />
+            <MultiSelectField
+              label="Matériaux"
+              values={materiaux}
+              onChange={setMateriaux}
+              options={selectOptions.materiaux}
+              placeholder="Ajouter un matériau…"
+              hint="Multi-select Airtable. Visible dans les filtres et le tableau récap."
+            />
           </div>
         </div>
 
