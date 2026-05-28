@@ -15,6 +15,10 @@ interface Props {
   /** Projet courant — utilisé uniquement par la section "Sauts de ligne"
    *  pour montrer les valeurs réelles de chaque cellule multi-valeurs. */
   projet?: Projet;
+  /** Si fourni, le bouton "Réinitialiser" appelle ce callback (qui doit
+   *  appliquer les préréglages Assemblage AUSSI au ManualConfig). Sinon
+   *  le bouton fait le comportement legacy : vide juste BandeauConfig. */
+  onResetAll?: () => void;
 }
 
 /** Reconstruit la liste de valeurs par cellule à partir du Projet, en
@@ -266,7 +270,7 @@ function AdvancedStyleSection({
 
 export { StyleRow };
 
-export default function BandeauConfigPanel({ value, onChange, projet }: Props) {
+export default function BandeauConfigPanel({ value, onChange, projet, onResetAll }: Props) {
   const multiValueCells = multiValueCellsFromProjet(projet);
   function updateSection(key: StyleSectionKey, style: BandeauStyle) {
     // Si toutes les propriétés sont vides, on retire la section pour garder
@@ -294,7 +298,12 @@ export default function BandeauConfigPanel({ value, onChange, projet }: Props) {
   }
 
   function resetAll() {
-    onChange({});
+    // Si le parent fournit un callback complet, on lui delegue : il
+    // appliquera les preregages Assemblage au BandeauConfig ET au
+    // ManualConfig (cf. lib/pdf/assemblageDefaults.ts). Sinon, comportement
+    // historique : on vide juste le BandeauConfig.
+    if (onResetAll) onResetAll();
+    else onChange({});
   }
 
   return (
@@ -303,7 +312,14 @@ export default function BandeauConfigPanel({ value, onChange, projet }: Props) {
         <p style={{ fontSize: '8pt', color: 'var(--ai-noir70)', margin: 0 }}>
           Surcharges optionnelles. Laisser vide pour utiliser les valeurs par défaut du template.
         </p>
-        <button type="button" onClick={resetAll} style={{ ...TOGGLE, fontSize: '8pt' }}>
+        <button
+          type="button"
+          onClick={resetAll}
+          style={{ ...TOGGLE, fontSize: '8pt' }}
+          title={onResetAll
+            ? 'Applique les préréglages Assemblage : typographie + bandeau + photo principale + texte + mots-clés + certifications. Écrase la configuration actuelle.'
+            : 'Vide la configuration du bandeau.'}
+        >
           Réinitialiser
         </button>
       </div>

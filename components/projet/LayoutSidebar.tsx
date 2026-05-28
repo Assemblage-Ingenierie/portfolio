@@ -10,6 +10,10 @@ import { MAX_MAIN_PORTRAIT_PHOTOS } from '@/lib/pdf/manualConfig';
 import type { BandeauConfig, BandeauStyle } from '@/lib/pdf/bandeauConfig';
 import { allPhotos } from '@/lib/pdf/templates/shared';
 import BandeauConfigPanel, { StyleRow } from '@/components/projet/BandeauConfigPanel';
+import {
+  ASSEMBLAGE_DEFAULT_BANDEAU,
+  ASSEMBLAGE_DEFAULT_MANUAL,
+} from '@/lib/pdf/assemblageDefaults';
 
 // ─── Constantes ──────────────────────────────────────────────────────────────
 
@@ -539,7 +543,25 @@ export default function LayoutSidebar({ projet, config, onChange, bandeauConfig,
       case 'typo':
         return (
           <div style={{ padding: '12px 16px', fontFamily: 'var(--sans)' }}>
-            <BandeauConfigPanel value={bandeauConfig} onChange={onBandeauChange} projet={projet} />
+            <BandeauConfigPanel
+              value={bandeauConfig}
+              onChange={onBandeauChange}
+              projet={projet}
+              onResetAll={() => {
+                // Applique les preregages Assemblage simultanement aux
+                // deux configs. Confirme avant d'ecraser les reglages
+                // existants pour ne pas perdre du travail par accident.
+                const confirmed = window.confirm(
+                  'Appliquer les préréglages Assemblage ?\n\n'
+                  + 'Cela remplace la configuration actuelle du bandeau '
+                  + 'ET de la mise en page (photo principale, texte, photos '
+                  + 'additionnelles, mots-clés, certifications).'
+                );
+                if (!confirmed) return;
+                onBandeauChange(ASSEMBLAGE_DEFAULT_BANDEAU);
+                onChange(ASSEMBLAGE_DEFAULT_MANUAL);
+              }}
+            />
           </div>
         );
       case 'main':     return <MainPhotoSection projet={projet} config={config} onChange={onChange} />;
