@@ -1,7 +1,7 @@
 'use client';
 
 import type {
-  BandeauConfig, BandeauStyle, BandeauLinesStyle,
+  BandeauConfig, BandeauStyle, BandeauLinesStyle, ProgrammeCellOptions,
   FontFamilyChoice, TextAlignChoice, TextTransformChoice,
 } from '@/lib/pdf/bandeauConfig';
 import ColorSelector from './ColorSelector';
@@ -11,13 +11,14 @@ interface Props {
   onChange: (next: BandeauConfig) => void;
 }
 
-type StyleSectionKey = Exclude<keyof BandeauConfig, 'lines' | 'titleMetaGap' | 'photoTextGap'>;
+type StyleSectionKey = Exclude<keyof BandeauConfig, 'lines' | 'titleMetaGap' | 'photoTextGap' | 'programme'>;
 
 const SECTIONS: { key: StyleSectionKey; label: string; help: string }[] = [
   { key: 'titre',       label: 'Titre de la fiche',           help: 'Le nom du projet (titre principal h1).' },
   { key: 'status',      label: 'Statut (en haut à droite)',   help: '"● Livré · 2025"' },
   { key: 'labels',      label: 'Libellés du bandeau',         help: '"Architecte", "Budget", "Surface"…' },
   { key: 'values',      label: 'Valeurs du bandeau',          help: '"Encore Heureux", "8,2 M€ HT", "4 242 m²"…' },
+  { key: 'metaSub',     label: 'Sous-titre du Programme',     help: 'La ligne discrète sous "Programme" — affiche le Programme secondaire quand un Programme principal est aussi rempli.' },
   { key: 'description', label: 'Description projet',          help: 'Le texte courant de la fiche (paragraphes Markdown). Appliqué sur tous les templates.' },
   { key: 'prestationAssemblage', label: 'Prestation Assemblage', help: 'Bloc rich text dédié, rendu uniquement par le template Dev (titre + valeur).' },
 ];
@@ -279,6 +280,20 @@ export default function BandeauConfigPanel({ value, onChange }: Props) {
           <StyleRow style={value[s.key] ?? {}} onChange={(st) => updateSection(s.key, st)} />
         </div>
       ))}
+      <ProgrammeOptionsRow
+        value={value.programme}
+        onChange={(p) => {
+          const next = { ...value };
+          // Si toutes les options sont à leur valeur par défaut, on retire
+          // la clé pour garder un JSON minimal.
+          if (!p || (p.hidePrincipal !== true)) {
+            delete next.programme;
+          } else {
+            next.programme = p;
+          }
+          onChange(next);
+        }}
+      />
       <LinesRow value={value.lines ?? {}} onChange={(l) => onChange({ ...value, lines: l })} />
       <TitleMetaGapRow
         value={value.titleMetaGap}
@@ -364,6 +379,34 @@ function TitleMetaGapRow({ value, onChange }: { value: number | undefined; onCha
         />
         <button type="button" onClick={() => onChange(undefined)} style={{ ...TOGGLE, fontSize: '8pt' }} title="Réinitialiser à la valeur par défaut">
           Reset
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ProgrammeOptionsRow({
+  value,
+  onChange,
+}: {
+  value: ProgrammeCellOptions | undefined;
+  onChange: (v: ProgrammeCellOptions | undefined) => void;
+}) {
+  const hidePrincipal = value?.hidePrincipal === true;
+  return (
+    <div style={{ marginBottom: '14px', paddingBottom: '14px' }}>
+      <label style={LABEL_S}>Cellule Programme</label>
+      <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', margin: '0 0 6px' }}>
+        Contrôle le contenu de la cellule « Programme » du bandeau. Par défaut, le Programme principal est affiché en grand et le Programme secondaire en sous-titre.
+      </p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+        <button
+          type="button"
+          onClick={() => onChange({ ...(value ?? {}), hidePrincipal: !hidePrincipal })}
+          style={hidePrincipal ? TOGGLE_ON : TOGGLE}
+          title={hidePrincipal ? 'Le Programme principal est masqué — le secondaire occupe la cellule.' : 'Le Programme principal s’affiche normalement.'}
+        >
+          {hidePrincipal ? '✓ Programme principal masqué' : '✕ Programme principal visible'}
         </button>
       </div>
     </div>

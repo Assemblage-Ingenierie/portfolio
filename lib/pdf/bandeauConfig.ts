@@ -65,6 +65,11 @@ export interface BandeauConfig {
   labels?: BandeauStyle;
   /** Valeurs du bandeau métadonnées. */
   values?: BandeauStyle;
+  /** Sous-titre d'une cellule du bandeau métadonnées (`.t-meta-sub`).
+   *  Aujourd'hui utilisé uniquement pour afficher le Programme secondaire
+   *  sous la valeur principale du Programme. Style indépendant des values
+   *  pour préserver la hiérarchie visuelle (secondaire = plus discret). */
+  metaSub?: BandeauStyle;
   /** Description projet (paragraphes Markdown rendus). Applique font-family
    *  et font-size aux <p>/<li>/<a>/<strong>/<em> de la description sur les
    *  4 templates (Solo, Diptyque, Triptyque, Manuel/Dev). */
@@ -86,6 +91,17 @@ export interface BandeauConfig {
    *  ±PHOTO_TEXT_GAP_RANGE_MM via `photoTextGapCss`. Disponible sur
    *  Str-Env et Dev (les templates avec photo principale + texte). */
   photoTextGap?: number;
+  /** Options de visibilité de la cellule Programme du bandeau métadonnées.
+   *  Permet par exemple de ne montrer que le Programme secondaire si on
+   *  juge le principal redondant ou peu pertinent. */
+  programme?: ProgrammeCellOptions;
+}
+
+export interface ProgrammeCellOptions {
+  /** Si `true`, le Programme principal est masqué. Le Programme secondaire
+   *  prend alors la place principale (et il n'y a plus de sous-titre).
+   *  Si aucun secondaire n'est rempli, la cellule Programme entière disparaît. */
+  hidePrincipal?: boolean;
 }
 
 /** Demi-amplitude (en mm) du slider `titleMetaGap`. À 0% → -RANGE, à 100% → +RANGE. */

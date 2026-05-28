@@ -365,11 +365,16 @@ export function metaGridHtml(projet: Projet, options?: { isDev?: boolean }): str
 
   // Programme : principal en valeur principale, secondaire en sous-titre.
   // Helper utilisé par les deux templates.
-  const programmeItem = (projet.programmePrincipal || projet.programmeSecondaire)
+  // L'utilisateur peut choisir de masquer le principal via
+  // `bandeauConfig.programme.hidePrincipal` — dans ce cas le secondaire
+  // remonte en valeur principale et il n'y a plus de sous-titre.
+  const hidePrincipal = projet.bandeauConfig?.programme?.hidePrincipal === true;
+  const effectivePrincipal = hidePrincipal ? undefined : projet.programmePrincipal;
+  const programmeItem = (effectivePrincipal || projet.programmeSecondaire)
     ? {
         label: 'Programme',
-        value: projet.programmePrincipal ?? projet.programmeSecondaire ?? '',
-        sub: projet.programmePrincipal ? projet.programmeSecondaire : undefined,
+        value: effectivePrincipal ?? projet.programmeSecondaire ?? '',
+        sub: effectivePrincipal ? projet.programmeSecondaire : undefined,
       }
     : null;
 
@@ -403,8 +408,10 @@ export function metaGridHtml(projet: Projet, options?: { isDev?: boolean }): str
   // les labels / values du bandeau.
   const labelStyle = styleToCss(projet.bandeauConfig?.labels);
   const valueStyle = styleToCss(projet.bandeauConfig?.values);
+  const subStyle = styleToCss(projet.bandeauConfig?.metaSub);
   const labelAttr = labelStyle ? ` style="${labelStyle}"` : '';
   const valueAttr = valueStyle ? ` style="${valueStyle}"` : '';
+  const subAttr = subStyle ? ` style="${subStyle}"` : '';
 
   // Lignes horizontales du bandeau (toggle visible/masqué, couleur, épaisseur)
   const linesCss = linesToCss(projet.bandeauConfig?.lines);
@@ -422,7 +429,7 @@ export function metaGridHtml(projet: Projet, options?: { isDev?: boolean }): str
       <div class="t-meta-item">
         <span class="t-meta-label"${labelAttr}>${esc(i.label)}</span>
         <div class="t-meta-value"${valueAttr}>${esc(i.value)}</div>
-        ${i.sub ? `<div class="t-meta-sub">${esc(i.sub)}</div>` : ''}
+        ${i.sub ? `<div class="t-meta-sub"${subAttr}>${esc(i.sub)}</div>` : ''}
       </div>
     `).join('')}
   </div>`;
