@@ -539,7 +539,7 @@ export default function LayoutSidebar({ projet, config, onChange, bandeauConfig,
       case 'typo':
         return (
           <div style={{ padding: '12px 16px', fontFamily: 'var(--sans)' }}>
-            <BandeauConfigPanel value={bandeauConfig} onChange={onBandeauChange} />
+            <BandeauConfigPanel value={bandeauConfig} onChange={onBandeauChange} projet={projet} />
           </div>
         );
       case 'main':     return <MainPhotoSection projet={projet} config={config} onChange={onChange} />;
