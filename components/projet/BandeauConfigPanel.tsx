@@ -99,31 +99,71 @@ function StyleRow({ style, onChange }: { style: BandeauStyle; onChange: (s: Band
         </div>
       </div>
 
-      {/* Rangée typo fine : interligne, espacement lettres/mots, alignement, casse */}
-      <div style={ROW}>
+      <AdvancedStyleSection style={style} set={set} />
+    </div>
+  );
+}
+
+/** Réglages typo/spacing avancés repliés dans un menu déroulant.
+ *  Ouvert automatiquement si au moins une propriété avancée est définie. */
+function AdvancedStyleSection({
+  style,
+  set,
+}: {
+  style: BandeauStyle;
+  set: <K extends keyof BandeauStyle>(k: K, v: BandeauStyle[K]) => void;
+}) {
+  const hasAdvanced =
+    style.lineHeight !== undefined ||
+    style.letterSpacing !== undefined ||
+    style.wordSpacing !== undefined ||
+    !!style.textAlign || !!style.textTransform ||
+    style.marginTop !== undefined ||
+    style.marginBottom !== undefined ||
+    style.paddingX !== undefined ||
+    style.paddingY !== undefined;
+
+  const summaryStyle: React.CSSProperties = {
+    cursor: 'pointer',
+    fontFamily: 'var(--sans)', fontSize: '8pt', fontWeight: 700,
+    letterSpacing: '0.06em', textTransform: 'uppercase',
+    color: hasAdvanced ? 'var(--ai-rouge)' : 'var(--ai-noir70)',
+    padding: '6px 0',
+    userSelect: 'none',
+    listStyle: 'none',
+  };
+
+  return (
+    <details open={hasAdvanced} style={{ marginTop: '4px' }}>
+      <summary style={summaryStyle}>
+        ▸ Réglages avancés{hasAdvanced ? ' •' : ''}
+      </summary>
+
+      {/* Rangée typo fine : interligne, espace lettres/mots, alignement, casse */}
+      <div style={{ ...ROW, marginTop: '6px' }}>
         <input
           type="number" step="0.05" min="0.8" max="2.5"
           value={style.lineHeight ?? ''}
           onChange={(e) => set('lineHeight', e.target.value === '' ? undefined : Number(e.target.value))}
           placeholder="Interligne"
-          title="Interligne (line-height, sans unité). Ex. 1.15, 1.3, 1.5."
+          title="Interligne (sans unité). Ex. 1.15 (serré), 1.3 (lecture), 1.5 (aéré)."
           style={{ ...INPUT_S, width: '100px', flex: '0 0 100px' }}
         />
         <input
           type="number" step="0.01" min="-0.1" max="0.4"
           value={style.letterSpacing ?? ''}
           onChange={(e) => set('letterSpacing', e.target.value === '' ? undefined : Number(e.target.value))}
-          placeholder="Lettres (em)"
-          title="Espacement entre lettres en em. Négatif resserre."
-          style={{ ...INPUT_S, width: '110px', flex: '0 0 110px' }}
+          placeholder="Espace lettres"
+          title="Espacement entre lettres. Décimal sans unité. Négatif resserre, positif aère (ex. 0.05 = espacement subtil de type titre)."
+          style={{ ...INPUT_S, width: '120px', flex: '0 0 120px' }}
         />
         <input
           type="number" step="0.05" min="-0.2" max="1"
           value={style.wordSpacing ?? ''}
           onChange={(e) => set('wordSpacing', e.target.value === '' ? undefined : Number(e.target.value))}
-          placeholder="Mots (em)"
-          title="Espacement entre mots en em."
-          style={{ ...INPUT_S, width: '100px', flex: '0 0 100px' }}
+          placeholder="Espace mots"
+          title="Espacement entre mots. Décimal sans unité. Positif aère les espaces entre mots."
+          style={{ ...INPUT_S, width: '110px', flex: '0 0 110px' }}
         />
         <select
           value={style.textAlign ?? ''}
@@ -151,42 +191,42 @@ function StyleRow({ style, onChange }: { style: BandeauStyle; onChange: (s: Band
         </select>
       </div>
 
-      {/* Rangée spacing : marges et paddings en mm */}
+      {/* Rangée spacing : marges externes et marges internes en mm */}
       <div style={ROW}>
         <input
           type="number" step="0.5" min="-20" max="40"
           value={style.marginTop ?? ''}
           onChange={(e) => set('marginTop', e.target.value === '' ? undefined : Number(e.target.value))}
           placeholder="Marge haut (mm)"
-          title="Marge supérieure en mm. Peut être négative pour rapprocher."
-          style={{ ...INPUT_S, width: '130px', flex: '0 0 130px' }}
+          title="Marge extérieure au-dessus du bloc, en mm. Négative pour rapprocher du bloc précédent."
+          style={{ ...INPUT_S, width: '140px', flex: '0 0 140px' }}
         />
         <input
           type="number" step="0.5" min="-20" max="40"
           value={style.marginBottom ?? ''}
           onChange={(e) => set('marginBottom', e.target.value === '' ? undefined : Number(e.target.value))}
           placeholder="Marge bas (mm)"
-          title="Marge inférieure en mm."
-          style={{ ...INPUT_S, width: '130px', flex: '0 0 130px' }}
+          title="Marge extérieure en-dessous du bloc, en mm."
+          style={{ ...INPUT_S, width: '140px', flex: '0 0 140px' }}
         />
         <input
           type="number" step="0.5" min="0" max="20"
           value={style.paddingX ?? ''}
           onChange={(e) => set('paddingX', e.target.value === '' ? undefined : Number(e.target.value))}
-          placeholder="Padding X (mm)"
-          title="Padding horizontal (gauche + droite) en mm. Utile avec un fond surligné."
-          style={{ ...INPUT_S, width: '130px', flex: '0 0 130px' }}
+          placeholder="Marge interne H (mm)"
+          title="Espace intérieur horizontal (gauche + droite), en mm. Utile pour créer un pavé surligné avec un fond coloré."
+          style={{ ...INPUT_S, width: '170px', flex: '0 0 170px' }}
         />
         <input
           type="number" step="0.5" min="0" max="20"
           value={style.paddingY ?? ''}
           onChange={(e) => set('paddingY', e.target.value === '' ? undefined : Number(e.target.value))}
-          placeholder="Padding Y (mm)"
-          title="Padding vertical (haut + bas) en mm."
-          style={{ ...INPUT_S, width: '130px', flex: '0 0 130px' }}
+          placeholder="Marge interne V (mm)"
+          title="Espace intérieur vertical (haut + bas), en mm."
+          style={{ ...INPUT_S, width: '170px', flex: '0 0 170px' }}
         />
       </div>
-    </div>
+    </details>
   );
 }
 
