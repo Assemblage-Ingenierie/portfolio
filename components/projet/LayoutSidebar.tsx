@@ -548,14 +548,16 @@ export default function LayoutSidebar({ projet, config, onChange, bandeauConfig,
               onChange={onBandeauChange}
               projet={projet}
               onResetAll={() => {
-                // Applique les preregages Assemblage simultanement aux
-                // deux configs. Confirme avant d'ecraser les reglages
-                // existants pour ne pas perdre du travail par accident.
+                // Applique les preregages Assemblage UNIQUEMENT en memoire
+                // (state React). Aucune ecriture Airtable a ce stade —
+                // l'utilisateur doit cliquer sur "Sauvegarder la mise en
+                // page" pour persister. La confirmation previent seulement
+                // l'ecrasement accidentel des reglages courants.
                 const confirmed = window.confirm(
                   'Appliquer les préréglages Assemblage ?\n\n'
-                  + 'Cela remplace la configuration actuelle du bandeau '
-                  + 'ET de la mise en page (photo principale, texte, photos '
-                  + 'additionnelles, mots-clés, certifications).'
+                  + 'Le bandeau et la mise en page seront remplacés '
+                  + 'en aperçu. Rien n’est encore sauvegardé : '
+                  + 'clique sur « Sauvegarder la mise en page » pour valider.'
                 );
                 if (!confirmed) return;
                 onBandeauChange(ASSEMBLAGE_DEFAULT_BANDEAU);
