@@ -365,11 +365,17 @@ export function metaGridHtml(projet: Projet, options?: { isDev?: boolean }): str
 
   // Programme : principal en valeur principale, secondaire en sous-titre.
   // Helper utilisé par les deux templates.
-  const programmeItem = (projet.programmePrincipal || projet.programmeSecondaire)
+  // L'utilisateur peut choisir de masquer le secondaire via
+  // `bandeauConfig.programme.hideSecondaire` — la cellule n'affiche alors
+  // que le principal, sans sous-titre. Si aucun principal n'est rempli
+  // dans ce cas, la cellule disparaît entièrement.
+  const hideSecondaire = projet.bandeauConfig?.programme?.hideSecondaire === true;
+  const effectiveSecondaire = hideSecondaire ? undefined : projet.programmeSecondaire;
+  const programmeItem = (projet.programmePrincipal || effectiveSecondaire)
     ? {
         label: 'Programme',
-        value: projet.programmePrincipal ?? projet.programmeSecondaire ?? '',
-        sub: projet.programmePrincipal ? projet.programmeSecondaire : undefined,
+        value: projet.programmePrincipal ?? effectiveSecondaire ?? '',
+        sub: projet.programmePrincipal ? effectiveSecondaire : undefined,
       }
     : null;
 
@@ -403,18 +409,46 @@ export function metaGridHtml(projet: Projet, options?: { isDev?: boolean }): str
   // les labels / values du bandeau.
   const labelStyle = styleToCss(projet.bandeauConfig?.labels);
   const valueStyle = styleToCss(projet.bandeauConfig?.values);
+  const subStyle = styleToCss(projet.bandeauConfig?.metaSub);
   const labelAttr = labelStyle ? ` style="${labelStyle}"` : '';
   const valueAttr = valueStyle ? ` style="${valueStyle}"` : '';
+  const subAttr = subStyle ? ` style="${subStyle}"` : '';
 
   // Lignes horizontales du bandeau (toggle visible/masqué, couleur, épaisseur)
   const linesCss = linesToCss(projet.bandeauConfig?.lines);
   // Espacement titre ↔ bandeau (slider 0..100, 50 = neutre). Appliqué en
   // margin-top sur la grille — négatif rapproche, positif éloigne.
-  const gapCss = titleMetaGapCss(projet.bandeauConfig);
+  const titleGapCss = titleMetaGapCss(projet.bandeauConfig);
+
+  // Distribution horizontale des cellules.
+  // Défaut = 'content' depuis 2026 : chaque cellule prend la largeur de son
+  // contenu, l'espace libre se répartit (justify-content: space-between).
+  // L'utilisateur peut basculer vers 'equal' (cellules de même largeur) via
+  // `bandeauConfig.cells.layout`. Les `weights` modulent la part par cellule.
+  const cellsCfg = projet.bandeauConfig?.cells;
+  const layout = cellsCfg?.layout ?? 'content';
+  const weightOf = (label: string): number => {
+    const w = cellsCfg?.weights?.[label as keyof NonNullable<typeof cellsCfg.weights>];
+    return (typeof w === 'number' && Number.isFinite(w) && w > 0) ? w : 1;
+  };
+  const gridCols = layout === 'content'
+    ? items.map(i => {
+        const w = weightOf(i.label);
+        return w !== 1 ? `minmax(${(w * 20).toFixed(1)}mm,max-content)` : 'max-content';
+      }).join(' ')
+    : items.map(i => `${weightOf(i.label)}fr`).join(' ');
+  const justifyCss = layout === 'content' ? 'justify-content:space-between' : '';
+  const gapMm = cellsCfg?.gap;
+  const cellGapCss = (typeof gapMm === 'number' && Number.isFinite(gapMm) && gapMm > 0)
+    ? `column-gap:${gapMm}mm`
+    : '';
+
   const gridStyle = [
-    `grid-template-columns:repeat(${items.length},1fr)`,
+    `grid-template-columns:${gridCols}`,
+    justifyCss,
+    cellGapCss,
     linesCss,
-    gapCss,
+    titleGapCss,
   ].filter(Boolean).join(';');
 
   return `<div class="t-meta-grid" style="${gridStyle}">
@@ -422,7 +456,7 @@ export function metaGridHtml(projet: Projet, options?: { isDev?: boolean }): str
       <div class="t-meta-item">
         <span class="t-meta-label"${labelAttr}>${esc(i.label)}</span>
         <div class="t-meta-value"${valueAttr}>${esc(i.value)}</div>
-        ${i.sub ? `<div class="t-meta-sub">${esc(i.sub)}</div>` : ''}
+        ${i.sub ? `<div class="t-meta-sub"${subAttr}>${esc(i.sub)}</div>` : ''}
       </div>
     `).join('')}
   </div>`;

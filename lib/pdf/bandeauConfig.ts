@@ -12,6 +12,8 @@
  */
 
 export type FontFamilyChoice = 'sans' | 'serif';
+export type TextAlignChoice = 'left' | 'center' | 'right' | 'justify';
+export type TextTransformChoice = 'none' | 'uppercase' | 'lowercase' | 'capitalize';
 
 export interface BandeauStyle {
   fontFamily?: FontFamilyChoice;
@@ -24,6 +26,24 @@ export interface BandeauStyle {
   color?: string;
   /** Surlignage : couleur de fond derrière le texte. */
   background?: string;
+  /** Interligne sans unité. Ex. 1.15, 1.3, 1.5. Défaut = hérité du template. */
+  lineHeight?: number;
+  /** Espacement entre lettres en em. Ex. 0.02, 0.05. Négatif resserre. */
+  letterSpacing?: number;
+  /** Espacement entre mots en em. */
+  wordSpacing?: number;
+  /** Alignement du texte. Défaut = hérité du template (left dans la charte). */
+  textAlign?: TextAlignChoice;
+  /** Transformation de casse. */
+  textTransform?: TextTransformChoice;
+  /** Marge supérieure en mm (peut être négative pour rapprocher). */
+  marginTop?: number;
+  /** Marge inférieure en mm. */
+  marginBottom?: number;
+  /** Padding horizontal en mm (gauche + droite). Utile avec `background`. */
+  paddingX?: number;
+  /** Padding vertical en mm (haut + bas). Utile avec `background`. */
+  paddingY?: number;
 }
 
 /** Style des deux lignes horizontales encadrant le bandeau métadonnées. */
@@ -45,6 +65,11 @@ export interface BandeauConfig {
   labels?: BandeauStyle;
   /** Valeurs du bandeau métadonnées. */
   values?: BandeauStyle;
+  /** Sous-titre d'une cellule du bandeau métadonnées (`.t-meta-sub`).
+   *  Aujourd'hui utilisé uniquement pour afficher le Programme secondaire
+   *  sous la valeur principale du Programme. Style indépendant des values
+   *  pour préserver la hiérarchie visuelle (secondaire = plus discret). */
+  metaSub?: BandeauStyle;
   /** Description projet (paragraphes Markdown rendus). Applique font-family
    *  et font-size aux <p>/<li>/<a>/<strong>/<em> de la description sur les
    *  4 templates (Solo, Diptyque, Triptyque, Manuel/Dev). */
@@ -66,6 +91,54 @@ export interface BandeauConfig {
    *  ±PHOTO_TEXT_GAP_RANGE_MM via `photoTextGapCss`. Disponible sur
    *  Str-Env et Dev (les templates avec photo principale + texte). */
   photoTextGap?: number;
+  /** Options de visibilité de la cellule Programme du bandeau métadonnées.
+   *  Permet par exemple de ne montrer que le Programme secondaire si on
+   *  juge le principal redondant ou peu pertinent. */
+  programme?: ProgrammeCellOptions;
+  /** Distribution horizontale des cellules du bandeau (largeur par cellule,
+   *  espacement entre cellules). Voir `BandeauCellsConfig`. */
+  cells?: BandeauCellsConfig;
+}
+
+export interface ProgrammeCellOptions {
+  /** Si `true`, le Programme secondaire est masqué — la cellule Programme
+   *  n'affiche plus que le Programme principal (sans sous-titre).
+   *  Si aucun principal n'est rempli, la cellule Programme entière disparaît. */
+  hideSecondaire?: boolean;
+}
+
+/** Libellés canoniques des cellules potentiellement présentes dans le bandeau
+ *  métadonnées, tous templates confondus (union Str-Env + Dev). L'ordre n'est
+ *  pas significatif ici — il est défini par le template lui-même. */
+export const CANONICAL_META_LABELS = [
+  'MOA',
+  'Bailleur',
+  'Architecte',
+  'BET associés',
+  'Budget',
+  'Surface',
+  'Entreprise',
+  'Mission AI',
+  'Programme',
+] as const;
+
+export type MetaLabel = typeof CANONICAL_META_LABELS[number];
+
+export type CellsLayout = 'equal' | 'content';
+
+export interface BandeauCellsConfig {
+  /** Distribution horizontale des cellules dans le bandeau.
+   *  - `'content'` (défaut) : chaque cellule prend la largeur naturelle de
+   *    son contenu, l'espace libre se distribue entre les cellules.
+   *  - `'equal'` : chaque cellule occupe une part égale, modulée par `weights`. */
+  layout?: CellsLayout;
+  /** Espace minimum entre cellules en mm (s'ajoute au padding existant). */
+  gap?: number;
+  /** Poids par cellule, clé = libellé (cf. `CANONICAL_META_LABELS`).
+   *  - En mode `'equal'` : multiplicateur de la part `fr` (1 = défaut, 2 = double).
+   *  - En mode `'content'` : `weight × 20mm` devient le `min-width` de la cellule.
+   *  Une valeur ≤ 0 ou non finie est ignorée (= défaut 1). */
+  weights?: Partial<Record<MetaLabel, number>>;
 }
 
 /** Demi-amplitude (en mm) du slider `titleMetaGap`. À 0% → -RANGE, à 100% → +RANGE. */
@@ -133,6 +206,31 @@ export function styleToCss(style?: BandeauStyle): string {
   if (style.underline) parts.push('text-decoration:underline');
   if (style.color) parts.push(`color:${style.color}`);
   if (style.background) parts.push(`background:${style.background}`);
+  if (style.lineHeight !== undefined && Number.isFinite(style.lineHeight)) {
+    parts.push(`line-height:${style.lineHeight}`);
+  }
+  if (style.letterSpacing !== undefined && Number.isFinite(style.letterSpacing)) {
+    parts.push(`letter-spacing:${style.letterSpacing}em`);
+  }
+  if (style.wordSpacing !== undefined && Number.isFinite(style.wordSpacing)) {
+    parts.push(`word-spacing:${style.wordSpacing}em`);
+  }
+  if (style.textAlign) parts.push(`text-align:${style.textAlign}`);
+  if (style.textTransform) parts.push(`text-transform:${style.textTransform}`);
+  if (style.marginTop !== undefined && Number.isFinite(style.marginTop)) {
+    parts.push(`margin-top:${style.marginTop}mm`);
+  }
+  if (style.marginBottom !== undefined && Number.isFinite(style.marginBottom)) {
+    parts.push(`margin-bottom:${style.marginBottom}mm`);
+  }
+  if (style.paddingX !== undefined && Number.isFinite(style.paddingX)) {
+    parts.push(`padding-left:${style.paddingX}mm`);
+    parts.push(`padding-right:${style.paddingX}mm`);
+  }
+  if (style.paddingY !== undefined && Number.isFinite(style.paddingY)) {
+    parts.push(`padding-top:${style.paddingY}mm`);
+    parts.push(`padding-bottom:${style.paddingY}mm`);
+  }
   return parts.join(';');
 }
 

@@ -1,6 +1,11 @@
 'use client';
 
-import type { BandeauConfig, BandeauStyle, BandeauLinesStyle, FontFamilyChoice } from '@/lib/pdf/bandeauConfig';
+import type {
+  BandeauConfig, BandeauStyle, BandeauLinesStyle, ProgrammeCellOptions,
+  BandeauCellsConfig, CellsLayout, MetaLabel,
+  FontFamilyChoice, TextAlignChoice, TextTransformChoice,
+} from '@/lib/pdf/bandeauConfig';
+import { CANONICAL_META_LABELS } from '@/lib/pdf/bandeauConfig';
 import ColorSelector from './ColorSelector';
 
 interface Props {
@@ -8,13 +13,14 @@ interface Props {
   onChange: (next: BandeauConfig) => void;
 }
 
-type StyleSectionKey = Exclude<keyof BandeauConfig, 'lines' | 'titleMetaGap' | 'photoTextGap'>;
+type StyleSectionKey = Exclude<keyof BandeauConfig, 'lines' | 'titleMetaGap' | 'photoTextGap' | 'programme' | 'cells'>;
 
 const SECTIONS: { key: StyleSectionKey; label: string; help: string }[] = [
   { key: 'titre',       label: 'Titre de la fiche',           help: 'Le nom du projet (titre principal h1).' },
   { key: 'status',      label: 'Statut (en haut à droite)',   help: '"● Livré · 2025"' },
   { key: 'labels',      label: 'Libellés du bandeau',         help: '"Architecte", "Budget", "Surface"…' },
   { key: 'values',      label: 'Valeurs du bandeau',          help: '"Encore Heureux", "8,2 M€ HT", "4 242 m²"…' },
+  { key: 'metaSub',     label: 'Sous-titre du Programme',     help: 'La ligne discrète sous "Programme" — affiche le Programme secondaire quand un Programme principal est aussi rempli.' },
   { key: 'description', label: 'Description projet',          help: 'Le texte courant de la fiche (paragraphes Markdown). Appliqué sur tous les templates.' },
   { key: 'prestationAssemblage', label: 'Prestation Assemblage', help: 'Bloc rich text dédié, rendu uniquement par le template Dev (titre + valeur).' },
 ];
@@ -95,7 +101,135 @@ function StyleRow({ style, onChange }: { style: BandeauStyle; onChange: (s: Band
           />
         </div>
       </div>
+
+      <AdvancedStyleSection style={style} set={set} />
     </div>
+  );
+}
+
+/** Réglages typo/spacing avancés repliés dans un menu déroulant.
+ *  Ouvert automatiquement si au moins une propriété avancée est définie. */
+function AdvancedStyleSection({
+  style,
+  set,
+}: {
+  style: BandeauStyle;
+  set: <K extends keyof BandeauStyle>(k: K, v: BandeauStyle[K]) => void;
+}) {
+  const hasAdvanced =
+    style.lineHeight !== undefined ||
+    style.letterSpacing !== undefined ||
+    style.wordSpacing !== undefined ||
+    !!style.textAlign || !!style.textTransform ||
+    style.marginTop !== undefined ||
+    style.marginBottom !== undefined ||
+    style.paddingX !== undefined ||
+    style.paddingY !== undefined;
+
+  const summaryStyle: React.CSSProperties = {
+    cursor: 'pointer',
+    fontFamily: 'var(--sans)', fontSize: '8pt', fontWeight: 700,
+    letterSpacing: '0.06em', textTransform: 'uppercase',
+    color: hasAdvanced ? 'var(--ai-rouge)' : 'var(--ai-noir70)',
+    padding: '6px 0',
+    userSelect: 'none',
+    listStyle: 'none',
+  };
+
+  return (
+    <details open={hasAdvanced} style={{ marginTop: '4px' }}>
+      <summary style={summaryStyle}>
+        ▸ Réglages avancés{hasAdvanced ? ' •' : ''}
+      </summary>
+
+      {/* Rangée typo fine : interligne, espace lettres/mots, alignement, casse */}
+      <div style={{ ...ROW, marginTop: '6px' }}>
+        <input
+          type="number" step="0.05" min="0.8" max="2.5"
+          value={style.lineHeight ?? ''}
+          onChange={(e) => set('lineHeight', e.target.value === '' ? undefined : Number(e.target.value))}
+          placeholder="Interligne"
+          title="Interligne (sans unité). Ex. 1.15 (serré), 1.3 (lecture), 1.5 (aéré)."
+          style={{ ...INPUT_S, width: '100px', flex: '0 0 100px' }}
+        />
+        <input
+          type="number" step="0.01" min="-0.1" max="0.4"
+          value={style.letterSpacing ?? ''}
+          onChange={(e) => set('letterSpacing', e.target.value === '' ? undefined : Number(e.target.value))}
+          placeholder="Espace lettres"
+          title="Espacement entre lettres. Décimal sans unité. Négatif resserre, positif aère (ex. 0.05 = espacement subtil de type titre)."
+          style={{ ...INPUT_S, width: '120px', flex: '0 0 120px' }}
+        />
+        <input
+          type="number" step="0.05" min="-0.2" max="1"
+          value={style.wordSpacing ?? ''}
+          onChange={(e) => set('wordSpacing', e.target.value === '' ? undefined : Number(e.target.value))}
+          placeholder="Espace mots"
+          title="Espacement entre mots. Décimal sans unité. Positif aère les espaces entre mots."
+          style={{ ...INPUT_S, width: '110px', flex: '0 0 110px' }}
+        />
+        <select
+          value={style.textAlign ?? ''}
+          onChange={(e) => set('textAlign', (e.target.value || undefined) as TextAlignChoice | undefined)}
+          title="Alignement du texte"
+          style={{ ...INPUT_S, width: 'auto', flex: '1 1 110px', minWidth: '110px' }}
+        >
+          <option value="">Alignement défaut</option>
+          <option value="left">Gauche</option>
+          <option value="center">Centré</option>
+          <option value="right">Droite</option>
+          <option value="justify">Justifié</option>
+        </select>
+        <select
+          value={style.textTransform ?? ''}
+          onChange={(e) => set('textTransform', (e.target.value || undefined) as TextTransformChoice | undefined)}
+          title="Transformation de casse"
+          style={{ ...INPUT_S, width: 'auto', flex: '1 1 110px', minWidth: '110px' }}
+        >
+          <option value="">Casse défaut</option>
+          <option value="none">Normale</option>
+          <option value="uppercase">MAJUSCULES</option>
+          <option value="lowercase">minuscules</option>
+          <option value="capitalize">Initiales</option>
+        </select>
+      </div>
+
+      {/* Rangée spacing : marges externes et marges internes en mm */}
+      <div style={ROW}>
+        <input
+          type="number" step="0.5" min="-20" max="40"
+          value={style.marginTop ?? ''}
+          onChange={(e) => set('marginTop', e.target.value === '' ? undefined : Number(e.target.value))}
+          placeholder="Marge haut (mm)"
+          title="Marge extérieure au-dessus du bloc, en mm. Négative pour rapprocher du bloc précédent."
+          style={{ ...INPUT_S, width: '140px', flex: '0 0 140px' }}
+        />
+        <input
+          type="number" step="0.5" min="-20" max="40"
+          value={style.marginBottom ?? ''}
+          onChange={(e) => set('marginBottom', e.target.value === '' ? undefined : Number(e.target.value))}
+          placeholder="Marge bas (mm)"
+          title="Marge extérieure en-dessous du bloc, en mm."
+          style={{ ...INPUT_S, width: '140px', flex: '0 0 140px' }}
+        />
+        <input
+          type="number" step="0.5" min="0" max="20"
+          value={style.paddingX ?? ''}
+          onChange={(e) => set('paddingX', e.target.value === '' ? undefined : Number(e.target.value))}
+          placeholder="Marge interne H (mm)"
+          title="Espace intérieur horizontal (gauche + droite), en mm. Utile pour créer un pavé surligné avec un fond coloré."
+          style={{ ...INPUT_S, width: '170px', flex: '0 0 170px' }}
+        />
+        <input
+          type="number" step="0.5" min="0" max="20"
+          value={style.paddingY ?? ''}
+          onChange={(e) => set('paddingY', e.target.value === '' ? undefined : Number(e.target.value))}
+          placeholder="Marge interne V (mm)"
+          title="Espace intérieur vertical (haut + bas), en mm."
+          style={{ ...INPUT_S, width: '170px', flex: '0 0 170px' }}
+        />
+      </div>
+    </details>
   );
 }
 
@@ -109,7 +243,15 @@ export default function BandeauConfigPanel({ value, onChange }: Props) {
       !style.fontFamily &&
       style.fontSize === undefined &&
       !style.bold && !style.italic && !style.underline &&
-      !style.color && !style.background;
+      !style.color && !style.background &&
+      style.lineHeight === undefined &&
+      style.letterSpacing === undefined &&
+      style.wordSpacing === undefined &&
+      !style.textAlign && !style.textTransform &&
+      style.marginTop === undefined &&
+      style.marginBottom === undefined &&
+      style.paddingX === undefined &&
+      style.paddingY === undefined;
     const next = { ...value };
     if (isEmpty) {
       delete next[key];
@@ -140,6 +282,32 @@ export default function BandeauConfigPanel({ value, onChange }: Props) {
           <StyleRow style={value[s.key] ?? {}} onChange={(st) => updateSection(s.key, st)} />
         </div>
       ))}
+      <CellsLayoutRow
+        value={value.cells}
+        onChange={(c) => {
+          const next = { ...value };
+          if (!c || (!c.layout && !c.gap && (!c.weights || Object.keys(c.weights).length === 0))) {
+            delete next.cells;
+          } else {
+            next.cells = c;
+          }
+          onChange(next);
+        }}
+      />
+      <ProgrammeOptionsRow
+        value={value.programme}
+        onChange={(p) => {
+          const next = { ...value };
+          // Si toutes les options sont à leur valeur par défaut, on retire
+          // la clé pour garder un JSON minimal.
+          if (!p || (p.hideSecondaire !== true)) {
+            delete next.programme;
+          } else {
+            next.programme = p;
+          }
+          onChange(next);
+        }}
+      />
       <LinesRow value={value.lines ?? {}} onChange={(l) => onChange({ ...value, lines: l })} />
       <TitleMetaGapRow
         value={value.titleMetaGap}
@@ -225,6 +393,151 @@ function TitleMetaGapRow({ value, onChange }: { value: number | undefined; onCha
         />
         <button type="button" onClick={() => onChange(undefined)} style={{ ...TOGGLE, fontSize: '8pt' }} title="Réinitialiser à la valeur par défaut">
           Reset
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function CellsLayoutRow({
+  value,
+  onChange,
+}: {
+  value: BandeauCellsConfig | undefined;
+  onChange: (v: BandeauCellsConfig | undefined) => void;
+}) {
+  const layout: CellsLayout = value?.layout ?? 'content';
+  const gap = value?.gap;
+  const weights: Partial<Record<MetaLabel, number>> = value?.weights ?? {};
+
+  const setLayout = (next: CellsLayout) => {
+    // Pas la peine de persister 'content' (= défaut) si rien d'autre n'est défini.
+    const out: BandeauCellsConfig = { ...(value ?? {}) };
+    if (next === 'content') delete out.layout;
+    else out.layout = next;
+    onChange(out);
+  };
+  const setGap = (next: number | undefined) => {
+    const out: BandeauCellsConfig = { ...(value ?? {}) };
+    if (next === undefined || !Number.isFinite(next) || next <= 0) delete out.gap;
+    else out.gap = next;
+    onChange(out);
+  };
+  const setWeight = (label: MetaLabel, next: number | undefined) => {
+    const out: BandeauCellsConfig = { ...(value ?? {}) };
+    const nextWeights: Partial<Record<MetaLabel, number>> = { ...weights };
+    if (next === undefined || !Number.isFinite(next) || next === 1 || next <= 0) {
+      delete nextWeights[label];
+    } else {
+      nextWeights[label] = next;
+    }
+    if (Object.keys(nextWeights).length === 0) delete out.weights;
+    else out.weights = nextWeights;
+    onChange(out);
+  };
+
+  const layoutBtn = (active: boolean): React.CSSProperties => ({
+    padding: '6px 12px', borderRadius: 2, cursor: 'pointer',
+    fontFamily: 'var(--sans)', fontSize: '9pt', fontWeight: 600,
+    background: active ? 'var(--ai-violet)' : 'white',
+    color: active ? 'white' : 'var(--ai-noir70)',
+    border: active ? '1px solid var(--ai-violet)' : '1px solid #DFE4E8',
+  });
+
+  return (
+    <div style={{ marginBottom: '14px', paddingBottom: '14px' }}>
+      <label style={LABEL_S}>Cellules du bandeau</label>
+      <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', margin: '0 0 6px' }}>
+        Contrôle la largeur des cellules et l&apos;espace entre elles. « Adaptée au contenu » = chaque cellule prend la place qu&apos;elle a besoin (recommandé). « Équirépartie » = toutes les cellules sont de même largeur (ancien comportement).
+      </p>
+
+      <div style={{ display: 'flex', gap: '6px', marginBottom: '10px' }}>
+        <button type="button" onClick={() => setLayout('content')} style={layoutBtn(layout === 'content')}>
+          Adaptée au contenu
+        </button>
+        <button type="button" onClick={() => setLayout('equal')} style={layoutBtn(layout === 'equal')}>
+          Équirépartie
+        </button>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+        <span style={{ fontSize: '8pt', color: 'var(--ai-noir70)', minWidth: '110px' }}>Espace entre cellules</span>
+        <input
+          type="range" min={0} max={15} step={0.5}
+          value={gap ?? 0}
+          onChange={(e) => setGap(Number(e.target.value))}
+          style={{ flex: '1 1 100px', accentColor: '#E30513' }}
+        />
+        <input
+          type="number" min={0} max={20} step={0.5}
+          value={gap ?? ''}
+          onChange={(e) => setGap(e.target.value === '' ? undefined : Number(e.target.value))}
+          placeholder="mm"
+          style={{ ...INPUT_S, width: '70px', flex: '0 0 70px', textAlign: 'right' }}
+        />
+      </div>
+
+      <details style={{ marginTop: '4px' }}>
+        <summary
+          style={{
+            cursor: 'pointer',
+            fontFamily: 'var(--sans)', fontSize: '8pt', fontWeight: 700,
+            letterSpacing: '0.06em', textTransform: 'uppercase',
+            color: Object.keys(weights).length > 0 ? 'var(--ai-rouge)' : 'var(--ai-noir70)',
+            padding: '6px 0',
+            userSelect: 'none', listStyle: 'none',
+          }}
+        >
+          ▸ Largeur par cellule{Object.keys(weights).length > 0 ? ` • ${Object.keys(weights).length}` : ''}
+        </summary>
+        <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', margin: '6px 0' }}>
+          Poids relatif de chaque cellule (1 = défaut). En mode « Adaptée au contenu », le poids impose une largeur minimum (poids × 20 mm). En mode « Équirépartie », le poids multiplie la part de chaque cellule (2 = double largeur).
+        </p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px 12px' }}>
+          {CANONICAL_META_LABELS.map((label) => {
+            const w = weights[label];
+            return (
+              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '8pt', color: 'var(--ai-noir70)', minWidth: '90px' }}>{label}</span>
+                <input
+                  type="number" min={0.3} max={4} step={0.1}
+                  value={w ?? ''}
+                  onChange={(e) => setWeight(label, e.target.value === '' ? undefined : Number(e.target.value))}
+                  placeholder="1.0"
+                  title={`Poids relatif de la cellule ${label}. Vide ou 1 = défaut.`}
+                  style={{ ...INPUT_S, width: '70px', flex: '0 0 70px', textAlign: 'right' }}
+                />
+              </div>
+            );
+          })}
+        </div>
+      </details>
+    </div>
+  );
+}
+
+function ProgrammeOptionsRow({
+  value,
+  onChange,
+}: {
+  value: ProgrammeCellOptions | undefined;
+  onChange: (v: ProgrammeCellOptions | undefined) => void;
+}) {
+  const hideSecondaire = value?.hideSecondaire === true;
+  return (
+    <div style={{ marginBottom: '14px', paddingBottom: '14px' }}>
+      <label style={LABEL_S}>Cellule Programme</label>
+      <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', margin: '0 0 6px' }}>
+        Contrôle le contenu de la cellule « Programme » du bandeau. Par défaut, le Programme principal est affiché en grand et le Programme secondaire en sous-titre.
+      </p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+        <button
+          type="button"
+          onClick={() => onChange({ ...(value ?? {}), hideSecondaire: !hideSecondaire })}
+          style={hideSecondaire ? TOGGLE_ON : TOGGLE}
+          title={hideSecondaire ? 'Le Programme secondaire est masqué — seul le principal s’affiche.' : 'Le Programme secondaire s’affiche en sous-titre.'}
+        >
+          {hideSecondaire ? '✓ Programme secondaire masqué' : '✕ Programme secondaire visible'}
         </button>
       </div>
     </div>
