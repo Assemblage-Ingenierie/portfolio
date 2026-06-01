@@ -1,6 +1,6 @@
 import type { Projet } from '@/types/projet';
 import { renderMarkdown, injectSoftHyphensFr } from '@/lib/utils/markdown';
-import { styleToCss, photoTextGapCss } from '@/lib/pdf/bandeauConfig';
+import { styleToCss, photoTextGapCss, bandeauPhotoGapCss } from '@/lib/pdf/bandeauConfig';
 import {
   TemplateBundle,
   headerHtml, footerHtml, titleBlockHtml, metaGridHtml,
@@ -499,8 +499,9 @@ export function renderDev(projet: Projet, configIn?: ManualConfig): TemplateBund
 
   // L'espacement titre ↔ bandeau est désormais géré par `BandeauConfig.titleMetaGap`
   // (cf. shared.ts → metaGridHtml). Champ `bandeauVerticalOffset` obsolète.
+  const bandeauWrapGap = bandeauPhotoGapCss(projet.bandeauConfig);
   const body = `<article class="page dev-page">
-    <div class="t-bandeau-wrap">
+    <div class="t-bandeau-wrap"${bandeauWrapGap ? ` style="${bandeauWrapGap}"` : ''}>
       ${headerHtml(projet, { isDev: true })}
       ${titleBlockHtml(projet, '26pt')}
       ${metaGridHtml(projet, { isDev: true })}

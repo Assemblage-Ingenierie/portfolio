@@ -487,7 +487,14 @@ export function metaGridHtml(projet: Projet, options?: { isDev?: boolean }): str
     if (materiauxValues.length)       items.push({ label: 'Matériaux',        values: materiauxValues });
   }
 
-  if (items.length === 0) return '';
+  // Cellules masquées par l'utilisateur (option « Activer/désactiver les
+  // champs » du panneau bandeau) — retirées pour réduire la largeur.
+  const hidden = projet.bandeauConfig?.hiddenCells;
+  const visibleItems = (hidden && hidden.length > 0)
+    ? items.filter((i) => !hidden.includes(i.label as (typeof hidden)[number]))
+    : items;
+
+  if (visibleItems.length === 0) return '';
 
   // Surcharges typographiques par projet — appliquées uniformément à tous
   // les labels / values du bandeau.
@@ -516,11 +523,11 @@ export function metaGridHtml(projet: Projet, options?: { isDev?: boolean }): str
     return (typeof w === 'number' && Number.isFinite(w) && w > 0) ? w : 1;
   };
   const gridCols = layout === 'content'
-    ? items.map(i => {
+    ? visibleItems.map(i => {
         const w = weightOf(i.label);
         return w !== 1 ? `minmax(${(w * 20).toFixed(1)}mm,max-content)` : 'max-content';
       }).join(' ')
-    : items.map(i => `${weightOf(i.label)}fr`).join(' ');
+    : visibleItems.map(i => `${weightOf(i.label)}fr`).join(' ');
   const justifyCss = layout === 'content' ? 'justify-content:space-between' : '';
   const gapMm = cellsCfg?.gap;
   const cellGapCss = (typeof gapMm === 'number' && Number.isFinite(gapMm) && gapMm > 0)
@@ -578,7 +585,7 @@ export function metaGridHtml(projet: Projet, options?: { isDev?: boolean }): str
   };
 
   return `<div class="t-meta-grid" style="${gridStyle}">
-    ${items.map(i => `
+    ${visibleItems.map(i => `
       <div class="t-meta-item">
         <span class="t-meta-label"${labelAttr}>${esc(i.label)}</span>
         <div class="t-meta-value"${valueAttr}>${renderValues(i.label, i.values)}</div>

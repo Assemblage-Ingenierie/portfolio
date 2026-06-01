@@ -95,9 +95,18 @@ export interface BandeauConfig {
    *  Permet par exemple de ne montrer que le Programme secondaire si on
    *  juge le principal redondant ou peu pertinent. */
   programme?: ProgrammeCellOptions;
+  /** Espacement entre le bandeau métadonnées (`.t-bandeau-wrap`) et la photo
+   *  principale qui suit. 0..100, 50 = neutre. Mappé sur ±BANDEAU_PHOTO_GAP_RANGE_MM
+   *  via `bandeauPhotoGapCss` (margin-bottom sur `.t-bandeau-wrap`). Str-Env + Dev. */
+  bandeauPhotoGap?: number;
   /** Distribution horizontale des cellules du bandeau (largeur par cellule,
    *  espacement entre cellules). Voir `BandeauCellsConfig`. */
   cells?: BandeauCellsConfig;
+  /** Cellules du bandeau masquées (pour réduire la largeur). Liste de
+   *  libellés `MetaLabel` à NE PAS afficher. L'UI ne propose que
+   *  `Matériaux`, `Programme`, `BET associés` mais le modèle accepte
+   *  n'importe quel libellé. Filtré dans `metaGridHtml`. */
+  hiddenCells?: MetaLabel[];
 }
 
 export interface ProgrammeCellOptions {
@@ -169,6 +178,8 @@ export interface BandeauCellsConfig {
 export const TITLE_META_GAP_RANGE_MM = 12;
 /** Demi-amplitude (en mm) du slider `photoTextGap`. */
 export const PHOTO_TEXT_GAP_RANGE_MM = 15;
+/** Demi-amplitude (en mm) du slider `bandeauPhotoGap` (bandeau ↔ photo). */
+export const BANDEAU_PHOTO_GAP_RANGE_MM = 15;
 
 /** Convertit un `titleMetaGap` (0..100, 50 = neutre) en CSS `margin-top`
  *  applicable sur `.t-meta-grid`. Retourne '' si non défini ou égal à 50. */
@@ -191,6 +202,18 @@ export function photoTextGapCss(config?: BandeauConfig): string {
   const offsetMm = ((clamped - 50) / 50) * PHOTO_TEXT_GAP_RANGE_MM;
   if (offsetMm === 0) return '';
   return `margin-top:${offsetMm.toFixed(2)}mm`;
+}
+
+/** Convertit un `bandeauPhotoGap` (0..100, 50 = neutre) en CSS `margin-bottom`
+ *  applicable sur `.t-bandeau-wrap` — fait varier l'écart entre le bandeau et
+ *  la photo qui suit. Retourne '' si non défini ou égal à 50. */
+export function bandeauPhotoGapCss(config?: BandeauConfig): string {
+  const v = config?.bandeauPhotoGap;
+  if (v === undefined || !Number.isFinite(v)) return '';
+  const clamped = Math.max(0, Math.min(100, v));
+  const offsetMm = ((clamped - 50) / 50) * BANDEAU_PHOTO_GAP_RANGE_MM;
+  if (offsetMm === 0) return '';
+  return `margin-bottom:${offsetMm.toFixed(2)}mm`;
 }
 
 /** Convertit un BandeauLinesStyle en surcharges CSS pour `.t-meta-grid`. */

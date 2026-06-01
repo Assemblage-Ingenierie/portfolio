@@ -184,7 +184,17 @@ Les mots-clés (`Projet.motsCles`, depuis Airtable « Mots-clés ») sont rendus
 Hook `useViewMode()` → `{ viewMode: 'admin' | 'user', setViewMode, canSwitch }`.
 - Les profils Supabase `role: 'user'` sont **forcés** sur `'user'` (`canSwitch: false`).
 - Les admins ont `'admin'` par défaut mais peuvent basculer vers `'user'` (prévisualisation), choix persisté dans `localStorage` sous `_portfolio_view_mode`. Toggle "Vue : Admin/User" dans `ProjetToolbar`, visible uniquement si `canSwitch`.
-- **Restriction côté UI uniquement** (pas de gate serveur — les routes restent protégées par `requireApprovedUser` + RLS). En mode `'user'`, `BandeauConfigPanel` masque le bouton Réinitialiser, les 7 sections typographiques, les lignes horizontales et les sliders d'espacement → ne reste que **Cellules du bandeau** + **Cellule Programme**.
+- **Restriction côté UI uniquement** (pas de gate serveur — les routes restent protégées par `requireApprovedUser` + RLS).
+
+#### Structure du panneau bandeau (`BandeauConfigPanel`)
+
+Le panneau (rendu dans la section « Mise en page typographique » de la sidebar) est organisé ainsi :
+- **Premier niveau (admin uniquement)** : bouton Réinitialiser + sections typo hors bandeau — *Titre de la fiche*, *Statut*, *Description projet*, *Prestation Assemblage* (`TOP_SECTION_KEYS`).
+- **Sous-menu déroulant « Bandeau »** (`<details open>`) :
+  - **admin** : *Libellés* / *Valeurs* / *Sous-titre du Programme* (`BANDEAU_SECTION_KEYS`) + *Cellules du bandeau* + *Cellule Programme* + *Lignes horizontales* + *Espacement titre ↔ bandeau* + *Espacement photo ↔ description* + *Espacement photo ↔ bandeau* + *Activer/désactiver les champs*.
+  - **user** : uniquement *Cellules du bandeau* + *Cellule Programme* + les 3 espacements + *Activer/désactiver les champs* (pas de sections typo, pas de lignes horizontales, pas de Réinitialiser).
+- **Espacement photo ↔ bandeau** : `BandeauConfig.bandeauPhotoGap` (0..100, 50 neutre) → `bandeauPhotoGapCss` applique un `margin-bottom` sur `.t-bandeau-wrap` (écart bandeau↔photo). Pendant la même famille que `titleMetaGap`/`photoTextGap`.
+- **Activer/désactiver les champs** : `BandeauConfig.hiddenCells: MetaLabel[]` — libellés masqués au rendu (filtrés dans `metaGridHtml`). L'UI ne propose que **BET associés**, **Programme**, **Matériaux** (pour réduire la largeur du bandeau), mais le modèle accepte n'importe quel `MetaLabel`.
 
 ### Builders WordPress
 
