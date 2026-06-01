@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import type { Projet } from '@/types/projet';
 import type {
   ManualConfig, PhotoConfig, PhotoFormat,
-  KeywordsConfig, CertificationsConfig, PrestationAssemblageConfig,
+  CertificationsConfig, PrestationAssemblageConfig,
 } from '@/lib/pdf/manualConfig';
 import { MAX_MAIN_PORTRAIT_PHOTOS } from '@/lib/pdf/manualConfig';
 import type { BandeauConfig, BandeauStyle } from '@/lib/pdf/bandeauConfig';
@@ -20,16 +21,18 @@ import {
 const STORAGE_KEY = 'portfolio_layout_section';
 const MAX_EXTRA_PHOTOS = 5;
 
-type SectionId = 'typo' | 'main' | 'text' | 'extra' | 'keywords' | 'certifications' | 'prestation';
+type SectionId = 'typo' | 'main' | 'text' | 'extra' | 'certifications' | 'prestation';
 
 interface SectionDef { id: SectionId; label: string; devOnly?: boolean; }
 
+// "Mots-clés" retiré du menu : depuis le passage à la position figée sous le
+// statut (cf. headerHtml dans shared.ts), la liste flottante n'est plus
+// configurable côté UI.
 const SECTIONS: SectionDef[] = [
   { id: 'typo',           label: 'Mise en page typographique' },
   { id: 'main',           label: 'Photo principale' },
   { id: 'text',           label: 'Texte description' },
   { id: 'extra',          label: 'Photos additionnelles' },
-  { id: 'keywords',       label: 'Mots-clés' },
   { id: 'certifications', label: 'Certifications' },
   { id: 'prestation',     label: 'Prestation Assemblage', devOnly: true },
 ];
@@ -327,60 +330,7 @@ function ExtraPhotosSection({ projet, config, onChange }: ExtraProps) {
   );
 }
 
-// ─── Section : Mots-clés ─────────────────────────────────────────────────────
-
-function KeywordsSection({ projet, config, onChange }: { projet: Projet; config: ManualConfig; onChange: (next: ManualConfig) => void }) {
-  const kw = config.keywords ?? { show: false };
-  const hasMotsCles = projet.motsCles && projet.motsCles.length > 0;
-  const update = (patch: Partial<KeywordsConfig>) => onChange({ ...config, keywords: { ...kw, ...patch } });
-
-  return (
-    <ContentPanel>
-      <div style={ROW}>
-        <button onClick={() => update({ show: !kw.show })} style={radioBtn(!!kw.show)} disabled={!hasMotsCles}>
-          {kw.show ? 'Liste activée' : 'Activer la liste'}
-        </button>
-      </div>
-      {!hasMotsCles && (
-        <p style={{ fontSize: '8pt', color: 'var(--ai-noir70)', margin: 0 }}>
-          Aucun mot-clé renseigné côté Airtable pour ce projet.
-        </p>
-      )}
-      {hasMotsCles && (
-        <p style={{ fontSize: '8pt', color: 'var(--ai-noir70)', margin: '4px 0 0' }}>
-          {projet.motsCles.length} mot{projet.motsCles.length > 1 ? 's' : ''}-clé{projet.motsCles.length > 1 ? 's' : ''} : {projet.motsCles.join(', ')}
-        </p>
-      )}
-      {kw.show && hasMotsCles && (
-        <>
-          <Slider label="Horizontal" value={kw.offsetPercent ?? 50} onChange={v => update({ offsetPercent: v })} min={0} max={100} step={5} />
-          <Slider label="Vertical" value={kw.offsetVerticalPercent ?? 50} onChange={v => update({ offsetVerticalPercent: v })} min={0} max={100} step={5} />
-          <Slider label="Espacement" value={kw.lineSpacing ?? 1} onChange={v => update({ lineSpacing: v })} min={0} max={20} step={1} unit="mm" />
-          <div style={{ marginTop: 6 }}>
-            <label style={{ display: 'block', fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 6 }}>
-              Mise en page (police, taille, B/I/U, couleur texte, surlignage)
-            </label>
-            <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', margin: '0 0 6px' }}>
-              Une virgule dans le champ Airtable « Mots-clés » crée un retour à la ligne.
-            </p>
-            <StyleRow
-              style={(kw.style ?? {}) as BandeauStyle}
-              onChange={st => {
-                const isEmpty = !st.fontFamily && st.fontSize === undefined && !st.bold && !st.italic && !st.underline && !st.color && !st.background;
-                update({ style: isEmpty ? undefined : st });
-              }}
-            />
-          </div>
-        </>
-      )}
-    </ContentPanel>
-  );
-}
-
 // ─── Section : Certifications ────────────────────────────────────────────────
-// Comportement strictement identique à KeywordsSection — copié plutôt que
-// factorisé pour rester lisible (les deux blocs sont conceptuellement
-// indépendants côté UX).
 
 function CertificationsSection({ projet, config, onChange }: { projet: Projet; config: ManualConfig; onChange: (next: ManualConfig) => void }) {
   const cert = config.certifications ?? { show: false };
@@ -490,13 +440,16 @@ interface Props {
   bandeauConfig: BandeauConfig;
   onBandeauChange: (next: BandeauConfig) => void;
   isDev?: boolean;
+  /** Recadrage photos : état + toggle, contrôlés par ProjetView. */
+  cropEditMode?: boolean;
+  onCropEditModeChange?: (next: boolean) => void;
 }
 
 const PANEL_WIDTH_KEY = 'portfolio_layout_panel_width';
 const PANEL_WIDTH_MIN = 180;
 const PANEL_WIDTH_MAX = 600;
 
-export default function LayoutSidebar({ projet, config, onChange, bandeauConfig, onBandeauChange, isDev }: Props) {
+export default function LayoutSidebar({ projet, config, onChange, bandeauConfig, onBandeauChange, isDev, cropEditMode, onCropEditModeChange }: Props) {
   const [active, setActive] = useState<SectionId | null>(null);
   const [panelWidth, setPanelWidth] = useState(280);
 
@@ -569,7 +522,6 @@ export default function LayoutSidebar({ projet, config, onChange, bandeauConfig,
       case 'main':     return <MainPhotoSection projet={projet} config={config} onChange={onChange} />;
       case 'text':     return <TextSection config={config} onChange={onChange} />;
       case 'extra':    return <ExtraPhotosSection projet={projet} config={config} onChange={onChange} />;
-      case 'keywords': return <KeywordsSection projet={projet} config={config} onChange={onChange} />;
       case 'certifications': return <CertificationsSection projet={projet} config={config} onChange={onChange} />;
       case 'prestation': return <PrestationSection projet={projet} config={config} onChange={onChange} />;
       default:         return null;
@@ -580,6 +532,40 @@ export default function LayoutSidebar({ projet, config, onChange, bandeauConfig,
     <div style={{ display: 'flex', alignSelf: 'stretch', flexShrink: 0 }}>
       {/* Navigation accordion */}
       <nav style={{ width: 170, background: 'white', borderRight: '1px solid #DFE4E8', display: 'flex', flexDirection: 'column' }}>
+        {/* Boutons d'édition (déplacés depuis la toolbar) */}
+        <Link
+          href={`/projet/${projet.slug}/edit`}
+          style={{
+            display: 'block', width: '100%', textAlign: 'left',
+            padding: '11px 14px', textDecoration: 'none',
+            border: 'none', borderBottom: '1px solid #DFE4E8',
+            borderLeft: '3px solid transparent',
+            cursor: 'pointer',
+            fontFamily: 'var(--sans)', fontSize: '7.5pt', fontWeight: 700,
+            letterSpacing: '0.06em', textTransform: 'uppercase',
+            color: 'var(--ai-violet)', background: 'white',
+          }}
+        >
+          ✎ Éditer les champs
+        </Link>
+        {onCropEditModeChange && (
+          <button
+            onClick={() => onCropEditModeChange(!cropEditMode)}
+            style={{
+              display: 'block', width: '100%', textAlign: 'left',
+              padding: '11px 14px',
+              border: 'none', borderBottom: '1px solid #DFE4E8',
+              borderLeft: cropEditMode ? '3px solid var(--ai-rouge)' : '3px solid transparent',
+              cursor: 'pointer',
+              fontFamily: 'var(--sans)', fontSize: '7.5pt', fontWeight: 700,
+              letterSpacing: '0.06em', textTransform: 'uppercase',
+              color: cropEditMode ? 'var(--ai-rouge)' : 'var(--ai-violet)',
+              background: cropEditMode ? '#FFF5F5' : 'white',
+            }}
+          >
+            {cropEditMode ? '✓ Terminer le recadrage' : '✂ Recadrer les photos'}
+          </button>
+        )}
         {visibleSections.map(s => (
           <button
             key={s.id}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Projet, TemplateChoice } from '@/types/projet';
 import TemplatePreview from '@/components/TemplatePreview';
 import LayoutSidebar from '@/components/projet/LayoutSidebar';
@@ -51,6 +51,22 @@ export default function ProjetView({ projet, isPrint }: Props) {
 
   const readOnly = ficheStatus === 'Prête pour publication' && !forceEdit;
 
+  // Snapshot des valeurs initiales (à l'ouverture de la fiche) pour détecter
+  // si la mise en page a été modifiée sans être sauvegardée. Mis à jour
+  // après chaque save réussi via `onSave` (cf. ProjetToolbar).
+  const initialSnapshotRef = useRef<string>(
+    JSON.stringify({
+      manualConfig: projet.savedManualConfig ?? DEFAULT_MANUAL_CONFIG,
+      bandeauConfig: projet.bandeauConfig ?? {},
+      photoCrops: projet.photoCrops ?? {},
+    }),
+  );
+  const currentSnapshot = useMemo(
+    () => JSON.stringify({ manualConfig, bandeauConfig, photoCrops }),
+    [manualConfig, bandeauConfig, photoCrops],
+  );
+  const isDirty = currentSnapshot !== initialSnapshotRef.current;
+
   async function handleTemplateChange(newTemplate: TemplateChoice) {
     setTemplate(newTemplate);
     // Dev est une variante UI de Manuel, non persistée dans Airtable.
@@ -92,10 +108,16 @@ export default function ProjetView({ projet, isPrint }: Props) {
           cropEditMode={cropEditMode}
           onCropEditModeChange={setCropEditMode}
           onTemplateChange={handleTemplateChange}
-          onSave={() => setMeasureTrigger(t => t + 1)}
+          onSave={() => {
+            setMeasureTrigger(t => t + 1);
+            // Save réussi → la mise en page actuelle devient la nouvelle
+            // référence (plus de "dirty" tant qu'on ne re-modifie pas).
+            initialSnapshotRef.current = currentSnapshot;
+          }}
           ficheStatus={ficheStatus}
           onFicheStatusChange={setFicheStatus}
           readOnly={readOnly}
+          isDirty={isDirty}
         />
       )}
       {isManualLayout ? (
@@ -107,6 +129,8 @@ export default function ProjetView({ projet, isPrint }: Props) {
             bandeauConfig={bandeauConfig}
             onBandeauChange={setBandeauConfig}
             isDev={template === 'Dev'}
+            cropEditMode={cropEditMode}
+            onCropEditModeChange={setCropEditMode}
           />
           <main style={{ flex: 1, display: 'flex', justifyContent: 'center', padding: 16 }}>
             <TemplatePreview
