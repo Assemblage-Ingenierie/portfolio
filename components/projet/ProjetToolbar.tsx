@@ -12,6 +12,7 @@ import { encodeConfig, ManualConfig } from '@/lib/pdf/manualConfig';
 import type { BandeauConfig } from '@/lib/pdf/bandeauConfig';
 import type { CropData } from '@/lib/pdf/photoCrop';
 import { FICHE_STATUS_VALUES, type FicheStatus } from '@/lib/pdf/projectConfig';
+import { color, feedback } from '@/lib/ui/tokens';
 
 interface Props {
   projet: Projet;
@@ -210,7 +211,7 @@ export default function ProjetToolbar({
         title={!isAdmin ? 'Seul un administrateur peut sélectionner "Prête pour publication"' : undefined}
         style={{
           ...btn,
-          background: statusSaveState === 'error' ? '#ffaaaa' : 'white',
+          background: statusSaveState === 'error' ? feedback.erreurClair : 'white',
           color: 'var(--ai-violet)',
           border: 'none',
         }}
@@ -261,7 +262,7 @@ export default function ProjetToolbar({
           title={readOnly ? 'Fiche verrouillée — passez en mode édition pour modifier la mise en page' : undefined}
           style={{
             ...btn,
-            background: saveState === 'saved' ? '#4caf50' : saveState === 'error' ? '#e53935' : 'white',
+            background: saveState === 'saved' ? '#4caf50' : saveState === 'error' ? feedback.erreur : 'white',
             color: saveState === 'idle' ? 'var(--ai-violet)' : 'white',
             border: 'none',
             opacity: readOnly ? 0.5 : 1,
@@ -293,7 +294,7 @@ export default function ProjetToolbar({
           (variant: 'v2' / buildWpContentV2) reste en place côté serveur
           pour pouvoir le ré-activer rapidement si besoin. */}
       <button
-        style={{ ...btn, background: '#E30513', color: 'white', border: 'none' }}
+        style={{ ...btn, background: color.rouge, color: 'white', border: 'none' }}
         onClick={handleUpdateProd}
         disabled={promoting}
         title="Pousse le contenu du dernier brouillon créé vers le post WordPress publié existant (recherche par slug)"
@@ -311,9 +312,9 @@ export default function ProjetToolbar({
         </a>
       )}
       {result?.url && (
-        <span style={{ color: '#90EE90', fontWeight: 600 }}>
+        <span style={{ color: feedback.succesClair, fontWeight: 600 }}>
           ✓ Publié #{result.id} [{result.type}/{result.status}, author {result.author}] —{' '}
-          <a href={result.url} target="_blank" rel="noopener noreferrer" style={{ color: '#90EE90' }}>voir le brouillon</a>
+          <a href={result.url} target="_blank" rel="noopener noreferrer" style={{ color: feedback.succesClair }}>voir le brouillon</a>
           {result.previousUrl && (
             <span style={{ color: '#ffdd88', marginLeft: 8, fontWeight: 400 }}>
               · ancien brouillon : <a href={result.previousUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#ffdd88' }}>{result.previousUrl}</a> (à supprimer manuellement après validation)
@@ -323,16 +324,16 @@ export default function ProjetToolbar({
         </span>
       )}
       {result?.error && (
-        <span style={{ color: '#ffaaaa', fontWeight: 600 }}>✗ {result.error}</span>
+        <span style={{ color: feedback.erreurClair, fontWeight: 600 }}>✗ {result.error}</span>
       )}
       {promoteResult?.prodUrl && (
-        <span style={{ color: '#90EE90', fontWeight: 600 }}>
+        <span style={{ color: feedback.succesClair, fontWeight: 600 }}>
           ✓ Production mise à jour #{promoteResult.prodId} —{' '}
-          <a href={promoteResult.prodUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#90EE90' }}>voir l&apos;article publié</a>
+          <a href={promoteResult.prodUrl} target="_blank" rel="noopener noreferrer" style={{ color: feedback.succesClair }}>voir l&apos;article publié</a>
         </span>
       )}
       {promoteResult?.error && (
-        <span style={{ color: '#ffaaaa', fontWeight: 600 }}>✗ {promoteResult.error}</span>
+        <span style={{ color: feedback.erreurClair, fontWeight: 600 }}>✗ {promoteResult.error}</span>
       )}
 
       {showLeaveModal && (
@@ -364,7 +365,7 @@ export default function ProjetToolbar({
             <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
               <button
                 onClick={handleLeaveWithoutSaving}
-                style={{ ...btn, background: 'white', color: 'var(--ai-noir70)', border: '1px solid #DFE4E8' }}
+                style={{ ...btn, background: 'white', color: 'var(--ai-noir70)', border: `1px solid ${color.gris}` }}
               >
                 Quitter sans sauvegarder
               </button>

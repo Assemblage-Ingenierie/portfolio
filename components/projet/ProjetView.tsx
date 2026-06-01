@@ -13,6 +13,7 @@ import type { CropData } from '@/lib/pdf/photoCrop';
 import { DEFAULT_FICHE_STATUS, type FicheStatus } from '@/lib/pdf/projectConfig';
 import { ASSEMBLAGE_DEFAULT_BANDEAU, ASSEMBLAGE_DEFAULT_MANUAL } from '@/lib/pdf/assemblageDefaults';
 import ProjetToolbar from './ProjetToolbar';
+import { ui } from '@/lib/ui/tokens';
 
 interface Props {
   projet: Projet;
@@ -137,7 +138,7 @@ export default function ProjetView({ projet, isPrint }: Props) {
         />
       )}
       {isManualLayout ? (
-        <div style={{ display: 'flex', alignItems: 'stretch', background: '#ECECEC', minHeight: 'calc(100vh - 48px)' }}>
+        <div style={{ display: 'flex', alignItems: 'stretch', background: ui.fondPage, minHeight: 'calc(100vh - 48px)' }}>
           <LayoutSidebar
             projet={projet}
             config={manualConfig}

@@ -6,6 +6,7 @@ import { MAX_MAIN_PORTRAIT_PHOTOS } from '@/lib/pdf/manualConfig';
 import type { BandeauStyle } from '@/lib/pdf/bandeauConfig';
 import { allPhotos } from '@/lib/pdf/templates/shared';
 import { StyleRow } from '@/components/projet/BandeauConfigPanel';
+import { color } from '@/lib/ui/tokens';
 
 type PanelSide = 'left' | 'right' | 'all';
 
@@ -26,7 +27,7 @@ interface Props {
 const SECTION: React.CSSProperties = {
   display: 'flex', flexDirection: 'column', gap: 8,
   padding: '12px 16px',
-  borderRight: '1px solid #DFE4E8',
+  borderRight: `1px solid ${color.gris}`,
   minWidth: 240,
 };
 const LAST_SECTION: React.CSSProperties = { ...SECTION, borderRight: 'none', flex: 1 };
@@ -35,14 +36,14 @@ const STITLE: React.CSSProperties = {
   color: 'var(--ai-rouge)', marginBottom: 2,
 };
 const ROW: React.CSSProperties = { display: 'flex', gap: 6, alignItems: 'center', fontSize: '9pt' };
-const SUBROW: React.CSSProperties = { ...ROW, paddingLeft: 8, borderLeft: '2px solid #DFE4E8' };
+const SUBROW: React.CSSProperties = { ...ROW, paddingLeft: 8, borderLeft: `2px solid ${color.gris}` };
 
 const radioBtn = (active: boolean): React.CSSProperties => ({
   padding: '4px 10px', borderRadius: 2, cursor: 'pointer',
   fontFamily: 'var(--sans)', fontSize: '8pt', fontWeight: 700,
   background: active ? 'var(--ai-violet)' : 'white',
   color: active ? 'white' : 'var(--ai-noir70)',
-  border: active ? 'none' : '1px solid #DFE4E8',
+  border: active ? 'none' : `1px solid ${color.gris}`,
 });
 
 interface SliderProps {
@@ -66,7 +67,7 @@ function Slider({ label, value, onChange, min = 25, max = 100, step = 5, unit = 
         type="range" min={min} max={max} step={step}
         value={value}
         onChange={e => onChange(Number(e.target.value))}
-        style={{ flex: 1, accentColor: '#E30513' }}
+        style={{ flex: 1, accentColor: color.rouge }}
       />
       <input
         type="number"
@@ -80,7 +81,7 @@ function Slider({ label, value, onChange, min = 25, max = 100, step = 5, unit = 
           width: 50, padding: '2px 4px', textAlign: 'right',
           fontFamily: 'var(--sans)', fontSize: '9pt', fontWeight: 700,
           color: 'var(--ai-rouge)',
-          border: '1px solid #DFE4E8', borderRadius: 2, background: 'white',
+          border: `1px solid ${color.gris}`, borderRadius: 2, background: 'white',
         }}
         title={`Valeur précise (${min}–${max})`}
       />
@@ -189,7 +190,7 @@ export default function ManualConfigPanel({ projet, config, onChange, side = 'al
     // (sinon le select déborde du conteneur quand un nom de fichier est long).
     flex: 1, minWidth: 0, maxWidth: '100%',
     padding: '4px 6px', fontSize: '9pt',
-    border: '1px solid #DFE4E8', borderRadius: 2, background: 'white',
+    border: `1px solid ${color.gris}`, borderRadius: 2, background: 'white',
     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
   };
 
@@ -210,7 +211,7 @@ export default function ManualConfigPanel({ projet, config, onChange, side = 'al
   const containerStyle: React.CSSProperties = isVertical
     ? {
         background: 'white',
-        border: '1px solid #DFE4E8',
+        border: `1px solid ${color.gris}`,
         display: 'flex',
         flexDirection: 'column',
         fontFamily: 'var(--sans)',
@@ -218,15 +219,15 @@ export default function ManualConfigPanel({ projet, config, onChange, side = 'al
       }
     : {
         background: 'white',
-        borderTop: '1px solid #DFE4E8',
-        borderBottom: '1px solid #DFE4E8',
+        borderTop: `1px solid ${color.gris}`,
+        borderBottom: `1px solid ${color.gris}`,
         display: 'flex',
         flexWrap: 'wrap',
         fontFamily: 'var(--sans)',
       };
   // En mode sidebar, override la bordure : verticale entre sections
   const sectionOverride: React.CSSProperties = isVertical
-    ? { borderRight: 'none', borderBottom: '1px solid #DFE4E8', minWidth: 0 }
+    ? { borderRight: 'none', borderBottom: `1px solid ${color.gris}`, minWidth: 0 }
     : {};
   const lastSectionOverride: React.CSSProperties = isVertical
     ? { borderRight: 'none', borderBottom: 'none', flex: 'unset', minWidth: 0 }
@@ -396,7 +397,7 @@ export default function ManualConfigPanel({ projet, config, onChange, side = 'al
                 style={{
                   width: 18, height: 18,
                   padding: 0,
-                  border: '1px solid #DFE4E8',
+                  border: `1px solid ${color.gris}`,
                   borderRadius: 2,
                   background: isEnabled ? 'var(--ai-violet)' : 'white',
                   color: 'white',

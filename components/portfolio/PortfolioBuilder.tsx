@@ -6,20 +6,21 @@ import type { Projet, Statut, TemplateChoice } from '@/types/projet';
 import { TEMPLATE_OPTIONS } from '@/types/projet';
 import { autoSelectTemplate } from '@/lib/pdf/selectTemplate';
 import { RangeSlider } from './RangeSlider';
+import { color } from '@/lib/ui/tokens';
 
 const STATUT_BG: Record<string, string> = {
-  'En étude': '#DFE4E8',
+  'En étude': color.gris,
   'Concours': '#F0E8F5',
-  'En chantier': '#F9E1E3',
+  'En chantier': color.rougeClair,
   'Livré': '#d4edda',
   'Abandonné': '#e2e3e5',
   'En pause': '#fff3cd',
   'En consultation': '#d1ecf1',
 };
 const STATUT_COLOR: Record<string, string> = {
-  'En étude': '#30323E',
+  'En étude': color.violet,
   'Concours': '#6B4F94',
-  'En chantier': '#E30513',
+  'En chantier': color.rouge,
   'Livré': '#155724',
   'Abandonné': '#6c757d',
   'En pause': '#856404',
@@ -269,7 +270,7 @@ export default function PortfolioBuilder({ projets }: Props) {
   const btn = (active: boolean): React.CSSProperties => ({
     padding: '4px 12px', borderRadius: '2px', cursor: 'pointer',
     fontFamily: 'var(--sans)', fontSize: '8pt', fontWeight: 700,
-    border: active ? 'none' : '1px solid #DFE4E8',
+    border: active ? 'none' : `1px solid ${color.gris}`,
     background: active ? 'var(--ai-rouge)' : 'white',
     color: active ? 'white' : 'var(--ai-noir70)',
   });
@@ -308,7 +309,7 @@ export default function PortfolioBuilder({ projets }: Props) {
           onChange={e => setSearch(e.target.value)}
           style={{
             width: '100%', padding: '8px 12px', fontFamily: 'var(--sans)', fontSize: '9pt',
-            border: '1px solid #DFE4E8', borderRadius: '2px', outline: 'none', background: 'white',
+            border: `1px solid ${color.gris}`, borderRadius: '2px', outline: 'none', background: 'white',
             marginBottom: 16,
           }}
         />
@@ -317,7 +318,7 @@ export default function PortfolioBuilder({ projets }: Props) {
             Row 1 : Pôle · Statut · Type
             Row 2 : Programme (pleine largeur)
             Row 3 : Matériaux (gauche, flex) · Année slider (droite) */}
-        <div style={{ background: 'white', border: '1px solid #DFE4E8', borderRadius: '2px', padding: '14px 16px', marginBottom: 20, display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'flex-start' }}>
+        <div style={{ background: 'white', border: `1px solid ${color.gris}`, borderRadius: '2px', padding: '14px 16px', marginBottom: 20, display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'flex-start' }}>
           <div>
             <div style={chipLabel}>Pôle</div>
             <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
@@ -336,7 +337,7 @@ export default function PortfolioBuilder({ projets }: Props) {
                   ...btn(selectedStatuts.has(s)),
                   background: selectedStatuts.has(s) ? STATUT_BG[s] : 'white',
                   color: selectedStatuts.has(s) ? STATUT_COLOR[s] : 'var(--ai-noir70)',
-                  border: selectedStatuts.has(s) ? `1px solid ${STATUT_COLOR[s]}` : '1px solid #DFE4E8',
+                  border: selectedStatuts.has(s) ? `1px solid ${STATUT_COLOR[s]}` : `1px solid ${color.gris}`,
                 }}>{s}</button>
               ))}
             </div>
@@ -414,14 +415,14 @@ export default function PortfolioBuilder({ projets }: Props) {
                 display: 'grid',
                 gridTemplateColumns: '32px 56px 1fr 100px 80px 130px',
                 gap: 12, alignItems: 'center', padding: '10px 16px',
-                borderBottom: i < filtered.length - 1 ? '1px solid #DFE4E8' : 'none',
+                borderBottom: i < filtered.length - 1 ? `1px solid ${color.gris}` : 'none',
                 background: isSelected ? '#FFF5F5' : 'white',
               }}>
                 <input
                   type="checkbox"
                   checked={isSelected}
                   onChange={() => toggleSelect(projet)}
-                  style={{ cursor: 'pointer', width: 16, height: 16, accentColor: '#E30513' }}
+                  style={{ cursor: 'pointer', width: 16, height: 16, accentColor: color.rouge }}
                 />
                 {projet.photoCouverture
                   ? <div style={{ width: 56, height: 40, backgroundImage: `url(${projet.photoCouverture.url})`, backgroundSize: 'cover', backgroundPosition: 'center', borderRadius: 1 }} />
@@ -439,8 +440,8 @@ export default function PortfolioBuilder({ projets }: Props) {
                   disabled={!isSelected}
                   style={{
                     padding: '4px 6px', fontSize: '8pt', fontFamily: 'var(--sans)',
-                    border: '1px solid #DFE4E8', borderRadius: 2,
-                    background: isSelected ? 'white' : '#F2F2F2',
+                    border: `1px solid ${color.gris}`, borderRadius: 2,
+                    background: isSelected ? 'white' : color.grisTresClair,
                     color: isSelected ? 'var(--ai-noir)' : 'var(--ai-noir70)',
                     cursor: isSelected ? 'pointer' : 'not-allowed',
                   }}
@@ -476,7 +477,7 @@ export default function PortfolioBuilder({ projets }: Props) {
                   display: 'grid',
                   gridTemplateColumns: '36px 28px 56px 1fr 100px 80px 130px 28px',
                   gap: 12, alignItems: 'center', padding: '10px 16px',
-                  borderBottom: i < orderedSlugs.length - 1 ? '1px solid #DFE4E8' : 'none',
+                  borderBottom: i < orderedSlugs.length - 1 ? `1px solid ${color.gris}` : 'none',
                   background: 'white',
                 }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -486,7 +487,7 @@ export default function PortfolioBuilder({ projets }: Props) {
                       aria-label="Monter"
                       style={{
                         padding: '2px 6px', fontSize: '10pt', lineHeight: 1,
-                        border: '1px solid #DFE4E8', borderRadius: 2,
+                        border: `1px solid ${color.gris}`, borderRadius: 2,
                         background: 'white',
                         color: isFirst ? '#CCC' : 'var(--ai-noir70)',
                         cursor: isFirst ? 'not-allowed' : 'pointer',
@@ -498,7 +499,7 @@ export default function PortfolioBuilder({ projets }: Props) {
                       aria-label="Descendre"
                       style={{
                         padding: '2px 6px', fontSize: '10pt', lineHeight: 1,
-                        border: '1px solid #DFE4E8', borderRadius: 2,
+                        border: `1px solid ${color.gris}`, borderRadius: 2,
                         background: 'white',
                         color: isLast ? '#CCC' : 'var(--ai-noir70)',
                         cursor: isLast ? 'not-allowed' : 'pointer',
@@ -521,7 +522,7 @@ export default function PortfolioBuilder({ projets }: Props) {
                     onChange={e => setItemTemplate(slug, e.target.value as TemplateChoice)}
                     style={{
                       padding: '4px 6px', fontSize: '8pt', fontFamily: 'var(--sans)',
-                      border: '1px solid #DFE4E8', borderRadius: 2,
+                      border: `1px solid ${color.gris}`, borderRadius: 2,
                       background: 'white', color: 'var(--ai-noir)', cursor: 'pointer',
                     }}
                   >
@@ -535,7 +536,7 @@ export default function PortfolioBuilder({ projets }: Props) {
                     title="Retirer du portfolio"
                     style={{
                       padding: '4px 6px', fontSize: '10pt', lineHeight: 1,
-                      border: '1px solid #DFE4E8', borderRadius: 2,
+                      border: `1px solid ${color.gris}`, borderRadius: 2,
                       background: 'white', color: 'var(--ai-noir70)', cursor: 'pointer',
                     }}
                   >✕</button>

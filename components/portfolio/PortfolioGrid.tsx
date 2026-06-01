@@ -5,20 +5,21 @@ import Link from 'next/link';
 import type { Projet, Statut } from '@/types/projet';
 import { RangeSlider } from './RangeSlider';
 import { FICHE_STATUS_VALUES, DEFAULT_FICHE_STATUS, type FicheStatus } from '@/lib/pdf/projectConfig';
+import { color, feedback } from '@/lib/ui/tokens';
 
 const STATUT_BG: Record<string, string> = {
-  'En étude': '#DFE4E8',
+  'En étude': color.gris,
   'Concours': '#F0E8F5',
-  'En chantier': '#F9E1E3',
+  'En chantier': color.rougeClair,
   'Livré': '#d4edda',
   'Abandonné': '#e2e3e5',
   'En pause': '#fff3cd',
   'En consultation': '#d1ecf1',
 };
 const STATUT_COLOR: Record<string, string> = {
-  'En étude': '#30323E',
+  'En étude': color.violet,
   'Concours': '#6B4F94',
-  'En chantier': '#E30513',
+  'En chantier': color.rouge,
   'Livré': '#155724',
   'Abandonné': '#6c757d',
   'En pause': '#856404',
@@ -262,7 +263,7 @@ export default function PortfolioGrid({ projets }: Props) {
   const btn = (active: boolean): React.CSSProperties => ({
     padding: '4px 12px', borderRadius: '6px', cursor: 'pointer',
     fontFamily: 'var(--sans)', fontSize: '8pt', fontWeight: 700,
-    border: active ? 'none' : '1px solid #DFE4E8',
+    border: active ? 'none' : `1px solid ${color.gris}`,
     background: active ? 'var(--ai-rouge)' : 'white',
     color: active ? 'white' : 'var(--ai-noir70)',
   });
@@ -270,9 +271,9 @@ export default function PortfolioGrid({ projets }: Props) {
   const totalProjets = projets.length;
   const statusColor: Record<FicheStatus, string> = {
     'Pas faite': '#9e9e9e',
-    'En cours': '#1976d2',
-    'En attente de validation': '#f9a825',
-    'Prête pour publication': '#2e7d32',
+    'En cours': feedback.info,
+    'En attente de validation': feedback.attente,
+    'Prête pour publication': feedback.succes,
   };
 
   return (
@@ -335,7 +336,7 @@ export default function PortfolioGrid({ projets }: Props) {
           onChange={e => setSearch(e.target.value)}
           style={{
             flex: 1, padding: '8px 12px', fontFamily: 'var(--sans)', fontSize: '9pt',
-            border: '1px solid #DFE4E8', borderRadius: '8px', outline: 'none',
+            border: `1px solid ${color.gris}`, borderRadius: '8px', outline: 'none',
             background: 'white',
           }}
         />
@@ -348,7 +349,7 @@ export default function PortfolioGrid({ projets }: Props) {
           </button>
         </div>
         {hasFilters && (
-          <button onClick={resetFilters} style={{ ...btn(false), border: '1px solid #E30513', color: '#E30513' }}>
+          <button onClick={resetFilters} style={{ ...btn(false), border: `1px solid ${color.rouge}`, color: color.rouge }}>
             × Réinitialiser
           </button>
         )}
@@ -359,7 +360,7 @@ export default function PortfolioGrid({ projets }: Props) {
       <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
 
       <aside style={{ flex: '0 0 220px', position: 'sticky', top: 24, alignSelf: 'flex-start' }}>
-        <div style={{ background: 'white', border: '1px solid #DFE4E8', borderRadius: 12, overflow: 'hidden' }}>
+        <div style={{ background: 'white', border: `1px solid ${color.gris}`, borderRadius: 12, overflow: 'hidden' }}>
           <button
             onClick={() => setWorkflowOpen((v) => !v)}
             style={{
@@ -440,7 +441,7 @@ export default function PortfolioGrid({ projets }: Props) {
       {/* Filters bar — disposition compacte : les petits filtres (Pôle ·
           Statut · Type · Année) tiennent sur la 1re rangée ; Programme
           (multi-select large) flue naturellement sur la rangée suivante. */}
-      <div style={{ background: 'white', border: '1px solid #DFE4E8', borderRadius: '12px', padding: '10px 14px', marginBottom: '20px', display: 'flex', flexWrap: 'wrap', gap: '14px 20px', alignItems: 'flex-start' }}>
+      <div style={{ background: 'white', border: `1px solid ${color.gris}`, borderRadius: '12px', padding: '10px 14px', marginBottom: '20px', display: 'flex', flexWrap: 'wrap', gap: '14px 20px', alignItems: 'flex-start' }}>
 
         {/* Pôle — multi-sélection, intersection AND */}
         <div>
@@ -464,7 +465,7 @@ export default function PortfolioGrid({ projets }: Props) {
                 ...btn(selectedStatuts.has(s)),
                 background: selectedStatuts.has(s) ? STATUT_BG[s] : 'white',
                 color: selectedStatuts.has(s) ? STATUT_COLOR[s] : 'var(--ai-noir70)',
-                border: selectedStatuts.has(s) ? `1px solid ${STATUT_COLOR[s]}` : '1px solid #DFE4E8',
+                border: selectedStatuts.has(s) ? `1px solid ${STATUT_COLOR[s]}` : `1px solid ${color.gris}`,
               }}>
                 {s}
               </button>
@@ -575,10 +576,10 @@ export default function PortfolioGrid({ projets }: Props) {
                 gap: '12px',
                 alignItems: 'center',
                 padding: '10px 16px',
-                borderBottom: i < filtered.length - 1 ? '1px solid #DFE4E8' : 'none',
+                borderBottom: i < filtered.length - 1 ? `1px solid ${color.gris}` : 'none',
                 cursor: 'pointer',
               }}
-                onMouseEnter={e => (e.currentTarget.style.background = '#F2F2F2')}
+                onMouseEnter={e => (e.currentTarget.style.background = color.grisTresClair)}
                 onMouseLeave={e => (e.currentTarget.style.background = 'white')}
               >
                 {projet.photoCouverture

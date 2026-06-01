@@ -1,6 +1,7 @@
 'use client';
 
 import { FICHE_STATUS_MESSAGES, type FicheStatus } from '@/lib/pdf/projectConfig';
+import { color } from '@/lib/ui/tokens';
 
 interface Props {
   status: FicheStatus;
@@ -31,7 +32,7 @@ export default function FicheStatusPopup({ status, onClose, onForceEdit }: Props
         style={{
           background: 'white', borderRadius: 4, maxWidth: 460, width: 'calc(100% - 32px)',
           padding: '24px 28px', boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
-          borderTop: `4px solid ${isLocked ? '#E30513' : 'var(--ai-violet)'}`,
+          borderTop: `4px solid ${isLocked ? color.rouge : 'var(--ai-violet)'}`,
         }}
       >
         <div style={{

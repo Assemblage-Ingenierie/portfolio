@@ -15,6 +15,7 @@ import {
   ASSEMBLAGE_DEFAULT_BANDEAU,
   ASSEMBLAGE_DEFAULT_MANUAL,
 } from '@/lib/pdf/assemblageDefaults';
+import { color } from '@/lib/ui/tokens';
 
 // ─── Constantes ──────────────────────────────────────────────────────────────
 
@@ -40,20 +41,20 @@ const SECTIONS: SectionDef[] = [
 // ─── Styles partagés ─────────────────────────────────────────────────────────
 
 const ROW: React.CSSProperties = { display: 'flex', gap: 6, alignItems: 'center', fontSize: '9pt' };
-const SUBROW: React.CSSProperties = { ...ROW, paddingLeft: 8, borderLeft: '2px solid #DFE4E8' };
+const SUBROW: React.CSSProperties = { ...ROW, paddingLeft: 8, borderLeft: `2px solid ${color.gris}` };
 
 const radioBtn = (active: boolean): React.CSSProperties => ({
   padding: '4px 10px', borderRadius: 2, cursor: 'pointer',
   fontFamily: 'var(--sans)', fontSize: '8pt', fontWeight: 700,
   background: active ? 'var(--ai-violet)' : 'white',
   color: active ? 'white' : 'var(--ai-noir70)',
-  border: active ? 'none' : '1px solid #DFE4E8',
+  border: active ? 'none' : `1px solid ${color.gris}`,
 });
 
 const select: React.CSSProperties = {
   flex: 1, minWidth: 0, maxWidth: '100%',
   padding: '4px 6px', fontSize: '9pt',
-  border: '1px solid #DFE4E8', borderRadius: 2, background: 'white',
+  border: `1px solid ${color.gris}`, borderRadius: 2, background: 'white',
   overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
 };
 
@@ -89,7 +90,7 @@ function Slider({ label, value, onChange, min = 25, max = 100, step = 5, unit = 
         <input
           type="range" min={min} max={max} step={step} value={value}
           onChange={e => onChange(Number(e.target.value))}
-          style={{ flex: 1, accentColor: '#E30513', width: '100%' }}
+          style={{ flex: 1, accentColor: color.rouge, width: '100%' }}
         />
         {showOverlay && (
           <div
@@ -117,7 +118,7 @@ function Slider({ label, value, onChange, min = 25, max = 100, step = 5, unit = 
         style={{
           width: 50, padding: '2px 4px', textAlign: 'right',
           fontFamily: 'var(--sans)', fontSize: '9pt', fontWeight: 700,
-          color: 'var(--ai-rouge)', border: '1px solid #DFE4E8', borderRadius: 2, background: 'white',
+          color: 'var(--ai-rouge)', border: `1px solid ${color.gris}`, borderRadius: 2, background: 'white',
         }}
       />
       <span style={{ minWidth: 14, color: 'var(--ai-noir70)' }}>{unit}</span>
@@ -405,7 +406,7 @@ function ExtraPhotosSection({ projet, config, onChange }: ExtraProps) {
                 onClick={() => setExtraAt(i, { enabled: !isEnabled })}
                 title={isEnabled ? 'Désactiver cette photo' : 'Réactiver cette photo'}
                 style={{
-                  width: 18, height: 18, padding: 0, border: '1px solid #DFE4E8', borderRadius: 2,
+                  width: 18, height: 18, padding: 0, border: `1px solid ${color.gris}`, borderRadius: 2,
                   background: isEnabled ? 'var(--ai-violet)' : 'white', color: 'white', cursor: 'pointer',
                   fontSize: 11, lineHeight: '14px', fontWeight: 700,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', flex: '0 0 18px',
@@ -635,14 +636,14 @@ export default function LayoutSidebar({ projet, config, onChange, bandeauConfig,
   return (
     <div style={{ display: 'flex', alignSelf: 'stretch', flexShrink: 0 }}>
       {/* Navigation accordion */}
-      <nav style={{ width: 170, background: 'white', borderRight: '1px solid #DFE4E8', display: 'flex', flexDirection: 'column' }}>
+      <nav style={{ width: 170, background: 'white', borderRight: `1px solid ${color.gris}`, display: 'flex', flexDirection: 'column' }}>
         {/* Boutons d'édition (déplacés depuis la toolbar) */}
         <Link
           href={`/projet/${projet.slug}/edit`}
           style={{
             display: 'block', width: '100%', textAlign: 'left',
             padding: '11px 14px', textDecoration: 'none',
-            border: 'none', borderBottom: '1px solid #DFE4E8',
+            border: 'none', borderBottom: `1px solid ${color.gris}`,
             borderLeft: '3px solid transparent',
             cursor: 'pointer',
             fontFamily: 'var(--sans)', fontSize: '7.5pt', fontWeight: 700,
@@ -658,7 +659,7 @@ export default function LayoutSidebar({ projet, config, onChange, bandeauConfig,
             style={{
               display: 'block', width: '100%', textAlign: 'left',
               padding: '11px 14px',
-              border: 'none', borderBottom: '1px solid #DFE4E8',
+              border: 'none', borderBottom: `1px solid ${color.gris}`,
               borderLeft: cropEditMode ? '3px solid var(--ai-rouge)' : '3px solid transparent',
               cursor: 'pointer',
               fontFamily: 'var(--sans)', fontSize: '7.5pt', fontWeight: 700,
@@ -677,7 +678,7 @@ export default function LayoutSidebar({ projet, config, onChange, bandeauConfig,
             style={{
               display: 'block', width: '100%', textAlign: 'left',
               padding: '11px 14px',
-              border: 'none', borderBottom: '1px solid #DFE4E8',
+              border: 'none', borderBottom: `1px solid ${color.gris}`,
               borderLeft: active === s.id ? '3px solid var(--ai-rouge)' : '3px solid transparent',
               cursor: 'pointer',
               fontFamily: 'var(--sans)', fontSize: '7.5pt', fontWeight: 700,
@@ -706,11 +707,11 @@ export default function LayoutSidebar({ projet, config, onChange, bandeauConfig,
             onMouseDown={startResize}
             style={{
               width: 5, flexShrink: 0, cursor: 'col-resize',
-              background: '#DFE4E8',
+              background: color.gris,
               transition: 'background 0.15s',
             }}
             onMouseEnter={e => (e.currentTarget.style.background = 'var(--ai-rouge)')}
-            onMouseLeave={e => (e.currentTarget.style.background = '#DFE4E8')}
+            onMouseLeave={e => (e.currentTarget.style.background = color.gris)}
             title="Étirer le panneau"
           />
         </div>
