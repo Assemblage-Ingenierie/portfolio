@@ -6,6 +6,7 @@ import type {
   FontFamilyChoice, TextAlignChoice, TextTransformChoice,
 } from '@/lib/pdf/bandeauConfig';
 import { CANONICAL_META_LABELS } from '@/lib/pdf/bandeauConfig';
+import { useViewMode } from '@/lib/auth/useViewMode';
 import ColorSelector from './ColorSelector';
 import type { Projet } from '@/types/projet';
 
@@ -292,6 +293,11 @@ export { StyleRow };
 
 export default function BandeauConfigPanel({ value, onChange, projet, onResetAll }: Props) {
   const multiValueCells = multiValueCellsFromProjet(projet);
+  // Mode de vue (admin = full UI, user = restreint à Cellules du bandeau +
+  // Cellule Programme). Géré dans `lib/auth/useViewMode.ts` ; le toggle est
+  // dans la toolbar (visible uniquement pour les profils Supabase admin).
+  const { viewMode } = useViewMode();
+  const isUserView = viewMode === 'user';
   function updateSection(key: StyleSectionKey, style: BandeauStyle) {
     // Si toutes les propriétés sont vides, on retire la section pour garder
     // la config minimale et utiliser les défauts CSS du template.
@@ -328,22 +334,24 @@ export default function BandeauConfigPanel({ value, onChange, projet, onResetAll
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '12px' }}>
-        <p style={{ fontSize: '8pt', color: 'var(--ai-noir70)', margin: 0 }}>
-          Surcharges optionnelles. Laisser vide pour utiliser les valeurs par défaut du template.
-        </p>
-        <button
-          type="button"
-          onClick={resetAll}
-          style={{ ...TOGGLE, fontSize: '8pt' }}
-          title={onResetAll
-            ? 'Applique les préréglages Assemblage : typographie + bandeau + photo principale + texte + mots-clés + certifications. Écrase la configuration actuelle.'
-            : 'Vide la configuration du bandeau.'}
-        >
-          Réinitialiser
-        </button>
-      </div>
-      {SECTIONS.map((s) => (
+      {!isUserView && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '12px' }}>
+          <p style={{ fontSize: '8pt', color: 'var(--ai-noir70)', margin: 0 }}>
+            Surcharges optionnelles. Laisser vide pour utiliser les valeurs par défaut du template.
+          </p>
+          <button
+            type="button"
+            onClick={resetAll}
+            style={{ ...TOGGLE, fontSize: '8pt' }}
+            title={onResetAll
+              ? 'Applique les préréglages Assemblage : typographie + bandeau + photo principale + texte + mots-clés + certifications. Écrase la configuration actuelle.'
+              : 'Vide la configuration du bandeau.'}
+          >
+            Réinitialiser
+          </button>
+        </div>
+      )}
+      {!isUserView && SECTIONS.map((s) => (
         <div key={s.key} style={{ marginBottom: '14px', paddingBottom: '14px', borderBottom: '1px dotted #DFE4E8' }}>
           <label style={LABEL_S}>{s.label}</label>
           <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', margin: '0 0 6px' }}>{s.help}</p>
@@ -380,25 +388,29 @@ export default function BandeauConfigPanel({ value, onChange, projet, onResetAll
           onChange(next);
         }}
       />
-      <LinesRow value={value.lines ?? {}} onChange={(l) => onChange({ ...value, lines: l })} />
-      <TitleMetaGapRow
-        value={value.titleMetaGap}
-        onChange={(v) => {
-          const next = { ...value };
-          if (v === undefined || v === 50) delete next.titleMetaGap;
-          else next.titleMetaGap = v;
-          onChange(next);
-        }}
-      />
-      <PhotoTextGapRow
-        value={value.photoTextGap}
-        onChange={(v) => {
-          const next = { ...value };
-          if (v === undefined || v === 50) delete next.photoTextGap;
-          else next.photoTextGap = v;
-          onChange(next);
-        }}
-      />
+      {!isUserView && (
+        <>
+          <LinesRow value={value.lines ?? {}} onChange={(l) => onChange({ ...value, lines: l })} />
+          <TitleMetaGapRow
+            value={value.titleMetaGap}
+            onChange={(v) => {
+              const next = { ...value };
+              if (v === undefined || v === 50) delete next.titleMetaGap;
+              else next.titleMetaGap = v;
+              onChange(next);
+            }}
+          />
+          <PhotoTextGapRow
+            value={value.photoTextGap}
+            onChange={(v) => {
+              const next = { ...value };
+              if (v === undefined || v === 50) delete next.photoTextGap;
+              else next.photoTextGap = v;
+              onChange(next);
+            }}
+          />
+        </>
+      )}
     </div>
   );
 }
