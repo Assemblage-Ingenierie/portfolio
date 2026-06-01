@@ -111,6 +111,7 @@ Airtable ──► lib/airtable/queries.ts (getProjets / getProjet)
   - `Rehab / Neuf` (`fldyD7L9E7cGL26vH`)
   - `Matériaux` (`fldC4SW9n1H2PZ3MH`)
   - `Statut` (`fldxXNdE0uNaomeby`) — multi-valeurs pour filtrage AND, fallback sur `État avancement` (single)
+- **Multi-selects et champs renommables écrits par field ID** dans `lib/airtable/mutations.ts → updateProjetFields()`. Les noms de colonnes Airtable ne sont pas garantis stables — toute écriture par nom risque un `UNKNOWN_FIELD_NAME` après un rename côté Airtable. Concerne : `Programme principal/secondaire`, `Mission AI`, `Pôle`, `Rehab/Neuf`, `Statut` (`État avancement`), `Matériaux`, `Certification`, `Prestation Assemblage`. Les constantes sont exportées depuis `lib/airtable/mappers.ts` (`FIELD_PROGRAMME_PRINCIPAL`, `FIELD_MISSION_AI`, `FIELD_CERTIFICATION`, …). **Ajouter un nouveau champ renommable = exporter sa constante `FIELD_*` dans `mappers.ts` et l'utiliser dans `mutations.ts`.**
 - **`Certification`** (`fldnb9rfM4C3m9Pcu`) — depuis 2026 c'est un champ rich text (Markdown GFM). Le mapper split sur newlines et strip les marqueurs de liste (`- `, `* `, `+ `, `1. `…) pour produire un `string[]`. Rétro-compat array si Airtable renvoie l'ancien format multi-select.
 - **Les linked records ne traversent jamais les bases** dans Airtable : un sync depuis une base externe crée une table locale dans la base destination, avec des record IDs différents de la base source. Les field IDs aussi sont réattribués (les noms sont préservés). C'est pour ça que `fetchCrmNames` lit le champ `Nom` par nom et pas par ID.
 - Tous les `update()` Airtable utilisent `{ typecast: true }` pour gérer gracieusement les conversions (number depuis string, etc.).
@@ -144,9 +145,23 @@ Le helper `metaGridHtml(projet, options)` dans `shared.ts` rend le bandeau commu
 
 Le label du champ Maître d'ouvrage est affiché **`MOA`** dans le PDF (le nom Airtable reste `Maître d'ouvrage`, mais le rendu utilise le sigle court).
 
+#### Mots-clés (position figée dans le bandeau d'en-tête)
+
+Les mots-clés (`Projet.motsCles`, depuis Airtable « Mots-clés ») sont rendus **dans le bandeau d'en-tête, sous le statut**, par `headerHtml()` dans `lib/pdf/templates/shared.ts` — pour **tous** les templates (Solo / Diptyque / Triptyque / Str-Env / Dev).
+
+- Format : `#tag#tag` concaténé, sans séparateur.
+- Couleur : `#30323E`. Style : classe CSS `.t-header-keywords`.
+- L'overlay flottant historique (`ManualConfig.keywords` avec sliders X/Y) est **désactivé** dans `manuel.ts` et `dev.ts`. La section "Mots-clés" a aussi été retirée de `LayoutSidebar` (cf. *Éditeur de fiche* plus bas). La config legacy `ManualConfig.keywords` reste chargée depuis Airtable pour rétro-compat des fiches existantes, mais elle n'est plus ni modifiable depuis l'UI ni rendue dans le PDF — à considérer comme `@deprecated` côté `manualConfig.ts`.
+
+### Éditeur de fiche (`ProjetView` + `ProjetToolbar` + `LayoutSidebar`)
+
+- **Sidebar gauche** (`components/projet/LayoutSidebar.tsx`) : uniquement affichée pour les templates **Str-Env** et **Dev**. En haut de la nav : boutons **Éditer les champs** (lien vers `/projet/[slug]/edit`) + **Recadrer les photos** (toggle `cropEditMode`). En dessous, les sections accordion (Mise en page typographique, Photo principale, Texte description, Photos additionnelles, Certifications, [Dev] Prestation Assemblage).
+- Pour les templates **Solo / Diptyque / Triptyque** : pas de sidebar — le bouton "Éditer les champs" reste dans la toolbar du haut (`ProjetToolbar`).
+- **Modale unsaved-changes** : `ProjetView` calcule `isDirty = JSON.stringify({manualConfig, bandeauConfig, photoCrops}) !== initialSnapshot` (via `useRef` + `useMemo`). Le clic sur "← Portfolio" déclenche une modale dans `ProjetToolbar` si `isDirty`, avec deux options : *Quitter sans sauvegarder* / *Sauvegarder la mise en page*. Le snapshot est réinitialisé après chaque save réussi (callback `onSave`).
+
 ### Builders WordPress
 
-Indépendants du système de templates PDF. `lib/wordpress/builders.ts` (Editorial — utilisé en production) + `buildersV2.ts` (Magazine — variante en parallèle, archivée). HTML inline-stylé autonome (pas de classes CSS externes) pour être embarqué dans WordPress tel quel.
+Indépendants du système de templates PDF. `lib/wordpress/builders.ts` (Editorial — utilisé en production) + `buildersV2.ts` (Magazine — endpoint vivant côté serveur via `variant: 'v2'` dans `publish/route.ts`, mais bouton UI masqué dans `ProjetToolbar` ; gardé pour ré-activation rapide). HTML inline-stylé autonome (pas de classes CSS externes) pour être embarqué dans WordPress tel quel.
 
 ⚠ **Ne pas modifier ces fichiers sans demande explicite portant sur l'export WordPress.**
 
