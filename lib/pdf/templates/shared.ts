@@ -543,9 +543,27 @@ export function metaGridHtml(projet: Projet, options?: { isDev?: boolean }): str
     if (label === 'Budget/Surface') set.add(0);
     return set;
   };
+  /** Sauts intra-valeur (cellules single-value longues). Indices de token
+   *  APRES lesquels insérer un `<br>`. Tokens = split sur /\s+/. */
+  const wordBreaksOf = (label: string): Set<number> => {
+    const arr = cellsCfg?.wordBreaks?.[label as keyof NonNullable<typeof cellsCfg.wordBreaks>];
+    return new Set(Array.isArray(arr) ? arr : []);
+  };
   const renderValues = (label: string, values: string[]): string => {
     if (values.length === 0) return '';
-    if (values.length === 1) return esc(values[0]);
+    if (values.length === 1) {
+      // Single-value : applique wordBreaks si configuré et si la valeur a
+      // au moins 2 tokens. Sinon rendu plat (comportement historique).
+      const wb = wordBreaksOf(label);
+      if (wb.size === 0) return esc(values[0]);
+      const tokens = values[0].split(/\s+/).filter(Boolean);
+      if (tokens.length < 2) return esc(values[0]);
+      return tokens.map((t, idx) => {
+        const isLast = idx === tokens.length - 1;
+        if (isLast) return esc(t);
+        return esc(t) + (wb.has(idx) ? '<br>' : ' ');
+      }).join('');
+    }
     const breaks = breaksOf(label);
     return values.map((v, idx) => {
       const isLast = idx === values.length - 1;

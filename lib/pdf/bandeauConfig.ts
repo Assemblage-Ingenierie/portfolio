@@ -154,6 +154,15 @@ export interface BandeauCellsConfig {
    *    - `[0, 1]` → "A\nB\nC" (un par ligne)
    *  Les indices ≥ nombre de valeurs sont ignorés silencieusement. */
   breaks?: Partial<Record<MetaLabel, number[]>>;
+  /** Sauts de ligne intra-valeur pour cellules single-value longues. Indices
+   *  de TOKEN (mot) APRES lesquels insérer un `<br>`. Les tokens sont obtenus
+   *  en splittant la valeur sur /\s+/. Ex. pour MOA = "Ministère de l'Education
+   *  nationale" → tokens = ['Ministère', 'de', "l'Education", 'nationale'].
+   *    - `[0]` → "Ministère\nde l'Education nationale"
+   *    - `[0, 2]` → "Ministère\nde l'Education\nnationale"
+   *  Ignoré silencieusement si la cellule est multi-valeur (utiliser `breaks`
+   *  à la place). */
+  wordBreaks?: Partial<Record<MetaLabel, number[]>>;
 }
 
 /** Demi-amplitude (en mm) du slider `titleMetaGap`. À 0% → -RANGE, à 100% → +RANGE. */
