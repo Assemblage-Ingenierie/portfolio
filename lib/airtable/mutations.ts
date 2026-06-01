@@ -9,6 +9,17 @@ import {
   type ProjectConfig,
   type FicheStatus,
 } from '@/lib/pdf/projectConfig';
+import {
+  FIELD_PROGRAMME_PRINCIPAL,
+  FIELD_PROGRAMME_SECONDAIRE,
+  FIELD_REHAB_NEUF,
+  FIELD_MATERIAUX,
+  FIELD_STATUT,
+  FIELD_MISSION_AI,
+  FIELD_CERTIFICATION,
+  FIELD_PRESTATION_ASSEMBLAGE,
+  FIELD_POLE,
+} from './mappers';
 
 export interface ProjetEditableFields {
   nom?: string;
@@ -66,23 +77,25 @@ export async function updateProjetFields(slug: string, fields: ProjetEditableFie
   if (fields.referentAi !== undefined)     update['Référent AI']        = fields.referentAi;
   // Multi-selects : on écrit des arrays. Airtable typecast:true convertit
   // gracieusement les nouvelles valeurs en options (création automatique).
-  if (fields.missionAiValues !== undefined)      update['Mission AI']            = fields.missionAiValues;
-  if (fields.programmesPrincipaux !== undefined)  update['Programme principal']   = fields.programmesPrincipaux;
-  if (fields.programmesSecondaires !== undefined) update['Programme secondaire']  = fields.programmesSecondaires;
+  // Multi-selects et champs renommables : écrits par FIELD ID (les noms de
+  // colonnes Airtable ne sont pas garantis stables — cf. FIELD_PROGRAMME_*).
+  if (fields.missionAiValues !== undefined)       update[FIELD_MISSION_AI]          = fields.missionAiValues;
+  if (fields.programmesPrincipaux !== undefined)  update[FIELD_PROGRAMME_PRINCIPAL] = fields.programmesPrincipaux;
+  if (fields.programmesSecondaires !== undefined) update[FIELD_PROGRAMME_SECONDAIRE] = fields.programmesSecondaires;
   if (fields.surface !== undefined)        update['Surface(m²)']        = fields.surface;
   if (fields.budgetRaw !== undefined)      update['Budget HT']          = fields.budgetRaw;
   if (fields.anneeLivraison !== undefined) update['Année livraison']    = fields.anneeLivraison;
   // Le champ "Programme" texte libre est deprecated depuis 2026 : remplace
   // par "Programmes principaux" + "Programmes secondaires" (multi-selects).
-  if (fields.pole !== undefined)           update['Pôle']               = fields.pole;
+  if (fields.pole !== undefined)           update[FIELD_POLE]           = fields.pole;
   if (fields.departement !== undefined)    update['Département']        = fields.departement;
-  if (fields.rehabNeufValues !== undefined) update['Rehab / Neuf']      = fields.rehabNeufValues;
-  if (fields.statutValues !== undefined)    update['État avancement']   = fields.statutValues;
-  if (fields.materiaux !== undefined)       update['Matériaux']         = fields.materiaux;
+  if (fields.rehabNeufValues !== undefined) update[FIELD_REHAB_NEUF]    = fields.rehabNeufValues;
+  if (fields.statutValues !== undefined)    update[FIELD_STATUT]        = fields.statutValues;
+  if (fields.materiaux !== undefined)       update[FIELD_MATERIAUX]     = fields.materiaux;
   if (fields.template !== undefined)       update['Template']           = fields.template;
-  if (fields.certifications !== undefined) update['Certification']      = fields.certifications.join('\n');
+  if (fields.certifications !== undefined) update[FIELD_CERTIFICATION]  = fields.certifications.join('\n');
   if (fields.motsCles !== undefined)       update['Mots-clés']          = fields.motsCles.join(', ');
-  if (fields.prestationAssemblage !== undefined) update['Prestation Assemblage'] = fields.prestationAssemblage;
+  if (fields.prestationAssemblage !== undefined) update[FIELD_PRESTATION_ASSEMBLAGE] = fields.prestationAssemblage;
   // Config unifiée (bandeau + manuel) dans le même champ Airtable. On lit
   // l'existant pour merger correctement quand l'API ne reçoit qu'une des
   // deux sous-configs (ex. update bandeau seul ne doit pas effacer manuel).
