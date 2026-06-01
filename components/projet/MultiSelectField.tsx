@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { color } from '@/lib/ui/tokens';
 
 /**
  * Composant générique de saisie multi-select.
@@ -36,7 +37,7 @@ const LABEL: React.CSSProperties = {
 
 const BOX: React.CSSProperties = {
   position: 'relative',
-  border: '1px solid #DFE4E8', borderRadius: '2px', background: 'white',
+  border: `1px solid ${color.gris}`, borderRadius: '2px', background: 'white',
   padding: '4px 6px', minHeight: '34px',
   display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px',
   fontFamily: 'var(--sans)', fontSize: '10pt',
@@ -44,8 +45,8 @@ const BOX: React.CSSProperties = {
 
 const CHIP: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', gap: '4px',
-  background: '#F2F2F2', color: 'var(--ai-noir)',
-  border: '1px solid #DFE4E8', borderRadius: '2px',
+  background: color.grisTresClair, color: 'var(--ai-noir)',
+  border: `1px solid ${color.gris}`, borderRadius: '2px',
   padding: '2px 6px 2px 8px', fontSize: '9pt', lineHeight: 1.3,
 };
 
@@ -64,7 +65,7 @@ const TEXT_INPUT: React.CSSProperties = {
 const DROPDOWN: React.CSSProperties = {
   position: 'absolute', left: 0, right: 0, top: '100%',
   marginTop: '2px',
-  background: 'white', border: '1px solid #DFE4E8', borderRadius: '2px',
+  background: 'white', border: `1px solid ${color.gris}`, borderRadius: '2px',
   boxShadow: '0 6px 18px rgba(0,0,0,0.12)',
   maxHeight: '220px', overflowY: 'auto',
   zIndex: 20,
@@ -144,7 +145,7 @@ export default function MultiSelectField({
         ref={boxRef}
         style={{
           ...BOX,
-          background: disabled ? '#F2F2F2' : 'white',
+          background: disabled ? color.grisTresClair : 'white',
           cursor: disabled ? 'not-allowed' : 'text',
         }}
         onClick={() => { if (!disabled) setOpen(true); }}
@@ -189,7 +190,7 @@ export default function MultiSelectField({
                 key={opt}
                 onClick={(e) => { e.stopPropagation(); addValue(opt); setOpen(false); }}
                 style={OPTION}
-                onMouseEnter={(e) => (e.currentTarget.style.background = '#F2F2F2')}
+                onMouseEnter={(e) => (e.currentTarget.style.background = color.grisTresClair)}
                 onMouseLeave={(e) => (e.currentTarget.style.background = 'white')}
               >
                 {opt}
@@ -198,8 +199,8 @@ export default function MultiSelectField({
             {showCreateHint && (
               <div
                 onClick={(e) => { e.stopPropagation(); addValue(input); setOpen(false); }}
-                style={{ ...OPTION, borderTop: filteredOptions.length > 0 ? '1px solid #DFE4E8' : 'none' }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = '#F9E1E3')}
+                style={{ ...OPTION, borderTop: filteredOptions.length > 0 ? `1px solid ${color.gris}` : 'none' }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = color.rougeClair)}
                 onMouseLeave={(e) => (e.currentTarget.style.background = 'white')}
               >
                 <span style={{ color: 'var(--ai-rouge)', fontWeight: 600 }}>+ Créer</span>

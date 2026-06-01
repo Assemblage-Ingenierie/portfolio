@@ -5,6 +5,7 @@ import type { Projet } from '@/types/projet';
 import { renderPdfHtml } from '@/lib/pdf/renderHtml';
 import type { ManualConfig } from '@/lib/pdf/manualConfig';
 import { measureOverflow, type OverflowMeasure } from '@/lib/utils/measureOverflow';
+import { ui } from '@/lib/ui/tokens';
 
 /**
  * Aperçu fidèle du rendu PDF : iframe contenant exactement le même HTML
@@ -97,7 +98,7 @@ export default function TemplatePreview({
   const overflowing = overflow !== null && overflow.overflowMm > 0;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '24px 16px 48px', background: '#ECECEC', minHeight: 'calc(100vh - 48px)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '24px 16px 48px', background: ui.fondPage, minHeight: 'calc(100vh - 48px)' }}>
       {overflowing && (
         <div
           role="alert"

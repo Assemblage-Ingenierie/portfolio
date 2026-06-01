@@ -4,20 +4,21 @@ import { useEffect, useMemo, useState } from 'react';
 import type { Statut } from '@/types/projet';
 import type { PublicProjet } from '@/app/api/public/portfolio/route';
 import { RangeSlider } from '@/components/portfolio/RangeSlider';
+import { color } from '@/lib/ui/tokens';
 
 const STATUT_BG: Record<string, string> = {
-  'En étude': '#DFE4E8',
+  'En étude': color.gris,
   'Concours': '#F0E8F5',
-  'En chantier': '#F9E1E3',
+  'En chantier': color.rougeClair,
   'Livré': '#d4edda',
   'Abandonné': '#e2e3e5',
   'En pause': '#fff3cd',
   'En consultation': '#d1ecf1',
 };
 const STATUT_COLOR: Record<string, string> = {
-  'En étude': '#30323E',
+  'En étude': color.violet,
   'Concours': '#6B4F94',
-  'En chantier': '#E30513',
+  'En chantier': color.rouge,
   'Livré': '#155724',
   'Abandonné': '#6c757d',
   'En pause': '#856404',
@@ -214,7 +215,7 @@ export default function PublicPortfolioTable() {
   const chipBtn = (active: boolean): React.CSSProperties => ({
     padding: '4px 12px', borderRadius: 2, cursor: 'pointer',
     fontFamily: 'var(--sans)', fontSize: '8pt', fontWeight: 700,
-    border: active ? 'none' : '1px solid #DFE4E8',
+    border: active ? 'none' : `1px solid ${color.gris}`,
     background: active ? 'var(--ai-rouge)' : 'white',
     color: active ? 'white' : 'var(--ai-noir70)',
   });
@@ -248,11 +249,11 @@ export default function PublicPortfolioTable() {
               onChange={(e) => setSearch(e.target.value)}
               style={{
                 width: '100%', padding: '8px 12px', fontFamily: 'var(--sans)', fontSize: '9pt',
-                border: '1px solid #DFE4E8', borderRadius: 2, outline: 'none', background: 'white', marginBottom: 16,
+                border: `1px solid ${color.gris}`, borderRadius: 2, outline: 'none', background: 'white', marginBottom: 16,
               }}
             />
 
-            <div style={{ background: 'white', border: '1px solid #DFE4E8', borderRadius: 2, padding: '14px 16px', marginBottom: 20, display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'flex-start' }}>
+            <div style={{ background: 'white', border: `1px solid ${color.gris}`, borderRadius: 2, padding: '14px 16px', marginBottom: 20, display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'flex-start' }}>
               {poles.length > 0 && (
                 <div>
                   <div style={chipLabel}>Pôle</div>
@@ -273,7 +274,7 @@ export default function PublicPortfolioTable() {
                       ...chipBtn(selectedStatuts.has(s)),
                       background: selectedStatuts.has(s) ? STATUT_BG[s] : 'white',
                       color: selectedStatuts.has(s) ? STATUT_COLOR[s] : 'var(--ai-noir70)',
-                      border: selectedStatuts.has(s) ? `1px solid ${STATUT_COLOR[s]}` : '1px solid #DFE4E8',
+                      border: selectedStatuts.has(s) ? `1px solid ${STATUT_COLOR[s]}` : `1px solid ${color.gris}`,
                     }}>{s}</button>
                   ))}
                 </div>
@@ -333,7 +334,7 @@ export default function PublicPortfolioTable() {
             </div>
 
             {error && (
-              <div style={{ padding: 16, background: '#F9E1E3', color: '#E30513', borderRadius: 2, marginBottom: 16 }}>{error}</div>
+              <div style={{ padding: 16, background: color.rougeClair, color: color.rouge, borderRadius: 2, marginBottom: 16 }}>{error}</div>
             )}
 
             {/* Indication sur la cliquabilité des noms de projet — placée
@@ -372,7 +373,7 @@ export default function PublicPortfolioTable() {
         {view === 'recap' && (
           <>
             {recapStd.length === 0 && recapDev.length === 0 && (
-              <div style={{ padding: 40, textAlign: 'center', color: 'var(--ai-noir70)', background: 'white', border: '1px solid #DFE4E8', borderRadius: 2 }}>
+              <div style={{ padding: 40, textAlign: 'center', color: 'var(--ai-noir70)', background: 'white', border: `1px solid ${color.gris}`, borderRadius: 2 }}>
                 Aucune référence sélectionnée.
               </div>
             )}
@@ -514,10 +515,10 @@ interface ProjetTableProps {
 function ProjetTable({ mode, rows, selectable, selection, onToggleSelect, loading, sortKey, sortDir, onSort }: ProjetTableProps) {
   const columns = columnsFor(mode);
   return (
-    <div style={{ background: 'white', borderRadius: 2, border: '1px solid #000', overflowX: 'auto' }}>
+    <div style={{ background: 'white', borderRadius: 2, border: `1px solid ${color.noir}`, overflowX: 'auto' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'var(--sans)', fontSize: '9pt' }}>
         <thead>
-          <tr style={{ background: '#F5F5F5', borderBottom: '1px solid #000' }}>
+          <tr style={{ background: '#F5F5F5', borderBottom: `1px solid ${color.noir}` }}>
             {selectable && <Th style={{ width: 36 }} />}
             {columns.map((c) => (
               <Th key={c.key}
@@ -530,7 +531,7 @@ function ProjetTable({ mode, rows, selectable, selection, onToggleSelect, loadin
         </thead>
         <tbody>
           {rows.map((p, i) => (
-            <tr key={p.slug} style={{ borderBottom: i < rows.length - 1 ? '1px solid #DFE4E8' : 'none' }}>
+            <tr key={p.slug} style={{ borderBottom: i < rows.length - 1 ? `1px solid ${color.gris}` : 'none' }}>
               {selectable && (
                 <td style={{ ...td, width: 36 }}>
                   <input
@@ -538,7 +539,7 @@ function ProjetTable({ mode, rows, selectable, selection, onToggleSelect, loadin
                     checked={selection?.has(p.slug) ?? false}
                     onChange={() => onToggleSelect?.(p.slug)}
                     aria-label="Sélectionner la référence"
-                    style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#E30513' }}
+                    style={{ width: 16, height: 16, cursor: 'pointer', accentColor: color.rouge }}
                   />
                 </td>
               )}
@@ -573,7 +574,7 @@ const td: React.CSSProperties = {
 const tdNom: React.CSSProperties = { ...td, minWidth: 220 };
 
 const yearInput: React.CSSProperties = {
-  width: 70, padding: '4px 6px', border: '1px solid #DFE4E8', borderRadius: 2,
+  width: 70, padding: '4px 6px', border: `1px solid ${color.gris}`, borderRadius: 2,
   fontFamily: 'var(--sans)', fontSize: '9pt',
 };
 
@@ -583,14 +584,14 @@ const recapTitle: React.CSSProperties = {
 };
 
 const ghostBtn: React.CSSProperties = {
-  padding: '6px 12px', border: '1px solid #DFE4E8', borderRadius: 2,
+  padding: '6px 12px', border: `1px solid ${color.gris}`, borderRadius: 2,
   background: 'white', cursor: 'pointer', color: 'var(--ai-noir70)',
   fontFamily: 'var(--sans)', fontSize: '9pt', fontWeight: 600,
 };
 
 function pageBtn(disabled: boolean): React.CSSProperties {
   return {
-    padding: '6px 12px', border: '1px solid #DFE4E8', borderRadius: 2,
+    padding: '6px 12px', border: `1px solid ${color.gris}`, borderRadius: 2,
     background: 'white', cursor: disabled ? 'not-allowed' : 'pointer',
     color: disabled ? '#CCC' : 'var(--ai-noir70)',
     fontFamily: 'var(--sans)', fontSize: '9pt', fontWeight: 600,

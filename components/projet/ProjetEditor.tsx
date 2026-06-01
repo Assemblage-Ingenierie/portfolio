@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { authedFetch } from '@/lib/supabase/authHeaders';
 import RichTextEditor from './RichTextEditor';
 import MultiSelectField from './MultiSelectField';
+import { color, feedback, ui } from '@/lib/ui/tokens';
 
 /** Shape de la réponse de /api/airtable/select-options. */
 interface SelectOptions {
@@ -33,10 +34,10 @@ const LABEL: React.CSSProperties = {
 };
 const INPUT: React.CSSProperties = {
   width: '100%', fontFamily: 'var(--sans)', fontSize: '10pt',
-  padding: '7px 10px', border: '1px solid #DFE4E8', borderRadius: '2px', background: 'white', outline: 'none',
+  padding: '7px 10px', border: `1px solid ${color.gris}`, borderRadius: '2px', background: 'white', outline: 'none',
 };
 const TEXTAREA: React.CSSProperties = { ...INPUT, resize: 'vertical' as const, lineHeight: '1.5' };
-const SECTION: React.CSSProperties = { marginBottom: '28px', paddingBottom: '28px', borderBottom: '1px solid #DFE4E8' };
+const SECTION: React.CSSProperties = { marginBottom: '28px', paddingBottom: '28px', borderBottom: `1px solid ${color.gris}` };
 const STITLE: React.CSSProperties = {
   fontFamily: 'var(--sans)', fontSize: '8pt', fontWeight: 700, letterSpacing: '0.15em',
   textTransform: 'uppercase' as const, color: 'var(--ai-rouge)', marginBottom: '16px',
@@ -45,7 +46,7 @@ const GRID2: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 
 
 // Style d'un champ lecture seule (CRM ou formule Airtable).
 const READONLY_INPUT: React.CSSProperties = {
-  ...INPUT, background: '#F2F2F2', color: '#888', cursor: 'not-allowed',
+  ...INPUT, background: color.grisTresClair, color: ui.disabled, cursor: 'not-allowed',
 };
 const HINT: React.CSSProperties = {
   fontSize: '7pt', color: 'var(--ai-noir70)', marginTop: '4px',
@@ -217,12 +218,12 @@ export default function ProjetEditor({ projet }: Props) {
       </Link>
       <div style={{ flex: 1 }} />
       {saveMsg && (
-        <span style={{ color: saveStatus === 'error' ? '#ffaaaa' : '#90EE90', fontWeight: 600 }}>
+        <span style={{ color: saveStatus === 'error' ? feedback.erreurClair : feedback.succesClair, fontWeight: 600 }}>
           {saveStatus === 'saving' ? '...' : saveMsg}
         </span>
       )}
       {!preview && (
-        <button onClick={handleSave} disabled={saveStatus === 'saving'} style={{ background: saveStatus === 'saving' ? '#888' : 'var(--ai-rouge)', color: 'white', padding: '5px 14px', borderRadius: '2px', border: 'none', cursor: 'pointer', fontWeight: 600, fontFamily: 'var(--sans)', fontSize: '8pt' }}>
+        <button onClick={handleSave} disabled={saveStatus === 'saving'} style={{ background: saveStatus === 'saving' ? ui.disabled : 'var(--ai-rouge)', color: 'white', padding: '5px 14px', borderRadius: '2px', border: 'none', cursor: 'pointer', fontWeight: 600, fontFamily: 'var(--sans)', fontSize: '8pt' }}>
           {saveStatus === 'saving' ? 'Sauvegarde...' : 'Sauvegarder dans Airtable'}
         </button>
       )}
@@ -279,7 +280,7 @@ export default function ProjetEditor({ projet }: Props) {
   }
 
   return (
-    <div style={{ background: '#ECECEC', minHeight: '100vh' }}>
+    <div style={{ background: ui.fondPage, minHeight: '100vh' }}>
       {toolbar}
       <div style={{ maxWidth: '760px', margin: '32px auto', padding: '0 24px 48px', fontFamily: 'var(--sans)' }}>
 
@@ -292,7 +293,7 @@ export default function ProjetEditor({ projet }: Props) {
           <div style={STITLE}>Template</div>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
             {TEMPLATE_OPTIONS.map(t => (
-              <button key={t} onClick={() => setTemplate(t)} style={{ padding: '6px 18px', borderRadius: '2px', cursor: 'pointer', fontFamily: 'var(--sans)', fontSize: '9pt', fontWeight: 700, background: template === t ? 'var(--ai-violet)' : 'white', color: template === t ? 'white' : 'var(--ai-noir70)', border: template === t ? 'none' : '1px solid #DFE4E8' }}>
+              <button key={t} onClick={() => setTemplate(t)} style={{ padding: '6px 18px', borderRadius: '2px', cursor: 'pointer', fontFamily: 'var(--sans)', fontSize: '9pt', fontWeight: 700, background: template === t ? 'var(--ai-violet)' : 'white', color: template === t ? 'white' : 'var(--ai-noir70)', border: template === t ? 'none' : `1px solid ${color.gris}` }}>
                 {t}
               </button>
             ))}
@@ -305,7 +306,7 @@ export default function ProjetEditor({ projet }: Props) {
           <div style={{ marginBottom: '14px' }}><label style={LABEL}>Adresse</label><input value={adresse} onChange={e => setAdresse(e.target.value)} style={INPUT} /></div>
           <div style={{ marginBottom: '14px' }}>
             <label style={LABEL}>Pitch (formule Airtable, lecture seule)</label>
-            <textarea value={pitch} onChange={e => setPitch(e.target.value)} rows={3} style={{ ...TEXTAREA, background: '#F2F2F2', color: '#888' }} readOnly />
+            <textarea value={pitch} onChange={e => setPitch(e.target.value)} rows={3} style={{ ...TEXTAREA, background: color.grisTresClair, color: ui.disabled }} readOnly />
             <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', marginTop: '4px' }}>Calculé par formule dans Airtable. Modifiable en aperçu uniquement.</p>
           </div>
           <div>
@@ -414,7 +415,7 @@ export default function ProjetEditor({ projet }: Props) {
           <div style={STITLE}>Contenu enrichi</div>
           <div style={{ marginBottom: '14px' }}>
             <label style={LABEL}>Chiffres clés (formule Airtable, lecture seule)</label>
-            <textarea value={chiffresClesRaw} onChange={e => setChiffresClesRaw(e.target.value)} rows={6} style={{ ...TEXTAREA, background: '#F2F2F2', color: '#888' }} readOnly placeholder={'Surface totale | 4 242 m2\nBudget travaux | 8,2 M HT'} />
+            <textarea value={chiffresClesRaw} onChange={e => setChiffresClesRaw(e.target.value)} rows={6} style={{ ...TEXTAREA, background: color.grisTresClair, color: ui.disabled }} readOnly placeholder={'Surface totale | 4 242 m2\nBudget travaux | 8,2 M HT'} />
             <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', marginTop: '4px' }}>Calculé par formule dans Airtable. Modifiable en aperçu uniquement.</p>
           </div>
           <div style={{ marginBottom: '14px' }}>

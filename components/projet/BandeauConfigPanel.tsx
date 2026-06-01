@@ -9,6 +9,7 @@ import { CANONICAL_META_LABELS } from '@/lib/pdf/bandeauConfig';
 import { useViewMode } from '@/lib/auth/useViewMode';
 import ColorSelector from './ColorSelector';
 import type { Projet } from '@/types/projet';
+import { color } from '@/lib/ui/tokens';
 
 interface Props {
   value: BandeauConfig;
@@ -123,7 +124,7 @@ const LABEL_S: React.CSSProperties = {
 };
 const INPUT_S: React.CSSProperties = {
   width: '100%', fontFamily: 'var(--sans)', fontSize: '10pt',
-  padding: '6px 8px', border: '1px solid #DFE4E8', borderRadius: '2px',
+  padding: '6px 8px', border: `1px solid ${color.gris}`, borderRadius: '2px',
   background: 'white', outline: 'none',
 };
 const ROW: React.CSSProperties = {
@@ -136,12 +137,12 @@ const ROW: React.CSSProperties = {
 const COLOR_INPUT: React.CSSProperties = {
   width: '40px', height: '32px',
   padding: '2px',
-  border: '1px solid #DFE4E8', borderRadius: '2px',
+  border: `1px solid ${color.gris}`, borderRadius: '2px',
   background: 'white', cursor: 'pointer',
   flex: '0 0 40px',
 };
 const TOGGLE: React.CSSProperties = {
-  padding: '4px 10px', border: '1px solid #DFE4E8', borderRadius: '2px',
+  padding: '4px 10px', border: `1px solid ${color.gris}`, borderRadius: '2px',
   background: 'white', cursor: 'pointer', fontFamily: 'var(--sans)', fontSize: '10pt',
 };
 const TOGGLE_ON: React.CSSProperties = {
@@ -186,7 +187,7 @@ function StyleRow({ style, onChange }: { style: BandeauStyle; onChange: (s: Band
           <ColorSelector
             value={style.background}
             onChange={(c) => set('background', c)}
-            fallback="#ffffff"
+            fallback={color.blanc}
             customTitle="Couleur de surlignage personnalisée"
             allowNone
           />
@@ -388,7 +389,7 @@ export default function BandeauConfigPanel({ value, onChange, projet, onResetAll
         </div>
       )}
       {!isUserView && SECTIONS.map((s) => (
-        <div key={s.key} style={{ marginBottom: '14px', paddingBottom: '14px', borderBottom: '1px dotted #DFE4E8' }}>
+        <div key={s.key} style={{ marginBottom: '14px', paddingBottom: '14px', borderBottom: `1px dotted ${color.gris}` }}>
           <label style={LABEL_S}>{s.label}</label>
           <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', margin: '0 0 6px' }}>{s.help}</p>
           <StyleRow style={value[s.key] ?? {}} onChange={(st) => updateSection(s.key, st)} />
@@ -474,7 +475,7 @@ function PhotoTextGapRow({ value, onChange }: { value: number | undefined; onCha
           min={0} max={100} step={5}
           value={v}
           onChange={(e) => onChange(Number(e.target.value))}
-          style={{ flex: '1 1 160px', accentColor: '#E30513' }}
+          style={{ flex: '1 1 160px', accentColor: color.rouge }}
         />
         <input
           type="number"
@@ -508,7 +509,7 @@ function TitleMetaGapRow({ value, onChange }: { value: number | undefined; onCha
           min={0} max={100} step={5}
           value={v}
           onChange={(e) => onChange(Number(e.target.value))}
-          style={{ flex: '1 1 160px', accentColor: '#E30513' }}
+          style={{ flex: '1 1 160px', accentColor: color.rouge }}
         />
         <input
           type="number"
@@ -614,7 +615,7 @@ function CellsLayoutRow({
     fontFamily: 'var(--sans)', fontSize: '9pt', fontWeight: 600,
     background: active ? 'var(--ai-violet)' : 'white',
     color: active ? 'white' : 'var(--ai-noir70)',
-    border: active ? '1px solid var(--ai-violet)' : '1px solid #DFE4E8',
+    border: active ? '1px solid var(--ai-violet)' : `1px solid ${color.gris}`,
   });
 
   return (
@@ -639,7 +640,7 @@ function CellsLayoutRow({
           type="range" min={0} max={15} step={0.5}
           value={gap ?? 0}
           onChange={(e) => setGap(Number(e.target.value))}
-          style={{ flex: '1 1 100px', accentColor: '#E30513' }}
+          style={{ flex: '1 1 100px', accentColor: color.rouge }}
         />
         <input
           type="number" min={0} max={20} step={0.5}
@@ -721,8 +722,8 @@ function CellsLayoutRow({
                           <span
                             style={{
                               display: 'inline-block',
-                              background: '#F2F2F2',
-                              border: '1px solid #DFE4E8',
+                              background: color.grisTresClair,
+                              border: `1px solid ${color.gris}`,
                               borderRadius: 2,
                               padding: '3px 7px',
                               fontSize: '9pt',
@@ -740,7 +741,7 @@ function CellsLayoutRow({
                                 cursor: 'pointer',
                                 background: isBreak ? 'var(--ai-rouge)' : 'white',
                                 color: isBreak ? 'white' : 'var(--ai-noir70)',
-                                border: isBreak ? '1px solid var(--ai-rouge)' : '1px solid #DFE4E8',
+                                border: isBreak ? '1px solid var(--ai-rouge)' : `1px solid ${color.gris}`,
                                 borderRadius: 2,
                                 width: 28,
                                 height: 24,
@@ -798,8 +799,8 @@ function CellsLayoutRow({
                           <span
                             style={{
                               display: 'inline-block',
-                              background: '#F2F2F2',
-                              border: '1px solid #DFE4E8',
+                              background: color.grisTresClair,
+                              border: `1px solid ${color.gris}`,
                               borderRadius: 2,
                               padding: '3px 7px',
                               fontSize: '9pt',
@@ -817,7 +818,7 @@ function CellsLayoutRow({
                                 cursor: 'pointer',
                                 background: isBreak ? 'var(--ai-rouge)' : 'white',
                                 color: isBreak ? 'white' : 'var(--ai-noir70)',
-                                border: isBreak ? '1px solid var(--ai-rouge)' : '1px solid #DFE4E8',
+                                border: isBreak ? '1px solid var(--ai-rouge)' : `1px solid ${color.gris}`,
                                 borderRadius: 2,
                                 width: 28,
                                 height: 24,

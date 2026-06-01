@@ -7,6 +7,7 @@ import { RangeSlider } from './RangeSlider';
 import { TABLEAU_FIELDS, TABLEAU_DEFAULTS_BY_MODE, TABLEAU_ORDER_BY_MODE, renderTableau, type TableauOrientation, type TableauMode } from '@/lib/pdf/tableauTemplate';
 import { SHARED_CSS, FONTS_LINK } from '@/lib/pdf/templates/shared';
 import { measureOverflow, type OverflowMeasure } from '@/lib/utils/measureOverflow';
+import { color } from '@/lib/ui/tokens';
 
 interface Props { projets: Projet[]; }
 
@@ -18,18 +19,18 @@ const chipLabel: React.CSSProperties = {
 };
 
 const STATUT_BG: Record<string, string> = {
-  'En étude': '#DFE4E8',
+  'En étude': color.gris,
   'Concours': '#F0E8F5',
-  'En chantier': '#F9E1E3',
+  'En chantier': color.rougeClair,
   'Livré': '#d4edda',
   'Abandonné': '#e2e3e5',
   'En pause': '#fff3cd',
   'En consultation': '#d1ecf1',
 };
 const STATUT_COLOR: Record<string, string> = {
-  'En étude': '#30323E',
+  'En étude': color.violet,
   'Concours': '#6B4F94',
-  'En chantier': '#E30513',
+  'En chantier': color.rouge,
   'Livré': '#155724',
   'Abandonné': '#6c757d',
   'En pause': '#856404',
@@ -356,7 +357,7 @@ export default function TableauBuilder({ projets }: Props) {
   const btn = (active: boolean): React.CSSProperties => ({
     padding: '4px 12px', borderRadius: 2, cursor: 'pointer',
     fontFamily: 'var(--sans)', fontSize: '8pt', fontWeight: 700,
-    border: active ? 'none' : '1px solid #DFE4E8',
+    border: active ? 'none' : `1px solid ${color.gris}`,
     background: active ? 'var(--ai-rouge)' : 'white',
     color: active ? 'white' : 'var(--ai-noir70)',
   });
@@ -541,14 +542,14 @@ function SelectStep(p: SelectStepProps) {
         onChange={e => p.setSearch(e.target.value)}
         style={{
           width: '100%', padding: '8px 12px', fontFamily: 'var(--sans)', fontSize: '9pt',
-          border: '1px solid #DFE4E8', borderRadius: 2, outline: 'none', background: 'white', marginBottom: 16,
+          border: `1px solid ${color.gris}`, borderRadius: 2, outline: 'none', background: 'white', marginBottom: 16,
         }}
       />
       {/* Filtres — layout aligné sur la page publique :
           Row 1 : Pôle · Statut · Type
           Row 2 : Programme (pleine largeur)
           Row 3 : Matériaux (gauche, flex) · Année slider (droite) */}
-      <div style={{ background: 'white', border: '1px solid #DFE4E8', borderRadius: 2, padding: '14px 16px', marginBottom: 20, display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'flex-start' }}>
+      <div style={{ background: 'white', border: `1px solid ${color.gris}`, borderRadius: 2, padding: '14px 16px', marginBottom: 20, display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'flex-start' }}>
         <div>
           <div style={chipLabel}>Pôle</div>
           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
@@ -566,7 +567,7 @@ function SelectStep(p: SelectStepProps) {
                 ...p.btn(p.selectedStatuts.has(s)),
                 background: p.selectedStatuts.has(s) ? STATUT_BG[s] : 'white',
                 color: p.selectedStatuts.has(s) ? STATUT_COLOR[s] : 'var(--ai-noir70)',
-                border: p.selectedStatuts.has(s) ? `1px solid ${STATUT_COLOR[s]}` : '1px solid #DFE4E8',
+                border: p.selectedStatuts.has(s) ? `1px solid ${STATUT_COLOR[s]}` : `1px solid ${color.gris}`,
               }}>{s}</button>
             ))}
           </div>
@@ -634,11 +635,11 @@ function SelectStep(p: SelectStepProps) {
             <div key={projet.slug} style={{
               display: 'grid', gridTemplateColumns: '32px 56px 1fr 100px 80px',
               gap: 12, alignItems: 'center', padding: '10px 16px',
-              borderBottom: i < p.filtered.length - 1 ? '1px solid #DFE4E8' : 'none',
+              borderBottom: i < p.filtered.length - 1 ? `1px solid ${color.gris}` : 'none',
               background: isSelected ? '#FFF5F5' : 'white',
             }}>
               <input type="checkbox" checked={isSelected} onChange={() => p.toggleSelect(projet.slug)}
-                style={{ cursor: 'pointer', width: 16, height: 16, accentColor: '#E30513' }} />
+                style={{ cursor: 'pointer', width: 16, height: 16, accentColor: color.rouge }} />
               {projet.photoCouverture
                 ? <div style={{ width: 56, height: 40, backgroundImage: `url(${projet.photoCouverture.url})`, backgroundSize: 'cover', backgroundPosition: 'center', borderRadius: 1 }} />
                 : <div style={{ width: 56, height: 40, background: 'var(--ai-gris)', borderRadius: 1 }} />
@@ -681,7 +682,7 @@ function OrderStep({ orderedSlugs, projetsBySlug, moveItem, removeFromOrder }: O
           <div key={slug} style={{
             display: 'grid', gridTemplateColumns: '36px 28px 56px 1fr 100px 80px 28px',
             gap: 12, alignItems: 'center', padding: '10px 16px',
-            borderBottom: i < orderedSlugs.length - 1 ? '1px solid #DFE4E8' : 'none',
+            borderBottom: i < orderedSlugs.length - 1 ? `1px solid ${color.gris}` : 'none',
             background: 'white',
           }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -702,7 +703,7 @@ function OrderStep({ orderedSlugs, projetsBySlug, moveItem, removeFromOrder }: O
             <div style={{ fontSize: '7.5pt', color: 'var(--ai-noir70)' }}>{projet.programme ?? '—'}</div>
             <div style={{ fontSize: '8pt', color: 'var(--ai-rouge)', fontWeight: 600 }}>{projet.anneeLivraison ?? '—'}</div>
             <button onClick={() => removeFromOrder(slug)} aria-label="Retirer"
-              style={{ padding: '4px 6px', fontSize: '10pt', lineHeight: 1, border: '1px solid #DFE4E8', borderRadius: 2, background: 'white', color: 'var(--ai-noir70)', cursor: 'pointer' }}>✕</button>
+              style={{ padding: '4px 6px', fontSize: '10pt', lineHeight: 1, border: `1px solid ${color.gris}`, borderRadius: 2, background: 'white', color: 'var(--ai-noir70)', cursor: 'pointer' }}>✕</button>
           </div>
         );
       })}
@@ -718,7 +719,7 @@ function OrderStep({ orderedSlugs, projetsBySlug, moveItem, removeFromOrder }: O
 function arrowBtn(disabled: boolean): React.CSSProperties {
   return {
     padding: '2px 6px', fontSize: '10pt', lineHeight: 1,
-    border: '1px solid #DFE4E8', borderRadius: 2, background: 'white',
+    border: `1px solid ${color.gris}`, borderRadius: 2, background: 'white',
     color: disabled ? '#CCC' : 'var(--ai-noir70)',
     cursor: disabled ? 'not-allowed' : 'pointer',
   };
@@ -901,14 +902,14 @@ function PreviewStep({
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 20 }}>
       {/* Sidebar config */}
-      <aside style={{ position: 'sticky', top: 16, alignSelf: 'start', background: 'white', border: '1px solid #DFE4E8', borderRadius: 2, padding: 16 }}>
+      <aside style={{ position: 'sticky', top: 16, alignSelf: 'start', background: 'white', border: `1px solid ${color.gris}`, borderRadius: 2, padding: 16 }}>
         <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 8 }}>Mode</div>
         <div style={{ display: 'flex', gap: 4, marginBottom: 18 }}>
           {(['Str-Env', 'Dev'] as const).map(m => (
             <button key={m} onClick={() => setMode(m)}
               style={{
                 flex: 1, padding: '6px 0', fontFamily: 'var(--sans)', fontSize: '8pt', fontWeight: 700,
-                border: mode === m ? 'none' : '1px solid #DFE4E8',
+                border: mode === m ? 'none' : `1px solid ${color.gris}`,
                 background: mode === m ? 'var(--ai-rouge)' : 'white',
                 color: mode === m ? 'white' : 'var(--ai-noir70)',
                 cursor: 'pointer', borderRadius: 2,
@@ -921,7 +922,7 @@ function PreviewStep({
             <button key={o} onClick={() => setOrientation(o)}
               style={{
                 flex: 1, padding: '6px 0', fontFamily: 'var(--sans)', fontSize: '8pt', fontWeight: 700,
-                border: orientation === o ? 'none' : '1px solid #DFE4E8',
+                border: orientation === o ? 'none' : `1px solid ${color.gris}`,
                 background: orientation === o ? 'var(--ai-rouge)' : 'white',
                 color: orientation === o ? 'white' : 'var(--ai-noir70)',
                 cursor: 'pointer', borderRadius: 2, textTransform: 'capitalize',
@@ -942,7 +943,7 @@ function PreviewStep({
               <div key={f.key} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '9pt', padding: '2px 0' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', flex: 1 }}>
                   <input type="checkbox" checked={checked} onChange={() => toggleField(f.key)}
-                    style={{ accentColor: '#E30513' }} />
+                    style={{ accentColor: color.rouge }} />
                   <span>
                     {displayLabel}
                     {isChampLibre && champLibreNom && (
@@ -956,7 +957,7 @@ function PreviewStep({
                     title="Configurer le champ libre"
                     style={{
                       padding: '2px 6px', fontSize: '7.5pt', fontWeight: 700,
-                      background: 'white', border: '1px solid #DFE4E8', borderRadius: 2,
+                      background: 'white', border: `1px solid ${color.gris}`, borderRadius: 2,
                       color: 'var(--ai-noir70)', cursor: 'pointer',
                     }}
                   >
@@ -1053,7 +1054,7 @@ function ChampLibreModal({
         }}
       >
         {/* Header */}
-        <div style={{ padding: '18px 24px', borderBottom: '1px solid #DFE4E8' }}>
+        <div style={{ padding: '18px 24px', borderBottom: `1px solid ${color.gris}` }}>
           <h2 style={{ margin: 0, fontSize: '14pt', fontWeight: 500, color: 'var(--ai-violet)' }}>
             Configurer la colonne « Champ libre »
           </h2>
@@ -1076,7 +1077,7 @@ function ChampLibreModal({
               placeholder="ex. Lot Assemblage, Particularités…"
               style={{
                 width: '100%', padding: '8px 12px', fontSize: '10pt',
-                border: '1px solid #DFE4E8', borderRadius: 2, outline: 'none',
+                border: `1px solid ${color.gris}`, borderRadius: 2, outline: 'none',
                 fontFamily: 'var(--sans)',
               }}
             />
@@ -1088,7 +1089,7 @@ function ChampLibreModal({
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {orderedProjets.map((p, i) => (
               <div key={p.slug} style={{
-                border: '1px solid #DFE4E8', borderRadius: 2, padding: 10,
+                border: `1px solid ${color.gris}`, borderRadius: 2, padding: 10,
                 background: '#FAFAFA',
               }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
@@ -1103,7 +1104,7 @@ function ChampLibreModal({
                   placeholder="Description pour cette référence…"
                   style={{
                     width: '100%', padding: '8px 10px', fontSize: '9.5pt',
-                    border: '1px solid #DFE4E8', borderRadius: 2, outline: 'none',
+                    border: `1px solid ${color.gris}`, borderRadius: 2, outline: 'none',
                     resize: 'vertical', fontFamily: 'var(--sans)',
                     minHeight: 60,
                   }}
@@ -1120,14 +1121,14 @@ function ChampLibreModal({
 
         {/* Footer */}
         <div style={{
-          padding: '14px 24px', borderTop: '1px solid #DFE4E8',
+          padding: '14px 24px', borderTop: `1px solid ${color.gris}`,
           display: 'flex', justifyContent: 'flex-end', gap: 8, background: '#FAFAFA',
         }}>
           <button
             onClick={onCancel}
             style={{
               padding: '8px 16px', background: 'white', color: 'var(--ai-noir70)',
-              border: '1px solid #DFE4E8', borderRadius: 2,
+              border: `1px solid ${color.gris}`, borderRadius: 2,
               fontFamily: 'var(--sans)', fontSize: '9.5pt', fontWeight: 600, cursor: 'pointer',
             }}
           >

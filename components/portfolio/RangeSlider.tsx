@@ -1,5 +1,7 @@
 'use client';
 
+import { color } from '@/lib/ui/tokens';
+
 /**
  * Double-slider d'intervalle (min / max), partagé entre les pages portfolio.
  * Styles dans `app/globals.css` sous la classe `.range-slider`.
@@ -20,19 +22,19 @@ export function RangeSlider({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '8pt', fontWeight: 700, color: '#E30513' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '8pt', fontWeight: 700, color: color.rouge }}>
         <span>{valueMin}</span><span>{valueMax}</span>
       </div>
       <div className="range-slider">
         <div style={{
           position: 'absolute', top: '50%', left: 0, right: 0,
-          height: '4px', background: '#DFE4E8', borderRadius: '2px',
+          height: '4px', background: color.gris, borderRadius: '2px',
           transform: 'translateY(-50%)', pointerEvents: 'none',
         }} />
         <div style={{
           position: 'absolute', top: '50%',
           left: `${pctLeft}%`, right: `${pctRight}%`,
-          height: '4px', background: '#E30513', borderRadius: '2px',
+          height: '4px', background: color.rouge, borderRadius: '2px',
           transform: 'translateY(-50%)', pointerEvents: 'none',
         }} />
         <input
