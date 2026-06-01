@@ -139,6 +139,15 @@ export interface BandeauCellsConfig {
    *  - En mode `'content'` : `weight × 20mm` devient le `min-width` de la cellule.
    *  Une valeur ≤ 0 ou non finie est ignorée (= défaut 1). */
   weights?: Partial<Record<MetaLabel, number>>;
+  /** Sauts de ligne par cellule multi-valeurs : array d'indices APRES
+   *  lesquels insérer un `<br>` (à la place de la virgule). Ex. pour
+   *  3 architectes [A, B, C] :
+   *    - `[]`     → "A, B, C" (tout inline, défaut)
+   *    - `[0]`    → "A\nB, C"
+   *    - `[1]`    → "A, B\nC"
+   *    - `[0, 1]` → "A\nB\nC" (un par ligne)
+   *  Les indices ≥ nombre de valeurs sont ignorés silencieusement. */
+  breaks?: Partial<Record<MetaLabel, number[]>>;
 }
 
 /** Demi-amplitude (en mm) du slider `titleMetaGap`. À 0% → -RANGE, à 100% → +RANGE. */

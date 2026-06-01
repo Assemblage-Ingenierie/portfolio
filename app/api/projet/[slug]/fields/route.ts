@@ -24,8 +24,8 @@ const FICHE_ONLY_FIELDS: ReadonlySet<keyof ProjetEditableFields> = new Set([
   'photoCrops',
   'template',
   'referentAi',
-  'mandataire',
-  'entreprise',
+  // 'mandataire', 'entreprise' : retirés de ProjetEditableFields depuis
+  // que les CRM-linked fields sont en lecture seule (cf. mutations.ts).
   'departement',
   'motsCles',
   // `ficheStatus` NE figure PAS ici : le sidebar de la home dénombre les

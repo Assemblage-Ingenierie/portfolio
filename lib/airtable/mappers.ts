@@ -43,6 +43,8 @@ export interface AuxValues {
   programmePrincipal?: string;
   programmesPrincipaux?: string[];
   programmeSecondaire?: string;
+  /** Toutes les valeurs du multi-select "Programme secondaire" (fldaTqKMNrIpeGBma). */
+  programmesSecondaires?: string[];
   pole?: string;
   vignettePoles?: string[];
   prestationAssemblage?: string;
@@ -209,11 +211,27 @@ export function recordToProjet(record: any, aux?: AuxValues): Projet {
     surface: f['Surface(m²)'] ?? undefined,
     budgetHT,
     anneeLivraison: f['Année livraison'] ?? undefined,
-    missionAi: f['Mission AI'] ?? undefined,
+    // Mission AI (multi-select fldgkpweXw9BypQfX) : Airtable retourne soit
+    // un array (cellFormat json par défaut), soit une string CSV selon le
+    // mode. On normalise dans les deux cas vers un array, et on garde
+    // `missionAi` (CSV joint) pour rétro-compatibilité avec le rendu.
+    ...(() => {
+      const raw = f['Mission AI'];
+      const values: string[] = Array.isArray(raw)
+        ? raw.map((s) => String(s).trim()).filter(Boolean)
+        : typeof raw === 'string' && raw.trim()
+          ? raw.split(',').map((s) => s.trim()).filter(Boolean)
+          : [];
+      return {
+        missionAi: values.length > 0 ? values.join(', ') : undefined,
+        missionAiValues: values.length > 0 ? values : undefined,
+      };
+    })(),
     programme: f['Programme'] ?? undefined,
     programmePrincipal: aux?.programmePrincipal,
     programmesPrincipaux: aux?.programmesPrincipaux,
     programmeSecondaire: aux?.programmeSecondaire,
+    programmesSecondaires: aux?.programmesSecondaires,
     // Pôle : prioritairement lu via aux par field ID (cf. FIELD_POLE), fallback
     // sur le nom de colonne 'Pôle' pour rester rétro-compatible.
     pole: aux?.pole ?? f['Pôle'] ?? undefined,

@@ -36,14 +36,21 @@ export interface Projet {
   surface?: number;
   budgetHT?: string;
   anneeLivraison?: number;
+  /** Valeur jointe pour affichage (CSV) — multi-select Airtable. */
   missionAi?: string;
+  /** Toutes les valeurs du multi-select "Mission AI" (fldgkpweXw9BypQfX). */
+  missionAiValues?: string[];
   programme?: string;
   programmePrincipal?: string;
   /** Toutes les valeurs du champ multi-select Airtable "Programmes principaux"
    *  (fldKNKtsZNpvmf695). Utilisé par les filtres du portfolio. Le rendu PDF
    *  continue de n'afficher que `programmePrincipal` (premier élément). */
   programmesPrincipaux?: string[];
+  /** Première valeur du multi-select "Programme secondaire" — utilisée par
+   *  le rendu legacy (sous-titre du Programme dans le bandeau). */
   programmeSecondaire?: string;
+  /** Toutes les valeurs du multi-select "Programme secondaire" (fldaTqKMNrIpeGBma). */
+  programmesSecondaires?: string[];
   pole?: string;
   /** Champ Airtable "Vignette pôle" (field id fld1PZuYO8mz0sULA) — multi-select
    *  STR / ENV / DEV. Pilote l'affichage des vignettes en en-tête : valeurs

@@ -7,10 +7,45 @@ import type {
 } from '@/lib/pdf/bandeauConfig';
 import { CANONICAL_META_LABELS } from '@/lib/pdf/bandeauConfig';
 import ColorSelector from './ColorSelector';
+import type { Projet } from '@/types/projet';
 
 interface Props {
   value: BandeauConfig;
   onChange: (next: BandeauConfig) => void;
+  /** Projet courant — utilisé uniquement par la section "Sauts de ligne"
+   *  pour montrer les valeurs réelles de chaque cellule multi-valeurs. */
+  projet?: Projet;
+  /** Si fourni, le bouton "Réinitialiser" appelle ce callback (qui doit
+   *  appliquer les préréglages Assemblage AUSSI au ManualConfig). Sinon
+   *  le bouton fait le comportement legacy : vide juste BandeauConfig. */
+  onResetAll?: () => void;
+}
+
+/** Reconstruit la liste de valeurs par cellule à partir du Projet, en
+ *  miroir de la logique de `metaGridHtml` dans shared.ts. Renvoie une
+ *  Map<label, values[]> ne contenant QUE les cellules avec ≥ 2 valeurs
+ *  (les autres ne nécessitent pas de configuration de breaks). */
+function multiValueCellsFromProjet(projet: Projet | undefined): Map<MetaLabel, string[]> {
+  const result = new Map<MetaLabel, string[]>();
+  if (!projet) return result;
+  const splitCsv = (v: string | undefined): string[] => {
+    if (!v) return [];
+    return v.split(/\s*,\s*/).map(s => s.trim()).filter(Boolean);
+  };
+  const candidates: Array<[MetaLabel, string[]]> = [
+    ['MOA',           splitCsv(projet.moa)],
+    ['Bailleur',      splitCsv(projet.bailleur)],
+    ['Architecte',    splitCsv(projet.architecte)],
+    ['BET associés',  splitCsv(projet.betAssocies)],
+    ['Entreprise',    splitCsv(projet.entreprise)],
+    ['Mission AI',    projet.missionAiValues && projet.missionAiValues.length > 0
+                        ? projet.missionAiValues
+                        : splitCsv(projet.missionAi)],
+  ];
+  for (const [label, values] of candidates) {
+    if (values.length >= 2) result.set(label, values);
+  }
+  return result;
 }
 
 type StyleSectionKey = Exclude<keyof BandeauConfig, 'lines' | 'titleMetaGap' | 'photoTextGap' | 'programme' | 'cells'>;
@@ -235,7 +270,8 @@ function AdvancedStyleSection({
 
 export { StyleRow };
 
-export default function BandeauConfigPanel({ value, onChange }: Props) {
+export default function BandeauConfigPanel({ value, onChange, projet, onResetAll }: Props) {
+  const multiValueCells = multiValueCellsFromProjet(projet);
   function updateSection(key: StyleSectionKey, style: BandeauStyle) {
     // Si toutes les propriétés sont vides, on retire la section pour garder
     // la config minimale et utiliser les défauts CSS du template.
@@ -262,7 +298,12 @@ export default function BandeauConfigPanel({ value, onChange }: Props) {
   }
 
   function resetAll() {
-    onChange({});
+    // Si le parent fournit un callback complet, on lui delegue : il
+    // appliquera les preregages Assemblage au BandeauConfig ET au
+    // ManualConfig (cf. lib/pdf/assemblageDefaults.ts). Sinon, comportement
+    // historique : on vide juste le BandeauConfig.
+    if (onResetAll) onResetAll();
+    else onChange({});
   }
 
   return (
@@ -271,7 +312,14 @@ export default function BandeauConfigPanel({ value, onChange }: Props) {
         <p style={{ fontSize: '8pt', color: 'var(--ai-noir70)', margin: 0 }}>
           Surcharges optionnelles. Laisser vide pour utiliser les valeurs par défaut du template.
         </p>
-        <button type="button" onClick={resetAll} style={{ ...TOGGLE, fontSize: '8pt' }}>
+        <button
+          type="button"
+          onClick={resetAll}
+          style={{ ...TOGGLE, fontSize: '8pt' }}
+          title={onResetAll
+            ? 'Applique les préréglages Assemblage : typographie + bandeau + photo principale + texte + mots-clés + certifications. Écrase la configuration actuelle.'
+            : 'Vide la configuration du bandeau.'}
+        >
           Réinitialiser
         </button>
       </div>
@@ -284,13 +332,17 @@ export default function BandeauConfigPanel({ value, onChange }: Props) {
       ))}
       <CellsLayoutRow
         value={value.cells}
+        multiValueCells={multiValueCells}
         onChange={(c) => {
           const next = { ...value };
-          if (!c || (!c.layout && !c.gap && (!c.weights || Object.keys(c.weights).length === 0))) {
-            delete next.cells;
-          } else {
-            next.cells = c;
-          }
+          const empty = !c || (
+            !c.layout &&
+            !c.gap &&
+            (!c.weights || Object.keys(c.weights).length === 0) &&
+            (!c.breaks || Object.keys(c.breaks).length === 0)
+          );
+          if (empty) delete next.cells;
+          else next.cells = c;
           onChange(next);
         }}
       />
@@ -401,14 +453,17 @@ function TitleMetaGapRow({ value, onChange }: { value: number | undefined; onCha
 
 function CellsLayoutRow({
   value,
+  multiValueCells,
   onChange,
 }: {
   value: BandeauCellsConfig | undefined;
+  multiValueCells: Map<MetaLabel, string[]>;
   onChange: (v: BandeauCellsConfig | undefined) => void;
 }) {
   const layout: CellsLayout = value?.layout ?? 'content';
   const gap = value?.gap;
   const weights: Partial<Record<MetaLabel, number>> = value?.weights ?? {};
+  const breaks: Partial<Record<MetaLabel, number[]>> = value?.breaks ?? {};
 
   const setLayout = (next: CellsLayout) => {
     // Pas la peine de persister 'content' (= défaut) si rien d'autre n'est défini.
@@ -433,6 +488,23 @@ function CellsLayoutRow({
     }
     if (Object.keys(nextWeights).length === 0) delete out.weights;
     else out.weights = nextWeights;
+    onChange(out);
+  };
+  /** Toggle un saut de ligne après la valeur d'index `idx` dans la cellule
+   *  `label`. Stocké comme array trié d'indices dans `breaks[label]`. */
+  const toggleBreak = (label: MetaLabel, idx: number) => {
+    const current = new Set(breaks[label] ?? []);
+    if (current.has(idx)) current.delete(idx);
+    else current.add(idx);
+    const out: BandeauCellsConfig = { ...(value ?? {}) };
+    const nextBreaks: Partial<Record<MetaLabel, number[]>> = { ...breaks };
+    if (current.size === 0) {
+      delete nextBreaks[label];
+    } else {
+      nextBreaks[label] = [...current].sort((a, b) => a - b);
+    }
+    if (Object.keys(nextBreaks).length === 0) delete out.breaks;
+    else out.breaks = nextBreaks;
     onChange(out);
   };
 
@@ -512,6 +584,83 @@ function CellsLayoutRow({
           })}
         </div>
       </details>
+
+      {multiValueCells.size > 0 && (
+        <details
+          open={Object.keys(breaks).length > 0}
+          style={{ marginTop: '8px' }}
+        >
+          <summary
+            style={{
+              cursor: 'pointer',
+              fontFamily: 'var(--sans)', fontSize: '8pt', fontWeight: 700,
+              letterSpacing: '0.06em', textTransform: 'uppercase',
+              color: Object.keys(breaks).length > 0 ? 'var(--ai-rouge)' : 'var(--ai-noir70)',
+              padding: '6px 0',
+              userSelect: 'none', listStyle: 'none',
+            }}
+          >
+            ▸ Sauts de ligne{Object.keys(breaks).length > 0 ? ` • ${Object.keys(breaks).length}` : ''}
+          </summary>
+          <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', margin: '6px 0 10px' }}>
+            Pour les cellules avec plusieurs valeurs, clique sur le séparateur entre deux valeurs pour basculer de virgule (inline) à saut de ligne. Seules les cellules multi-valeurs de cette fiche sont affichées.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {[...multiValueCells.entries()].map(([label, vals]) => {
+              const breakSet = new Set(breaks[label] ?? []);
+              return (
+                <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span style={{ fontSize: '8pt', color: 'var(--ai-noir70)', fontWeight: 600 }}>{label}</span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px' }}>
+                    {vals.map((v, idx) => {
+                      const isLast = idx === vals.length - 1;
+                      const isBreak = breakSet.has(idx);
+                      return (
+                        <span key={`${label}-${idx}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <span
+                            style={{
+                              display: 'inline-block',
+                              background: '#F2F2F2',
+                              border: '1px solid #DFE4E8',
+                              borderRadius: 2,
+                              padding: '3px 7px',
+                              fontSize: '9pt',
+                              color: 'var(--ai-noir)',
+                            }}
+                          >
+                            {v}
+                          </span>
+                          {!isLast && (
+                            <button
+                              type="button"
+                              onClick={() => toggleBreak(label, idx)}
+                              title={isBreak ? `Saut de ligne après "${v}". Cliquer pour rendre inline.` : `"${v}" et "${vals[idx + 1]}" sont sur la même ligne. Cliquer pour ajouter un saut de ligne.`}
+                              style={{
+                                cursor: 'pointer',
+                                background: isBreak ? 'var(--ai-rouge)' : 'white',
+                                color: isBreak ? 'white' : 'var(--ai-noir70)',
+                                border: isBreak ? '1px solid var(--ai-rouge)' : '1px solid #DFE4E8',
+                                borderRadius: 2,
+                                width: 28,
+                                height: 24,
+                                fontFamily: 'var(--sans)', fontSize: '10pt', fontWeight: 700,
+                                padding: 0,
+                                lineHeight: 1,
+                              }}
+                            >
+                              {isBreak ? '↵' : ','}
+                            </button>
+                          )}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </details>
+      )}
     </div>
   );
 }

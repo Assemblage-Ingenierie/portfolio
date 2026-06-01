@@ -14,21 +14,28 @@ export interface ProjetEditableFields {
   nom?: string;
   adresse?: string;
   description?: string;
-  moa?: string;
-  mandataire?: string;
-  betAssocies?: string;
-  entreprise?: string;
-  bailleur?: string;
+  // CRM-linked records (MOA / Architecte / Mandataire / Entreprise /
+  // BET associés / Bailleur) : NON éditables depuis le portfolio.
+  // Toute écriture corromprait la relation linked record côté Airtable —
+  // les valeurs doivent être modifiées directement dans la base CRM.
   referentAi?: string;
-  missionAi?: string;
+  /** Multi-select "Mission AI" (fldgkpweXw9BypQfX) — array de valeurs. */
+  missionAiValues?: string[];
+  /** Multi-select "Programme principal" (fldKNKtsZNpvmf695). */
+  programmesPrincipaux?: string[];
+  /** Multi-select "Programme secondaire" (fldaTqKMNrIpeGBma). */
+  programmesSecondaires?: string[];
   surface?: number;
   budgetRaw?: number;
   anneeLivraison?: number;
-  programme?: string;
   pole?: string;
   departement?: string;
-  rehabNeuf?: string;
-  statut?: string;
+  /** Multi-select "Rehab / Neuf" (fldyD7L9E7cGL26vH). */
+  rehabNeufValues?: string[];
+  /** Multi-select "État avancement / Statut" (fldxXNdE0uNaomeby). */
+  statutValues?: string[];
+  /** Multi-select "Matériaux" (fldC4SW9n1H2PZ3MH). */
+  materiaux?: string[];
   template?: string;
   certifications?: string[];
   motsCles?: string[];
@@ -54,21 +61,24 @@ export async function updateProjetFields(slug: string, fields: ProjetEditableFie
   if (fields.nom !== undefined)            update['Nom du projet']      = fields.nom;
   if (fields.adresse !== undefined)        update['Adresse']            = fields.adresse;
   if (fields.description !== undefined)    update['Description projet'] = fields.description;
-  if (fields.moa !== undefined)            update["Maître d'ouvrage"]   = fields.moa;
-  if (fields.mandataire !== undefined)     update['Mandataire']         = fields.mandataire;
-  if (fields.betAssocies !== undefined)    update['BET associés']       = fields.betAssocies;
-  if (fields.entreprise !== undefined)     update['Entreprise']         = fields.entreprise;
-  if (fields.bailleur !== undefined)       update['Bailleur']           = fields.bailleur;
+  // Pas d'écriture sur les champs CRM (MOA / Mandataire / BET associés /
+  // Entreprise / Bailleur / Architecte) : ils sont gérés depuis la base CRM.
   if (fields.referentAi !== undefined)     update['Référent AI']        = fields.referentAi;
-  if (fields.missionAi !== undefined)      update['Mission AI']         = fields.missionAi;
+  // Multi-selects : on écrit des arrays. Airtable typecast:true convertit
+  // gracieusement les nouvelles valeurs en options (création automatique).
+  if (fields.missionAiValues !== undefined)      update['Mission AI']            = fields.missionAiValues;
+  if (fields.programmesPrincipaux !== undefined)  update['Programme principal']   = fields.programmesPrincipaux;
+  if (fields.programmesSecondaires !== undefined) update['Programme secondaire']  = fields.programmesSecondaires;
   if (fields.surface !== undefined)        update['Surface(m²)']        = fields.surface;
   if (fields.budgetRaw !== undefined)      update['Budget HT']          = fields.budgetRaw;
   if (fields.anneeLivraison !== undefined) update['Année livraison']    = fields.anneeLivraison;
-  if (fields.programme !== undefined)      update['Programme']          = fields.programme;
+  // Le champ "Programme" texte libre est deprecated depuis 2026 : remplace
+  // par "Programmes principaux" + "Programmes secondaires" (multi-selects).
   if (fields.pole !== undefined)           update['Pôle']               = fields.pole;
   if (fields.departement !== undefined)    update['Département']        = fields.departement;
-  if (fields.rehabNeuf !== undefined)      update['Rehab / Neuf']       = fields.rehabNeuf ? [fields.rehabNeuf] : [];
-  if (fields.statut !== undefined)         update['État avancement']    = fields.statut;
+  if (fields.rehabNeufValues !== undefined) update['Rehab / Neuf']      = fields.rehabNeufValues;
+  if (fields.statutValues !== undefined)    update['État avancement']   = fields.statutValues;
+  if (fields.materiaux !== undefined)       update['Matériaux']         = fields.materiaux;
   if (fields.template !== undefined)       update['Template']           = fields.template;
   if (fields.certifications !== undefined) update['Certification']      = fields.certifications.join('\n');
   if (fields.motsCles !== undefined)       update['Mots-clés']          = fields.motsCles.join(', ');

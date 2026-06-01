@@ -63,6 +63,8 @@ interface AuxByFieldId {
   principal?: string;
   principaux?: string[];
   secondaire?: string;
+  /** Toutes les valeurs du multi-select Programme secondaire. */
+  secondaires?: string[];
   pole?: string;
   vignettePoles?: string[];
   prestationAssemblage?: string;
@@ -124,6 +126,7 @@ async function fetchAuxByFieldId(
         principal: firstValue(r.fields[FIELD_PROGRAMME_PRINCIPAL]),
         principaux: allValues(r.fields[FIELD_PROGRAMME_PRINCIPAL]),
         secondaire: firstValue(r.fields[FIELD_PROGRAMME_SECONDAIRE]),
+        secondaires: allValues(r.fields[FIELD_PROGRAMME_SECONDAIRE]),
         pole: typeof poleRaw === 'string' && poleRaw.trim() ? poleRaw.trim() : undefined,
         vignettePoles,
         prestationAssemblage: typeof prestaRaw === 'string' && prestaRaw.trim() ? prestaRaw : undefined,
@@ -182,6 +185,7 @@ export async function getProjets(): Promise<Projet[]> {
         programmePrincipal: prog?.principal,
         programmesPrincipaux: prog?.principaux,
         programmeSecondaire: prog?.secondaire,
+        programmesSecondaires: prog?.secondaires,
         pole: prog?.pole,
         vignettePoles: prog?.vignettePoles,
         prestationAssemblage: prog?.prestationAssemblage,
@@ -240,6 +244,7 @@ export async function getProjet(slug: string): Promise<Projet | null> {
       programmePrincipal: p?.principal,
       programmesPrincipaux: p?.principaux,
       programmeSecondaire: p?.secondaire,
+      programmesSecondaires: p?.secondaires,
       pole: p?.pole,
       vignettePoles: p?.vignettePoles,
       prestationAssemblage: p?.prestationAssemblage,

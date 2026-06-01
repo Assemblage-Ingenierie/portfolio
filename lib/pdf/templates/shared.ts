@@ -361,7 +361,20 @@ export function titleBlockHtml(projet: Projet, h1Size = '32pt'): string {
 }
 
 export function metaGridHtml(projet: Projet, options?: { isDev?: boolean }): string {
-  const items: { label: string; value: string; sub?: string }[] = [];
+  // Chaque cellule porte un array de valeurs (1 ou plus). Cela permet de
+  // contrôler le séparateur (virgule inline OU saut de ligne <br>) par
+  // valeur via `bandeauConfig.cells.breaks[label]`. Pour les cellules
+  // mono-valeur (Budget, Surface, Programme via value/sub), l'array
+  // contient un seul élément et aucun break ne s'applique.
+  const items: { label: string; values: string[]; sub?: string }[] = [];
+
+  /** Split un CSV CRM ("Studio A, Studio B") en array. NB : si un nom CRM
+   *  contient une virgule (rare), il sera coupé — tradeoff accepté. Pour
+   *  un split sûr, exposer un *Values array depuis le mapper. */
+  const splitCsv = (v: string | undefined): string[] => {
+    if (!v) return [];
+    return v.split(/\s*,\s*/).map(s => s.trim()).filter(Boolean);
+  };
 
   // Programme : principal en valeur principale, secondaire en sous-titre.
   // Helper utilisé par les deux templates.
@@ -369,12 +382,14 @@ export function metaGridHtml(projet: Projet, options?: { isDev?: boolean }): str
   // `bandeauConfig.programme.hideSecondaire` — la cellule n'affiche alors
   // que le principal, sans sous-titre. Si aucun principal n'est rempli
   // dans ce cas, la cellule disparaît entièrement.
+  // Note : la logique value/sub historique est PRÉSERVÉE — pas de breaks
+  // applicables sur cette cellule (le sub reste rendu dans .t-meta-sub).
   const hideSecondaire = projet.bandeauConfig?.programme?.hideSecondaire === true;
   const effectiveSecondaire = hideSecondaire ? undefined : projet.programmeSecondaire;
   const programmeItem = (projet.programmePrincipal || effectiveSecondaire)
     ? {
         label: 'Programme',
-        value: projet.programmePrincipal ?? effectiveSecondaire ?? '',
+        values: [projet.programmePrincipal ?? effectiveSecondaire ?? ''],
         sub: projet.programmePrincipal ? effectiveSecondaire : undefined,
       }
     : null;
@@ -383,23 +398,23 @@ export function metaGridHtml(projet: Projet, options?: { isDev?: boolean }): str
     // Bandeau Dev — ordre fixé par le métier :
     // MOA · Bailleur · Architecte · Budget · Programme · Mission AI · BET associés.
     // Seuls les champs renseignés apparaissent.
-    if (projet.moa)         items.push({ label: 'MOA',              value: projet.moa });
-    if (projet.bailleur)    items.push({ label: 'Bailleur',         value: projet.bailleur });
-    if (projet.architecte)  items.push({ label: 'Architecte',       value: projet.architecte });
-    if (projet.budgetHT)    items.push({ label: 'Budget',           value: projet.budgetHT });
+    if (projet.moa)         items.push({ label: 'MOA',              values: splitCsv(projet.moa) });
+    if (projet.bailleur)    items.push({ label: 'Bailleur',         values: splitCsv(projet.bailleur) });
+    if (projet.architecte)  items.push({ label: 'Architecte',       values: splitCsv(projet.architecte) });
+    if (projet.budgetHT)    items.push({ label: 'Budget',           values: [projet.budgetHT] });
     if (programmeItem)      items.push(programmeItem);
-    if (projet.missionAi)   items.push({ label: 'Mission AI',       value: projet.missionAi });
-    if (projet.betAssocies) items.push({ label: 'BET associés',     value: projet.betAssocies });
+    if (projet.missionAi)   items.push({ label: 'Mission AI',       values: projet.missionAiValues && projet.missionAiValues.length > 0 ? projet.missionAiValues : splitCsv(projet.missionAi) });
+    if (projet.betAssocies) items.push({ label: 'BET associés',     values: splitCsv(projet.betAssocies) });
   } else {
     // Bandeau Str-Env — ordre historique + BET associés inséré juste après
     // Architecte (même nature : linked record Sync CRM "acteurs du projet").
-    if (projet.moa)         items.push({ label: 'MOA',              value: projet.moa });
-    if (projet.architecte)  items.push({ label: 'Architecte',       value: projet.architecte });
-    if (projet.betAssocies) items.push({ label: 'BET associés',     value: projet.betAssocies });
-    if (projet.budgetHT)    items.push({ label: 'Budget',           value: projet.budgetHT });
-    if (projet.surface)     items.push({ label: 'Surface',          value: `${projet.surface.toLocaleString('fr-FR')} m²` });
-    if (projet.entreprise)  items.push({ label: 'Entreprise',       value: projet.entreprise });
-    if (projet.missionAi)   items.push({ label: 'Mission AI',       value: projet.missionAi });
+    if (projet.moa)         items.push({ label: 'MOA',              values: splitCsv(projet.moa) });
+    if (projet.architecte)  items.push({ label: 'Architecte',       values: splitCsv(projet.architecte) });
+    if (projet.betAssocies) items.push({ label: 'BET associés',     values: splitCsv(projet.betAssocies) });
+    if (projet.budgetHT)    items.push({ label: 'Budget',           values: [projet.budgetHT] });
+    if (projet.surface)     items.push({ label: 'Surface',          values: [`${projet.surface.toLocaleString('fr-FR')} m²`] });
+    if (projet.entreprise)  items.push({ label: 'Entreprise',       values: splitCsv(projet.entreprise) });
+    if (projet.missionAi)   items.push({ label: 'Mission AI',       values: projet.missionAiValues && projet.missionAiValues.length > 0 ? projet.missionAiValues : splitCsv(projet.missionAi) });
     if (programmeItem)      items.push(programmeItem);
   }
 
@@ -451,11 +466,30 @@ export function metaGridHtml(projet: Projet, options?: { isDev?: boolean }): str
     titleGapCss,
   ].filter(Boolean).join(';');
 
+  // Sauts de ligne configurables par cellule. `breaks[label]` = array
+  // d'indices APRES lesquels insérer un <br> au lieu d'une virgule.
+  // Les indices ≥ values.length-1 sont ignorés silencieusement (config
+  // périmée après ajout/suppression d'une valeur).
+  const breaksOf = (label: string): Set<number> => {
+    const arr = cellsCfg?.breaks?.[label as keyof NonNullable<typeof cellsCfg.breaks>];
+    return new Set(Array.isArray(arr) ? arr : []);
+  };
+  const renderValues = (label: string, values: string[]): string => {
+    if (values.length === 0) return '';
+    if (values.length === 1) return esc(values[0]);
+    const breaks = breaksOf(label);
+    return values.map((v, idx) => {
+      const isLast = idx === values.length - 1;
+      if (isLast) return esc(v);
+      return esc(v) + (breaks.has(idx) ? '<br>' : ', ');
+    }).join('');
+  };
+
   return `<div class="t-meta-grid" style="${gridStyle}">
     ${items.map(i => `
       <div class="t-meta-item">
         <span class="t-meta-label"${labelAttr}>${esc(i.label)}</span>
-        <div class="t-meta-value"${valueAttr}>${esc(i.value)}</div>
+        <div class="t-meta-value"${valueAttr}>${renderValues(i.label, i.values)}</div>
         ${i.sub ? `<div class="t-meta-sub"${subAttr}>${esc(i.sub)}</div>` : ''}
       </div>
     `).join('')}
