@@ -75,6 +75,13 @@ export interface PrestationAssemblageConfig {
   offsetVerticalPercent?: number;
   /** Surcharges typographiques (police, taille, B/I/U, couleur, surlignage). */
   style?: import('./bandeauConfig').BandeauStyle;
+  /** Pourcentage de caractères dans la colonne 1 (mode 2-col uniquement).
+   *  Default = 50. Si 100, la col 1 contient tout le texte et la col 2
+   *  est vide (largeur 50% de la page). */
+  col1Percent?: number;
+  /** Pourcentage de caractères dans la colonne 2 (mode 2-col uniquement).
+   *  Default = 50. Si 0, la col 2 est vide. */
+  col2Percent?: number;
 }
 
 /** Nombre max de photos principales en mode portrait (mainPhoto + mainPhoto2 + mainPhotosExtra). */

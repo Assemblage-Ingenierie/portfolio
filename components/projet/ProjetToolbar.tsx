@@ -7,6 +7,7 @@ import type { Projet, TemplateChoice } from '@/types/projet';
 import { TEMPLATE_OPTIONS } from '@/types/projet';
 import { authedFetch } from '@/lib/supabase/authHeaders';
 import { useAuth } from '@/lib/supabase/useAuth';
+import { useViewMode } from '@/lib/auth/useViewMode';
 import { encodeConfig, ManualConfig } from '@/lib/pdf/manualConfig';
 import type { BandeauConfig } from '@/lib/pdf/bandeauConfig';
 import type { CropData } from '@/lib/pdf/photoCrop';
@@ -61,6 +62,7 @@ export default function ProjetToolbar({
 
   const { profile } = useAuth();
   const isAdmin = profile?.role === 'admin';
+  const { viewMode, setViewMode, canSwitch } = useViewMode();
 
   async function handleStatusChange(next: FicheStatus) {
     const previous = ficheStatus;
@@ -223,6 +225,21 @@ export default function ProjetToolbar({
           </option>
         ))}
       </select>
+
+      {canSwitch && (
+        <>
+          <label style={{ color: 'white', fontWeight: 600, marginLeft: 4, marginRight: 4 }}>Vue :</label>
+          <select
+            value={viewMode}
+            onChange={(e) => setViewMode(e.target.value as 'admin' | 'user')}
+            title="Bascule entre la vue admin (tous les contrôles) et la vue user (UI restreinte)"
+            style={{ ...btn, background: 'white', color: 'var(--ai-violet)', border: 'none' }}
+          >
+            <option value="admin">Admin</option>
+            <option value="user">User</option>
+          </select>
+        </>
+      )}
 
       {/* "Éditer les champs" + "Recadrer les photos" sont déplacés dans la
           sidebar gauche pour les templates Str-Env / Dev (qui affichent la

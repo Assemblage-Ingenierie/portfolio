@@ -26,7 +26,7 @@ const FONT_SANS = 'sans' as const;
  * Préréglages du BandeauConfig (typo + cellules + lignes + espacements).
  *
  * Tailles (pt) — issues du brief utilisateur :
- *   Titre 18 · Status 14 · Labels 11 · Values 10
+ *   Titre 18 · Status 11 · Labels 11 · Values 10
  *   metaSub 9 · Description 9 · Prestation Assemblage 9
  *
  * Cellules : distribution adaptée au contenu (`layout: 'content'` —
@@ -41,7 +41,7 @@ const FONT_SANS = 'sans' as const;
  */
 export const ASSEMBLAGE_DEFAULT_BANDEAU: BandeauConfig = {
   titre:                { fontFamily: FONT_SANS, fontSize: 18 },
-  status:               { fontFamily: FONT_SANS, fontSize: 14 },
+  status:               { fontFamily: FONT_SANS, fontSize: 11 },
   labels:               { fontFamily: FONT_SANS, fontSize: 11 },
   values:               { fontFamily: FONT_SANS, fontSize: 10 },
   metaSub:              { fontFamily: FONT_SANS, fontSize: 9 },

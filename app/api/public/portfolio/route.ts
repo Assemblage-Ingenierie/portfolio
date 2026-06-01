@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from 'next/server';
+import { NextResponse, type NextRequest, connection } from 'next/server';
 import { getProjets } from '@/lib/airtable';
 import type { Projet } from '@/types/projet';
 
@@ -99,6 +99,11 @@ function sanitize(p: Projet): PublicProjet {
 }
 
 export async function GET(req: NextRequest) {
+  // Opt-out explicite du prerender Next 16 (cacheComponents) : sans cet appel
+  // l'accès à `req.nextUrl.searchParams` plus bas déclenche un bail-out de
+  // prerender erreur côté build. `connection()` signale au runtime que la
+  // route est dynamique par nature (lecture de query params à chaque appel).
+  await connection();
   try {
     const projets = await getProjets();
     const sanitized = projets.filter((p) => p.visiblePortfolio).map(sanitize);
