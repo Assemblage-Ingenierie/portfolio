@@ -381,29 +381,11 @@ export function renderManuel(projet: Projet, configIn?: ManualConfig): TemplateB
     extraHtml = `<div class="man-extra-grid" style="grid-template-columns:repeat(${extraPhotos.length},1fr);">${cells}</div>`;
   }
 
-  // ── Liste flottante de mots-clés (superposition, z-index max) ──
-  // Ancrée en haut/droite de la page utile ; les sliders X/Y la déplacent
-  // de là. Passe au-dessus de tout (photos, texte, bandeau) — l'utilisateur
-  // ajuste manuellement les sliders en cas de chevauchement gênant.
-  //
-  // Décalages X et Y en mm absolus (indépendants de la taille de la liste).
-  // H_RANGE = ±200mm permet de balayer toute la largeur de la page A4
-  // (largeur utile ≈ 186mm depuis l'ancre top:80mm right:12mm).
-  let keywordsHtml = '';
-  const kw = cfg.keywords;
-  if (kw?.show && projet.motsCles && projet.motsCles.length > 0) {
-    const H_RANGE_MM = 200;
-    const kwXMm = ((clampPercent(kw.offsetPercent ?? 50) - 50) / 50) * H_RANGE_MM;
-    const kwYMm = ((clampPercent(kw.offsetVerticalPercent ?? 50) - 50) / 50) * V_RANGE_MM;
-    const lineSpacingMm = Math.max(0, Math.min(20, kw.lineSpacing ?? 1));
-    const kwStyle = styleToCss(kw.style);
-    // Chaque entrée de projet.motsCles vient déjà d'un split sur ','
-    // côté mapper Airtable. Chaque entrée = une ligne, espaces conservés.
-    const items = projet.motsCles
-      .map((m) => `<li style="margin-bottom:${lineSpacingMm}mm"><span class="man-kw-item"${kwStyle ? ` style="${kwStyle}"` : ''}>${m}</span></li>`)
-      .join('');
-    keywordsHtml = `<ul class="man-keywords" style="--photo-x-offset:${kwXMm}mm; --photo-y-offset:${kwYMm}mm">${items}</ul>`;
-  }
+  // ── Mots-clés : position figée sous le statut (cf. headerHtml). ──
+  // L'overlay flottant historique est désactivé : les mots-clés sont rendus
+  // directement dans le bandeau d'en-tête, en couleur #30323E. La config
+  // `keywords` reste lue côté UI (rétro-compat) mais ignorée au rendu.
+  const keywordsHtml = '';
 
   // ── Liste flottante de certifications (même mécanique que les mots-clés) ──
   let certificationsHtml = '';

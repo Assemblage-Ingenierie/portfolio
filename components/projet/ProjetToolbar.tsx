@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import type { Projet, TemplateChoice } from '@/types/projet';
 import { TEMPLATE_OPTIONS } from '@/types/projet';
 import { authedFetch } from '@/lib/supabase/authHeaders';
@@ -26,6 +27,10 @@ interface Props {
   /** Si vrai : sauvegarde mise en page désactivée (fiche verrouillée et user
    *  n'a pas cliqué "Editer tout de même"). */
   readOnly?: boolean;
+  /** Si vrai : modifications non sauvegardées (manualConfig/bandeauConfig/
+   *  photoCrops divergent des valeurs initiales). Affiche une modale au
+   *  clic sur "← Portfolio". */
+  isDirty?: boolean;
 }
 
 export default function ProjetToolbar({
@@ -41,11 +46,15 @@ export default function ProjetToolbar({
   ficheStatus,
   onFicheStatusChange,
   readOnly,
+  isDirty,
 }: Props) {
+  const router = useRouter();
   const [publishing, setPublishing] = useState(false);
   const [result, setResult] = useState<{ url?: string; error?: string; warning?: string; status?: string; type?: string; author?: number; id?: number; previousUrl?: string } | null>(null);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [statusSaveState, setStatusSaveState] = useState<'idle' | 'saving' | 'error'>('idle');
+  // Modale de confirmation au clic sur "← Portfolio" si modifications non sauvegardées.
+  const [showLeaveModal, setShowLeaveModal] = useState(false);
   // Promotion du dernier draft vers la prod (route /update-prod).
   const [promoting, setPromoting] = useState(false);
   const [promoteResult, setPromoteResult] = useState<{ prodUrl?: string; prodId?: number; draftUrl?: string; error?: string } | null>(null);
@@ -118,7 +127,7 @@ export default function ProjetToolbar({
     }
   }
 
-  async function handleSaveLayout() {
+  async function handleSaveLayout(): Promise<boolean> {
     setSaveState('saving');
     try {
       const res = await authedFetch(`/api/projet/${projet.slug}/fields`, {
@@ -134,11 +143,32 @@ export default function ProjetToolbar({
       setSaveState('saved');
       onSave?.();
       setTimeout(() => setSaveState('idle'), 3000);
+      return true;
     } catch (err) {
       console.error('[saveLayout]', err);
       setSaveState('error');
       setTimeout(() => setSaveState('idle'), 4000);
+      return false;
     }
+  }
+
+  function handlePortfolioClick(e: React.MouseEvent) {
+    if (!isDirty) return; // pas modifié → navigation normale via <Link>
+    e.preventDefault();
+    setShowLeaveModal(true);
+  }
+
+  async function handleSaveAndLeave() {
+    const ok = await handleSaveLayout();
+    if (ok) {
+      setShowLeaveModal(false);
+      router.push('/');
+    }
+  }
+
+  function handleLeaveWithoutSaving() {
+    setShowLeaveModal(false);
+    router.push('/');
   }
 
   async function handleDownloadPdf() {
@@ -156,7 +186,7 @@ export default function ProjetToolbar({
 
   return (
     <div style={{ background: 'var(--ai-violet)', padding: '10px 24px', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', fontFamily: 'var(--sans)', fontSize: '8pt' }}>
-      <Link href="/" style={{ color: 'var(--ai-gris)', textDecoration: 'none', fontWeight: 600 }}>← Portfolio</Link>
+      <Link href="/" onClick={handlePortfolioClick} style={{ color: 'var(--ai-gris)', textDecoration: 'none', fontWeight: 600 }}>← Portfolio</Link>
       <div style={{ flex: 1 }} />
 
       <label style={{ color: 'white', fontWeight: 600, marginRight: 4 }}>Template :</label>
@@ -194,26 +224,17 @@ export default function ProjetToolbar({
         ))}
       </select>
 
-      <Link
-        href={`/projet/${projet.slug}/edit`}
-        style={{ ...btn, background: 'transparent', border: '1px solid var(--ai-gris)', color: 'white', textDecoration: 'none' }}
-      >
-        Editer les champs
-      </Link>
-
-      {(template === 'Str-Env' || template === 'Dev') && onCropEditModeChange && (
-        <button
-          onClick={() => onCropEditModeChange(!cropEditMode)}
-          style={{
-            ...btn,
-            background: cropEditMode ? 'var(--ai-rouge)' : 'white',
-            color: cropEditMode ? 'white' : 'var(--ai-violet)',
-            border: 'none',
-          }}
-          title="Aligner les bords horizontaux des photos en recadrant non-destructivement"
+      {/* "Éditer les champs" + "Recadrer les photos" sont déplacés dans la
+          sidebar gauche pour les templates Str-Env / Dev (qui affichent la
+          LayoutSidebar). Pour les autres templates (Solo/Diptyque/Triptyque),
+          on garde "Éditer les champs" ici puisqu'il n'y a pas de sidebar. */}
+      {template !== 'Str-Env' && template !== 'Dev' && (
+        <Link
+          href={`/projet/${projet.slug}/edit`}
+          style={{ ...btn, background: 'transparent', border: '1px solid var(--ai-gris)', color: 'white', textDecoration: 'none' }}
         >
-          {cropEditMode ? '✓ Terminer le recadrage' : '✂ Recadrer les photos'}
-        </button>
+          Editer les champs
+        </Link>
       )}
 
       {(template === 'Str-Env' || template === 'Dev') && (
@@ -295,6 +316,51 @@ export default function ProjetToolbar({
       )}
       {promoteResult?.error && (
         <span style={{ color: '#ffaaaa', fontWeight: 600 }}>✗ {promoteResult.error}</span>
+      )}
+
+      {showLeaveModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 9999,
+          }}
+          onClick={() => setShowLeaveModal(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'white', padding: '24px 28px', borderRadius: 4,
+              maxWidth: 480, width: '90%',
+              fontFamily: 'var(--sans)', color: 'var(--ai-noir)',
+              boxShadow: '0 10px 30px rgba(0,0,0,0.25)',
+            }}
+          >
+            <h2 style={{ fontFamily: 'var(--serif)', fontSize: '14pt', fontWeight: 500, margin: '0 0 12px', color: 'var(--ai-violet)' }}>
+              Vous n&apos;avez pas sauvegardé la mise en page
+            </h2>
+            <p style={{ fontSize: '10pt', lineHeight: 1.5, margin: '0 0 20px', color: 'var(--ai-noir70)' }}>
+              Des modifications de mise en page typographique, photo principale, texte, photos additionnelles ou certifications n&apos;ont pas été enregistrées. Que voulez-vous faire ?
+            </p>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+              <button
+                onClick={handleLeaveWithoutSaving}
+                style={{ ...btn, background: 'white', color: 'var(--ai-noir70)', border: '1px solid #DFE4E8' }}
+              >
+                Quitter sans sauvegarder
+              </button>
+              <button
+                onClick={handleSaveAndLeave}
+                disabled={saveState === 'saving'}
+                style={{ ...btn, background: 'var(--ai-rouge)', color: 'white', border: 'none' }}
+              >
+                {saveState === 'saving' ? 'Sauvegarde…' : 'Sauvegarder la mise en page'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

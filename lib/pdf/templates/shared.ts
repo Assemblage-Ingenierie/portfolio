@@ -86,10 +86,21 @@ html, body { background: white; }
 .t-header {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  /* flex-end : les vignettes (gauche) sont alignées en bas, donc sur la
+     même ligne que les mots-clés (ligne basse de la colonne droite).
+     La hauteur du bandeau reste pilotée par la hauteur des vignettes
+     (10mm) — la colonne droite est plus courte, pas d'augmentation. */
+  align-items: flex-end;
   border-bottom: 1px solid var(--ai-rouge);
   padding-bottom: 3mm;
   font-family: var(--sans);
+}
+/* Colonne droite du bandeau : statut + mots-clés, alignés à droite. */
+.t-header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
 }
 /* Bandeau d'en-tête : 3 vignettes pôle (STR / ENV / DEV) à gauche,
    statut + année à droite. La vignette correspondant au pôle du projet
@@ -141,6 +152,14 @@ html, body { background: white; }
   font-size: 9pt; font-weight: 500;
   letter-spacing: 0.06em;
   color: var(--ai-rouge);
+}
+/* Mots-clés sous le statut — position figée pour toutes les fiches.
+   Format : #tag#tag concaténé sans séparateur. Couleur #30323E. */
+.t-header-keywords {
+  font-family: var(--sans); font-size: 8.5pt; font-weight: 400;
+  letter-spacing: 0.02em; color: #30323E;
+  margin-top: 1mm;
+  text-align: right;
 }
 
 /* Footer retiré du template — fonction footerHtml() renvoie '' désormais.
@@ -313,6 +332,12 @@ export function headerHtml(projet: Projet, options?: { isDev?: boolean }): strin
   const statusStyle = styleToCss(projet.bandeauConfig?.status);
   const vignettesHtml = buildHeaderVignettes(projet);
 
+  // Mots-clés en position figée sous le statut. Format #tag#tag sans
+  // séparateur, en couleur #30323E. Affiché pour toutes les fiches.
+  const keywordsHtml = (projet.motsCles && projet.motsCles.length > 0)
+    ? `<div class="t-header-keywords">${projet.motsCles.map((k) => `#${esc(k)}`).join('')}</div>`
+    : '';
+
   // Template Dev : affiche la période de prestation au lieu du statut + année.
   // Source : ProjectConfig.portfolio.{date_demarrage,date_fin_estimee}
   // (champ Airtable "Config template manuel"). Si absente, on retombe sur
@@ -325,7 +350,10 @@ export function headerHtml(projet: Projet, options?: { isDev?: boolean }): strin
     if (period) {
       return `<header class="t-header">
         <div class="t-header-vignettes">${vignettesHtml}</div>
-        <div class="t-header-statut"${statusStyle ? ` style="${statusStyle}"` : ''}>Période : ${esc(period)}</div>
+        <div class="t-header-right">
+          <div class="t-header-statut"${statusStyle ? ` style="${statusStyle}"` : ''}>Période : ${esc(period)}</div>
+          ${keywordsHtml}
+        </div>
       </header>`;
     }
   }
@@ -334,7 +362,10 @@ export function headerHtml(projet: Projet, options?: { isDev?: boolean }): strin
   const annee = projet.anneeLivraison ? ` · ${esc(String(projet.anneeLivraison))}` : '';
   return `<header class="t-header">
     <div class="t-header-vignettes">${vignettesHtml}</div>
-    <div class="t-header-statut"${statusStyle ? ` style="${statusStyle}"` : ''}>● ${esc(projet.statut)}${annee}</div>
+    <div class="t-header-right">
+      <div class="t-header-statut"${statusStyle ? ` style="${statusStyle}"` : ''}>● ${esc(projet.statut)}${annee}</div>
+      ${keywordsHtml}
+    </div>
   </header>`;
 }
 

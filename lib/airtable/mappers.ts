@@ -31,6 +31,10 @@ export const FIELD_MATERIAUX = 'fldC4SW9n1H2PZ3MH';
 // plusieurs valeurs. Le champ historique 'État avancement' reste utilisé en
 // fallback pour le statut canonique (single value).
 export const FIELD_STATUT = 'fldxXNdE0uNaomeby';
+// Mission AI (multi-select) — écrit par field ID en mutation.
+export const FIELD_MISSION_AI = 'fldgkpweXw9BypQfX';
+// Certification (rich text Markdown depuis 2026) — écrit par field ID.
+export const FIELD_CERTIFICATION = 'fldnb9rfM4C3m9Pcu';
 
 /**
  * Valeurs auxiliaires injectées dans le mapper.
