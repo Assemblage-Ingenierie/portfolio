@@ -41,6 +41,10 @@ function multiValueCellsFromProjet(projet: Projet | undefined): Map<MetaLabel, s
     ['Mission AI',    projet.missionAiValues && projet.missionAiValues.length > 0
                         ? projet.missionAiValues
                         : splitCsv(projet.missionAi)],
+    // Matériaux : multi-select Airtable, exposé dans le bandeau après Programme.
+    // L'utilisateur peut ajuster les sauts de ligne entre matériaux comme pour
+    // les autres multi-valeurs.
+    ['Matériaux',     projet.materiaux ?? []],
   ];
   for (const [label, values] of candidates) {
     if (values.length >= 2) result.set(label, values);
