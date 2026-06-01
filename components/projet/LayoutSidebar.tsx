@@ -69,17 +69,45 @@ function truncateFilename(name: string | undefined, maxLen = 18): string {
 interface SliderProps {
   label: string; value: number; onChange: (v: number) => void;
   min?: number; max?: number; step?: number; unit?: string;
+  /** Si défini : seuil au-dessus duquel le slider n'a plus d'effet visuel
+   *  (la photo a atteint sa taille naturelle max). La portion droite du
+   *  rail est grisée pour signaler la zone "morte". */
+  saturatedAbove?: number;
 }
 
-function Slider({ label, value, onChange, min = 25, max = 100, step = 5, unit = '%' }: SliderProps) {
+function Slider({ label, value, onChange, min = 25, max = 100, step = 5, unit = '%', saturatedAbove }: SliderProps) {
+  const showOverlay =
+    typeof saturatedAbove === 'number' &&
+    Number.isFinite(saturatedAbove) &&
+    saturatedAbove > min &&
+    saturatedAbove < max;
+  const overlayLeftPct = showOverlay ? ((saturatedAbove - min) / (max - min)) * 100 : 0;
   return (
     <div style={ROW}>
       <span style={{ minWidth: 60, color: 'var(--ai-noir70)' }}>{label}</span>
-      <input
-        type="range" min={min} max={max} step={step} value={value}
-        onChange={e => onChange(Number(e.target.value))}
-        style={{ flex: 1, accentColor: '#E30513' }}
-      />
+      <div style={{ position: 'relative', flex: 1, display: 'flex', alignItems: 'center' }}>
+        <input
+          type="range" min={min} max={max} step={step} value={value}
+          onChange={e => onChange(Number(e.target.value))}
+          style={{ flex: 1, accentColor: '#E30513', width: '100%' }}
+        />
+        {showOverlay && (
+          <div
+            title={`Taille maximale atteinte à ${saturatedAbove}% — au-delà la photo ne grandit plus.`}
+            style={{
+              position: 'absolute',
+              left: `${overlayLeftPct}%`,
+              right: 0,
+              top: '50%',
+              height: 6,
+              marginTop: -3,
+              background: 'rgba(155, 155, 155, 0.55)',
+              pointerEvents: 'none',
+              borderRadius: 3,
+            }}
+          />
+        )}
+      </div>
       <input
         type="number" min={min} max={max} step={1} value={value}
         onChange={e => {
@@ -95,6 +123,43 @@ function Slider({ label, value, onChange, min = 25, max = 100, step = 5, unit = 
       <span style={{ minWidth: 14, color: 'var(--ai-noir70)' }}>{unit}</span>
     </div>
   );
+}
+
+/**
+ * Mesure les dimensions naturelles d'une image. Renvoie null tant que l'image
+ * n'est pas chargée (utilisé pour la détection de saturation des sliders Taille).
+ */
+function useImageNaturalSize(url: string | undefined): { width: number; height: number } | null {
+  const [size, setSize] = useState<{ width: number; height: number } | null>(null);
+  useEffect(() => {
+    if (!url) { setSize(null); return; }
+    let cancelled = false;
+    const img = new window.Image();
+    img.onload = () => {
+      if (!cancelled) setSize({ width: img.naturalWidth, height: img.naturalHeight });
+    };
+    img.src = url;
+    return () => { cancelled = true; };
+  }, [url]);
+  return size;
+}
+
+/**
+ * Conversion px → mm à 96 DPI (standard CSS pour les exports PDF / iframe).
+ * Si la photo naturelle est plus petite que le conteneur, elle sature avant
+ * d'atteindre 100% du slider — on retourne ce seuil pour grisage visuel.
+ */
+const MM_PER_PX = 25.4 / 96;
+function photoSaturationPercent(
+  natural: { width: number; height: number } | null,
+  containerWidthMm: number,
+): number | undefined {
+  if (!natural) return undefined;
+  const naturalMm = natural.width * MM_PER_PX;
+  if (naturalMm >= containerWidthMm) return undefined;
+  const pct = Math.round((naturalMm / containerWidthMm) * 100);
+  if (pct < 25 || pct >= 100) return undefined;
+  return pct;
 }
 
 // ─── Contenant générique d'un panneau ────────────────────────────────────────
@@ -117,6 +182,17 @@ function MainPhotoSection({ projet, config, onChange }: MainPhotoProps) {
     value: i,
     label: `Photo ${i + 1}${p.filename ? ` — ${truncateFilename(p.filename)}` : ''}`,
   }));
+  // Container approximatif de la photo principale en paysage : largeur utile
+  // d'une page A4 moins les marges latérales (~186mm). Détecte la saturation
+  // du slider Taille 1 pour griser la portion sans effet. En mode portrait
+  // la photo principale est rendue dans une grille N colonnes — on ignore
+  // pour l'instant (saturation plus rare, calcul plus complexe).
+  const CONTAINER_PAYSAGE_MM = 186;
+  const mainPhotoUrl = photos[config.mainPhoto.index]?.url;
+  const mainNaturalSize = useImageNaturalSize(mainPhotoUrl);
+  const mainSaturatedAbove = config.mainPhotoFormat === 'paysage'
+    ? photoSaturationPercent(mainNaturalSize, CONTAINER_PAYSAGE_MM)
+    : undefined;
 
   const setMain = (patch: Partial<PhotoConfig>) =>
     onChange({ ...config, mainPhoto: { ...config.mainPhoto, ...patch } });
@@ -168,7 +244,7 @@ function MainPhotoSection({ projet, config, onChange }: MainPhotoProps) {
           {photoOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
       </div>
-      <Slider label="Taille 1" value={config.mainPhoto.sizePercent} onChange={v => setMain({ sizePercent: v })} />
+      <Slider label="Taille 1" value={config.mainPhoto.sizePercent} onChange={v => setMain({ sizePercent: v })} saturatedAbove={mainSaturatedAbove} />
       <Slider label="Horizontal 1" value={config.mainPhoto.offsetPercent ?? 50} onChange={v => setMain({ offsetPercent: v })} min={0} max={100} step={5} />
       <Slider label="Vertical 1" value={config.mainPhoto.offsetVerticalPercent ?? 50} onChange={v => setMain({ offsetVerticalPercent: v })} min={0} max={100} step={5} />
 
@@ -258,6 +334,26 @@ function ExtraPhotosSection({ projet, config, onChange }: ExtraProps) {
     label: `Photo ${i + 1}${p.filename ? ` — ${truncateFilename(p.filename)}` : ''}`,
   }));
   const extras = config.extraPhotos ?? [];
+  // Container des photos additionnelles : largeur utile A4 ~186mm. Chaque
+  // slot grandit jusqu'à cette largeur quand sizePercent=100. Si la photo
+  // naturelle est plus petite, on grise la portion morte du slider.
+  const EXTRA_CONTAINER_MM = 186;
+  // Hook appelé pour chaque slot extra (max 5). Les hooks doivent être appelés
+  // dans le même ordre à chaque render → on alloue les 5 slots inconditionnellement.
+  const extraUrl0 = photos[extras[0]?.index ?? 0]?.url;
+  const extraUrl1 = photos[extras[1]?.index ?? 0]?.url;
+  const extraUrl2 = photos[extras[2]?.index ?? 0]?.url;
+  const extraUrl3 = photos[extras[3]?.index ?? 0]?.url;
+  const extraUrl4 = photos[extras[4]?.index ?? 0]?.url;
+  const extraSizes = [
+    useImageNaturalSize(extras[0] ? extraUrl0 : undefined),
+    useImageNaturalSize(extras[1] ? extraUrl1 : undefined),
+    useImageNaturalSize(extras[2] ? extraUrl2 : undefined),
+    useImageNaturalSize(extras[3] ? extraUrl3 : undefined),
+    useImageNaturalSize(extras[4] ? extraUrl4 : undefined),
+  ];
+  const extraSaturatedAbove = (i: number): number | undefined =>
+    photoSaturationPercent(extraSizes[i] ?? null, EXTRA_CONTAINER_MM);
 
   const toggleExtras = () => {
     if (extras.length > 0) onChange({ ...config, extraPhotos: [] });
@@ -320,7 +416,7 @@ function ExtraPhotosSection({ projet, config, onChange }: ExtraProps) {
                 {photoOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
             </div>
-            <div style={SUBROW}><Slider label={`Taille ${i + 1}`} value={e.sizePercent} onChange={v => setExtraAt(i, { sizePercent: v })} /></div>
+            <div style={SUBROW}><Slider label={`Taille ${i + 1}`} value={e.sizePercent} onChange={v => setExtraAt(i, { sizePercent: v })} saturatedAbove={extraSaturatedAbove(i)} /></div>
             <div style={SUBROW}><Slider label={`Horizontal ${i + 1}`} value={e.offsetPercent ?? 50} onChange={v => setExtraAt(i, { offsetPercent: v })} min={0} max={100} step={5} /></div>
             <div style={SUBROW}><Slider label={`Vertical ${i + 1}`} value={e.offsetVerticalPercent ?? 50} onChange={v => setExtraAt(i, { offsetVerticalPercent: v })} min={0} max={100} step={5} /></div>
           </div>

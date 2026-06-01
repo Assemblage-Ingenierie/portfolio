@@ -1,5 +1,5 @@
 import type { Projet } from '@/types/projet';
-import { renderMarkdown } from '@/lib/utils/markdown';
+import { renderMarkdown, injectSoftHyphensFr } from '@/lib/utils/markdown';
 import { styleToCss, linesToCss, titleMetaGapCss } from '@/lib/pdf/bandeauConfig';
 import { croppedPhotoHtml, isMeaningfulCrop, photoCropKey } from '@/lib/pdf/photoCrop';
 
@@ -219,7 +219,12 @@ html, body { background: white; }
 }
 /* Bloc markdown rendu (description rich text Airtable) — défaut design
    system : Open Sans 9pt (modifiable via BandeauConfig.description). */
-.t-texte-md { font-family: var(--sans); font-size: 9pt; line-height: 1.5; color: var(--ai-noir); }
+/* Description : césure limitée. hyphens:manual n'autorise les coupures
+   QUE sur les soft hyphens (U+00AD) injectés par injectSoftHyphensFr() — qui
+   place un seul soft hyphen à 2 caractères de la fin de chaque mot >= 6
+   lettres. Résultat : le navigateur ne coupe un mot que si nécessaire et
+   toujours en laissant un orphelin de 2 caractères max sur la ligne suivante. */
+.t-texte-md { font-family: var(--sans); font-size: 9pt; line-height: 1.5; color: var(--ai-noir); hyphens: manual; -webkit-hyphens: manual; }
 .t-texte-md p { margin: 0 0 2.5mm; }
 .t-texte-md p:last-child { margin-bottom: 0; }
 .t-texte-md strong { font-weight: 700; }
@@ -604,11 +609,11 @@ export function descriptionHtml(projet: Projet, columns: 1 | 2 = 1, singleParagr
 
   if (singleParagraph) {
     const flat = text.replace(/\s*\n+\s*/g, ' ');
-    return `<div class="t-texte-md t-texte-md--inline"${styleAttr}>${renderMarkdown(flat)}</div>`;
+    return `<div class="t-texte-md t-texte-md--inline"${styleAttr}>${injectSoftHyphensFr(renderMarkdown(flat))}</div>`;
   }
 
   const cls = columns === 2 ? 't-texte-md t-texte-cols-2' : 't-texte-md';
-  return `<div class="${cls}"${styleAttr}>${renderMarkdown(text)}</div>`;
+  return `<div class="${cls}"${styleAttr}>${injectSoftHyphensFr(renderMarkdown(text))}</div>`;
 }
 
 export function photoImg(

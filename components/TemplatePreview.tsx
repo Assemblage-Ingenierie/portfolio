@@ -36,6 +36,16 @@ export default function TemplatePreview({
     [projet, manualConfig]
   );
 
+  // Hash léger sur le html : utilisé en `key` sur l'<iframe>. Garantit le
+  // remount de l'iframe quand le contenu change, contournement d'un cas
+  // ou Chrome n'invalidait pas la doc malgré la mise à jour de l'attribut
+  // `srcDoc` (reproduit sur l'annulation d'un saut de ligne dans le bandeau).
+  const iframeKey = useMemo(() => {
+    let h = 0;
+    for (let i = 0; i < html.length; i++) h = ((h << 5) - h + html.charCodeAt(i)) | 0;
+    return h;
+  }, [html]);
+
   // Mesure le débordement à chaque fois que le HTML change ou que l'iframe
   // charge. On laisse aux fonts/images le temps de se stabiliser.
   useEffect(() => {
@@ -117,6 +127,7 @@ export default function TemplatePreview({
         </div>
       )}
       <iframe
+        key={iframeKey}
         ref={iframeRef}
         title={`Aperçu — ${projet.nom}`}
         srcDoc={html}
