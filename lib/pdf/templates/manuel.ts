@@ -1,5 +1,5 @@
 import type { Projet } from '@/types/projet';
-import { renderMarkdown } from '@/lib/utils/markdown';
+import { renderMarkdown, injectSoftHyphensFr } from '@/lib/utils/markdown';
 import { styleToCss, photoTextGapCss } from '@/lib/pdf/bandeauConfig';
 import {
   TemplateBundle,
@@ -242,7 +242,7 @@ function paragraphsToHtml(text: string): string {
   // sur '.' donc il peut être tronqué au milieu d'un span gras / italique :
   // marked tolère les paires non-fermées en les laissant tel quel, ce qui
   // est acceptable pour le template Manuel (texte délibérément coupé).
-  return renderMarkdown(text);
+  return injectSoftHyphensFr(renderMarkdown(text));
 }
 
 /**

@@ -4,7 +4,7 @@ import {
   headerHtml, footerHtml, titleBlockHtml, metaGridHtml,
   photoImg, allPhotos,
 } from './shared';
-import { renderMarkdown } from '@/lib/utils/markdown';
+import { renderMarkdown, injectSoftHyphensFr } from '@/lib/utils/markdown';
 import { styleToCss } from '@/lib/pdf/bandeauConfig';
 
 /**
@@ -216,7 +216,7 @@ export function renderTriptyque(projet: Projet): TemplateBundle {
   const descStyle = styleToCss(projet.bandeauConfig?.description);
   const textHtml = description || extraPhoto
     ? `<div class="tri-text t-texte-md"${descStyle ? ` style="${descStyle}"` : ''}>
-        ${renderMarkdown(description)}
+        ${injectSoftHyphensFr(renderMarkdown(description))}
         ${extraPhoto ? `<div class="tri-extra-photo photo-frame" style="--extra-photo-max:${extraPhotoMaxHeight}mm">${photoImg(extraPhoto, projet.nom, projet)}</div>` : ''}
       </div>`
     : '';

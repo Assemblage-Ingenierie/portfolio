@@ -69,6 +69,41 @@ function multiValueCellsFromProjet(projet: Projet | undefined): Map<MetaLabel, s
   return result;
 }
 
+/** Cellules single-value dont la valeur est suffisamment longue pour mériter
+ *  une option de saut de ligne intra-valeur (mot par mot). Seuil : > 10
+ *  caractères ET au moins 2 tokens après split sur whitespace. Renvoie une
+ *  Map<label, tokens[]> alignée sur le tokenize qui sera fait au rendu
+ *  (`renderValues` dans shared.ts utilise le même `split(/\s+/)`). */
+function singleLongCellsFromProjet(projet: Projet | undefined): Map<MetaLabel, string[]> {
+  const result = new Map<MetaLabel, string[]>();
+  if (!projet) return result;
+  // Liste des cellules single-value candidates dans le bandeau (cf.
+  // metaGridHtml). On exclut Programme : sa cellule a un sub-titre dédié
+  // (programmeSecondaire) qui complique le rendu — pas de besoin métier
+  // remonté pour wrapper le programme principal.
+  const candidates: Array<[MetaLabel, string | undefined]> = [
+    // Pour les CRM multi-valeurs séparées par virgules, on vérifie aussi
+    // ici le cas single (1 valeur). Si la valeur est multi-valeur, elle
+    // est gérée par multiValueCellsFromProjet ci-dessus.
+    ['MOA',           projet.moa],
+    ['Bailleur',      projet.bailleur],
+    ['Architecte',    projet.architecte],
+    ['BET associés',  projet.betAssocies],
+    ['Entreprise',    projet.entreprise],
+  ];
+  for (const [label, raw] of candidates) {
+    const v = (raw ?? '').trim();
+    if (!v) continue;
+    // Exclure les multi-valeurs (déjà traitées par breaks classiques).
+    if (v.includes(',')) continue;
+    if (v.length <= 10) continue;
+    const tokens = v.split(/\s+/).filter(Boolean);
+    if (tokens.length < 2) continue;
+    result.set(label, tokens);
+  }
+  return result;
+}
+
 type StyleSectionKey = Exclude<keyof BandeauConfig, 'lines' | 'titleMetaGap' | 'photoTextGap' | 'programme' | 'cells'>;
 
 const SECTIONS: { key: StyleSectionKey; label: string; help: string }[] = [
@@ -293,6 +328,7 @@ export { StyleRow };
 
 export default function BandeauConfigPanel({ value, onChange, projet, onResetAll }: Props) {
   const multiValueCells = multiValueCellsFromProjet(projet);
+  const singleLongCells = singleLongCellsFromProjet(projet);
   // Mode de vue (admin = full UI, user = restreint à Cellules du bandeau +
   // Cellule Programme). Géré dans `lib/auth/useViewMode.ts` ; le toggle est
   // dans la toolbar (visible uniquement pour les profils Supabase admin).
@@ -361,17 +397,26 @@ export default function BandeauConfigPanel({ value, onChange, projet, onResetAll
       <CellsLayoutRow
         value={value.cells}
         multiValueCells={multiValueCells}
+        singleLongCells={singleLongCells}
         onChange={(c) => {
-          const next = { ...value };
           const empty = !c || (
             !c.layout &&
             !c.gap &&
             (!c.weights || Object.keys(c.weights).length === 0) &&
-            (!c.breaks || Object.keys(c.breaks).length === 0)
+            (!c.breaks || Object.keys(c.breaks).length === 0) &&
+            (!c.wordBreaks || Object.keys(c.wordBreaks).length === 0)
           );
-          if (empty) delete next.cells;
-          else next.cells = c;
-          onChange(next);
+          // Reconstruction explicite : on retire la clé `cells` via destructuration
+          // au lieu de `delete next.cells` sur un shallow spread. Garantit une
+          // nouvelle référence d'objet à chaque toggle (fix du bug "le bandeau
+          // ne se met pas à jour quand on annule le dernier saut de ligne").
+          if (empty) {
+            const { cells: _omitCells, ...rest } = value;
+            void _omitCells;
+            onChange(rest);
+          } else {
+            onChange({ ...value, cells: c });
+          }
         }}
       />
       <ProgrammeOptionsRow
@@ -486,16 +531,19 @@ function TitleMetaGapRow({ value, onChange }: { value: number | undefined; onCha
 function CellsLayoutRow({
   value,
   multiValueCells,
+  singleLongCells,
   onChange,
 }: {
   value: BandeauCellsConfig | undefined;
   multiValueCells: Map<MetaLabel, string[]>;
+  singleLongCells: Map<MetaLabel, string[]>;
   onChange: (v: BandeauCellsConfig | undefined) => void;
 }) {
   const layout: CellsLayout = value?.layout ?? 'content';
   const gap = value?.gap;
   const weights: Partial<Record<MetaLabel, number>> = value?.weights ?? {};
   const breaks: Partial<Record<MetaLabel, number[]>> = value?.breaks ?? {};
+  const wordBreaks: Partial<Record<MetaLabel, number[]>> = value?.wordBreaks ?? {};
 
   const setLayout = (next: CellsLayout) => {
     // Pas la peine de persister 'content' (= défaut) si rien d'autre n'est défini.
@@ -522,23 +570,44 @@ function CellsLayoutRow({
     else out.weights = nextWeights;
     onChange(out);
   };
-  /** Toggle un saut de ligne après la valeur d'index `idx` dans la cellule
-   *  `label`. Stocké comme array trié d'indices dans `breaks[label]`. */
-  const toggleBreak = (label: MetaLabel, idx: number) => {
-    const current = new Set(breaks[label] ?? []);
+  /** Toggle un saut de ligne dans une cellule. `store` indique sur quel
+   *  champ on agit : 'breaks' (multi-valeur, idx = index de valeur) ou
+   *  'wordBreaks' (single-value long, idx = index de token).
+   *  Reconstruit toujours un nouvel objet `out` (pas de mutation in-place)
+   *  pour garantir que React voit un changement de référence et re-render
+   *  l'aperçu. Cf. fix bug "le bandeau ne se met pas à jour quand on
+   *  annule le dernier saut de ligne". */
+  const toggleBreakIn = (
+    store: 'breaks' | 'wordBreaks',
+    label: MetaLabel,
+    idx: number,
+  ) => {
+    const source = store === 'breaks' ? breaks : wordBreaks;
+    const current = new Set(source[label] ?? []);
     if (current.has(idx)) current.delete(idx);
     else current.add(idx);
-    const out: BandeauCellsConfig = { ...(value ?? {}) };
-    const nextBreaks: Partial<Record<MetaLabel, number[]>> = { ...breaks };
+    const nextStore: Partial<Record<MetaLabel, number[]>> = { ...source };
     if (current.size === 0) {
-      delete nextBreaks[label];
+      delete nextStore[label];
     } else {
-      nextBreaks[label] = [...current].sort((a, b) => a - b);
+      nextStore[label] = [...current].sort((a, b) => a - b);
     }
-    if (Object.keys(nextBreaks).length === 0) delete out.breaks;
-    else out.breaks = nextBreaks;
-    onChange(out);
+    // Reconstruction explicite sans `delete` mutatif. Si le store cible est
+    // vide après l'opération, on omet la clé via destructuration.
+    const empty = Object.keys(nextStore).length === 0;
+    const base: BandeauCellsConfig = { ...(value ?? {}) };
+    if (store === 'breaks') {
+      const { breaks: _omit, ...rest } = base;
+      void _omit;
+      onChange(empty ? rest : { ...rest, breaks: nextStore });
+    } else {
+      const { wordBreaks: _omit, ...rest } = base;
+      void _omit;
+      onChange(empty ? rest : { ...rest, wordBreaks: nextStore });
+    }
   };
+  const toggleBreak = (label: MetaLabel, idx: number) => toggleBreakIn('breaks', label, idx);
+  const toggleWordBreak = (label: MetaLabel, idx: number) => toggleBreakIn('wordBreaks', label, idx);
 
   const layoutBtn = (active: boolean): React.CSSProperties => ({
     padding: '6px 12px', borderRadius: 2, cursor: 'pointer',
@@ -681,6 +750,83 @@ function CellsLayoutRow({
                               }}
                             >
                               {isBreak ? '↵' : ','}
+                            </button>
+                          )}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </details>
+      )}
+
+      {singleLongCells.size > 0 && (
+        <details
+          open={Object.keys(wordBreaks).length > 0}
+          style={{ marginTop: '8px' }}
+        >
+          <summary
+            style={{
+              cursor: 'pointer',
+              fontFamily: 'var(--sans)', fontSize: '8pt', fontWeight: 700,
+              letterSpacing: '0.06em', textTransform: 'uppercase',
+              color: Object.keys(wordBreaks).length > 0 ? 'var(--ai-rouge)' : 'var(--ai-noir70)',
+              padding: '6px 0',
+              userSelect: 'none', listStyle: 'none',
+            }}
+          >
+            ▸ Sauts de ligne intra-valeur{Object.keys(wordBreaks).length > 0 ? ` • ${Object.keys(wordBreaks).length}` : ''}
+          </summary>
+          <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', margin: '6px 0 10px' }}>
+            Pour les cellules avec une valeur longue (&gt; 10 caractères), clique sur l&apos;espace entre deux mots pour basculer entre espace inline et saut de ligne. Utile pour wrapper « Ministère de l&apos;Éducation nationale ».
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {[...singleLongCells.entries()].map(([label, tokens]) => {
+              const wbSet = new Set(wordBreaks[label] ?? []);
+              return (
+                <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <span style={{ fontSize: '8pt', color: 'var(--ai-noir70)', fontWeight: 600 }}>{label}</span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px' }}>
+                    {tokens.map((t, idx) => {
+                      const isLast = idx === tokens.length - 1;
+                      const isBreak = wbSet.has(idx);
+                      return (
+                        <span key={`${label}-${idx}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <span
+                            style={{
+                              display: 'inline-block',
+                              background: '#F2F2F2',
+                              border: '1px solid #DFE4E8',
+                              borderRadius: 2,
+                              padding: '3px 7px',
+                              fontSize: '9pt',
+                              color: 'var(--ai-noir)',
+                            }}
+                          >
+                            {t}
+                          </span>
+                          {!isLast && (
+                            <button
+                              type="button"
+                              onClick={() => toggleWordBreak(label, idx)}
+                              title={isBreak ? `Saut de ligne après "${t}". Cliquer pour rendre inline.` : `"${t}" et "${tokens[idx + 1]}" sont sur la même ligne. Cliquer pour ajouter un saut de ligne.`}
+                              style={{
+                                cursor: 'pointer',
+                                background: isBreak ? 'var(--ai-rouge)' : 'white',
+                                color: isBreak ? 'white' : 'var(--ai-noir70)',
+                                border: isBreak ? '1px solid var(--ai-rouge)' : '1px solid #DFE4E8',
+                                borderRadius: 2,
+                                width: 28,
+                                height: 24,
+                                fontFamily: 'var(--sans)', fontSize: '10pt', fontWeight: 700,
+                                padding: 0,
+                                lineHeight: 1,
+                              }}
+                            >
+                              {isBreak ? '↵' : '·'}
                             </button>
                           )}
                         </span>
