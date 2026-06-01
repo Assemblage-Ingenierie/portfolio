@@ -535,13 +535,17 @@ export default function PortfolioGrid({ projets }: Props) {
       {viewMode === 'grid' ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '16px' }}>
           {filtered.map(projet => (
-            <Link key={projet.slug} href={`/projet/${projet.slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-              <article style={{ background: 'white', borderRadius: '2px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', cursor: 'pointer' }}>
+            <Link key={projet.slug} href={`/projet/${projet.slug}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}>
+              {/* Tuile uniforme : height 100% (la grille align-items: stretch
+                  par défaut + height 100% sur le Link force toutes les tuiles
+                  d'une même rangée à la même hauteur). Image en aspect-ratio
+                  fixe pour un rendu cohérent quelle que soit la photo source. */}
+              <article style={{ background: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', cursor: 'pointer', height: '100%', display: 'flex', flexDirection: 'column' }}>
                 {projet.photoCouverture
-                  ? <div style={{ height: '130px', backgroundImage: `url(${projet.photoCouverture.url})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
-                  : <div style={{ height: '130px', background: 'var(--ai-gris)' }} />
+                  ? <div style={{ aspectRatio: '16 / 10', width: '100%', backgroundImage: `url(${projet.photoCouverture.url})`, backgroundSize: 'cover', backgroundPosition: 'center', flexShrink: 0 }} />
+                  : <div style={{ aspectRatio: '16 / 10', width: '100%', background: 'var(--ai-gris)', flexShrink: 0 }} />
                 }
-                <div style={{ padding: '12px' }}>
+                <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', flex: 1 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '5px' }}>
                     <span style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--ai-noir70)' }}>
                       {projet.affaire}
@@ -552,7 +556,7 @@ export default function PortfolioGrid({ projets }: Props) {
                     {projet.nom}
                   </h2>
                   {projet.moa && <p style={{ fontSize: '8pt', color: 'var(--ai-noir70)', marginBottom: '2px' }}>{projet.moa}</p>}
-                  <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                  <div style={{ display: 'flex', gap: '8px', marginTop: 'auto', paddingTop: '4px' }}>
                     {projet.anneeLivraison && <span style={{ fontSize: '8pt', color: 'var(--ai-rouge)', fontWeight: 600 }}>{projet.anneeLivraison}</span>}
                     {projet.pole && <span style={{ fontSize: '7pt', color: 'var(--ai-noir70)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{projet.pole}</span>}
                   </div>
