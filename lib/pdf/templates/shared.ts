@@ -86,10 +86,21 @@ html, body { background: white; }
 .t-header {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  /* flex-end : les vignettes (gauche) sont alignées en bas, donc sur la
+     même ligne que les mots-clés (ligne basse de la colonne droite).
+     La hauteur du bandeau reste pilotée par la hauteur des vignettes
+     (10mm) — la colonne droite est plus courte, pas d'augmentation. */
+  align-items: flex-end;
   border-bottom: 1px solid var(--ai-rouge);
   padding-bottom: 3mm;
   font-family: var(--sans);
+}
+/* Colonne droite du bandeau : statut + mots-clés, alignés à droite. */
+.t-header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
 }
 /* Bandeau d'en-tête : 3 vignettes pôle (STR / ENV / DEV) à gauche,
    statut + année à droite. La vignette correspondant au pôle du projet
@@ -339,7 +350,7 @@ export function headerHtml(projet: Projet, options?: { isDev?: boolean }): strin
     if (period) {
       return `<header class="t-header">
         <div class="t-header-vignettes">${vignettesHtml}</div>
-        <div>
+        <div class="t-header-right">
           <div class="t-header-statut"${statusStyle ? ` style="${statusStyle}"` : ''}>Période : ${esc(period)}</div>
           ${keywordsHtml}
         </div>
@@ -351,7 +362,7 @@ export function headerHtml(projet: Projet, options?: { isDev?: boolean }): strin
   const annee = projet.anneeLivraison ? ` · ${esc(String(projet.anneeLivraison))}` : '';
   return `<header class="t-header">
     <div class="t-header-vignettes">${vignettesHtml}</div>
-    <div>
+    <div class="t-header-right">
       <div class="t-header-statut"${statusStyle ? ` style="${statusStyle}"` : ''}>● ${esc(projet.statut)}${annee}</div>
       ${keywordsHtml}
     </div>
