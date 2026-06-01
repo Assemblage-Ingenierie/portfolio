@@ -35,7 +35,7 @@ function Badge({ statut }: { statut: Statut }) {
       fontSize: '7pt', fontWeight: 700, padding: '2px 6px',
       background: STATUT_BG[statut] ?? '#eee',
       color: STATUT_COLOR[statut] ?? '#333',
-      borderRadius: '2px', whiteSpace: 'nowrap',
+      borderRadius: '6px', whiteSpace: 'nowrap',
     }}>
       {statut}
     </span>
@@ -260,7 +260,7 @@ export default function PortfolioGrid({ projets }: Props) {
   };
 
   const btn = (active: boolean): React.CSSProperties => ({
-    padding: '4px 12px', borderRadius: '2px', cursor: 'pointer',
+    padding: '4px 12px', borderRadius: '6px', cursor: 'pointer',
     fontFamily: 'var(--sans)', fontSize: '8pt', fontWeight: 700,
     border: active ? 'none' : '1px solid #DFE4E8',
     background: active ? 'var(--ai-rouge)' : 'white',
@@ -296,7 +296,7 @@ export default function PortfolioGrid({ projets }: Props) {
                 fontWeight: 700,
                 letterSpacing: '0.05em',
                 textDecoration: 'none',
-                borderRadius: 2,
+                borderRadius: 8,
                 textAlign: 'center',
               }}
             >
@@ -313,7 +313,7 @@ export default function PortfolioGrid({ projets }: Props) {
                 fontWeight: 700,
                 letterSpacing: '0.05em',
                 textDecoration: 'none',
-                borderRadius: 2,
+                borderRadius: 8,
                 textAlign: 'center',
               }}
             >
@@ -335,7 +335,7 @@ export default function PortfolioGrid({ projets }: Props) {
           onChange={e => setSearch(e.target.value)}
           style={{
             flex: 1, padding: '8px 12px', fontFamily: 'var(--sans)', fontSize: '9pt',
-            border: '1px solid #DFE4E8', borderRadius: '2px', outline: 'none',
+            border: '1px solid #DFE4E8', borderRadius: '8px', outline: 'none',
             background: 'white',
           }}
         />
@@ -359,7 +359,7 @@ export default function PortfolioGrid({ projets }: Props) {
       <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
 
       <aside style={{ flex: '0 0 220px', position: 'sticky', top: 24, alignSelf: 'flex-start' }}>
-        <div style={{ background: 'white', border: '1px solid #DFE4E8', borderRadius: 2, overflow: 'hidden' }}>
+        <div style={{ background: 'white', border: '1px solid #DFE4E8', borderRadius: 12, overflow: 'hidden' }}>
           <button
             onClick={() => setWorkflowOpen((v) => !v)}
             style={{
@@ -440,7 +440,7 @@ export default function PortfolioGrid({ projets }: Props) {
       {/* Filters bar — disposition compacte : les petits filtres (Pôle ·
           Statut · Type · Année) tiennent sur la 1re rangée ; Programme
           (multi-select large) flue naturellement sur la rangée suivante. */}
-      <div style={{ background: 'white', border: '1px solid #DFE4E8', borderRadius: '2px', padding: '10px 14px', marginBottom: '20px', display: 'flex', flexWrap: 'wrap', gap: '14px 20px', alignItems: 'flex-start' }}>
+      <div style={{ background: 'white', border: '1px solid #DFE4E8', borderRadius: '12px', padding: '10px 14px', marginBottom: '20px', display: 'flex', flexWrap: 'wrap', gap: '14px 20px', alignItems: 'flex-start' }}>
 
         {/* Pôle — multi-sélection, intersection AND */}
         <div>
@@ -566,7 +566,7 @@ export default function PortfolioGrid({ projets }: Props) {
           ))}
         </div>
       ) : (
-        <div style={{ background: 'white', borderRadius: '2px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+        <div style={{ background: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
           {filtered.map((projet, i) => (
             <Link key={projet.slug} href={`/projet/${projet.slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
               <div style={{
