@@ -407,6 +407,23 @@ export function metaGridHtml(projet: Projet, options?: { isDev?: boolean }): str
     return v.split(/\s*,\s*/).map(s => s.trim()).filter(Boolean);
   };
 
+  /** Collapse "AMO ENV" / "AMO DEV" → "AMO" dans une liste de Mission AI.
+   *  Si l'une de ces deux valeurs (ou les deux) est présente, on les retire
+   *  et on insère un seul "AMO" à leur place (en préservant l'ordre relatif).
+   *  Les autres valeurs (ex. "MOE", "OPC") passent inchangées. */
+  const collapseAmoMissionAi = (values: string[]): string[] => {
+    const out: string[] = [];
+    let amoInserted = false;
+    for (const v of values) {
+      if (v === 'AMO ENV' || v === 'AMO DEV') {
+        if (!amoInserted) { out.push('AMO'); amoInserted = true; }
+        continue;
+      }
+      out.push(v);
+    }
+    return out;
+  };
+
   // Programme : principal en valeur principale, secondaire en sous-titre.
   // Helper utilisé par les deux templates.
   // L'utilisateur peut choisir de masquer le secondaire via
@@ -449,7 +466,7 @@ export function metaGridHtml(projet: Projet, options?: { isDev?: boolean }): str
     if (budgetSurfaceValues.length)   items.push({ label: 'Budget/Surface',   values: budgetSurfaceValues });
     if (programmeItem)                items.push(programmeItem);
     if (materiauxValues.length)       items.push({ label: 'Matériaux',        values: materiauxValues });
-    if (projet.missionAi)             items.push({ label: 'Mission AI',       values: projet.missionAiValues && projet.missionAiValues.length > 0 ? projet.missionAiValues : splitCsv(projet.missionAi) });
+    if (projet.missionAi)             items.push({ label: 'Mission AI',       values: collapseAmoMissionAi(projet.missionAiValues && projet.missionAiValues.length > 0 ? projet.missionAiValues : splitCsv(projet.missionAi)) });
     if (projet.betAssocies)           items.push({ label: 'BET associés',     values: splitCsv(projet.betAssocies) });
   } else {
     // Bandeau Str-Env — ordre historique + BET associés inséré juste après
@@ -460,7 +477,7 @@ export function metaGridHtml(projet: Projet, options?: { isDev?: boolean }): str
     if (projet.betAssocies)           items.push({ label: 'BET associés',     values: splitCsv(projet.betAssocies) });
     if (budgetSurfaceValues.length)   items.push({ label: 'Budget/Surface',   values: budgetSurfaceValues });
     if (projet.entreprise)            items.push({ label: 'Entreprise',       values: splitCsv(projet.entreprise) });
-    if (projet.missionAi)             items.push({ label: 'Mission AI',       values: projet.missionAiValues && projet.missionAiValues.length > 0 ? projet.missionAiValues : splitCsv(projet.missionAi) });
+    if (projet.missionAi)             items.push({ label: 'Mission AI',       values: collapseAmoMissionAi(projet.missionAiValues && projet.missionAiValues.length > 0 ? projet.missionAiValues : splitCsv(projet.missionAi)) });
     if (programmeItem)                items.push(programmeItem);
     if (materiauxValues.length)       items.push({ label: 'Matériaux',        values: materiauxValues });
   }

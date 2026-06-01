@@ -242,6 +242,21 @@ const CSS = `
   column-rule: 1px solid var(--ai-gris);
 }
 .dev-presta--2col .dev-presta-body p { break-inside: avoid; }
+/* 2-colonnes piloté par sliders col1Percent / col2Percent : grille manuelle
+   (chaque colonne occupe une demi-page, col 2 peut être vide si col2=0). */
+.dev-presta--2col-split .dev-presta-body {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: start;
+}
+.dev-presta--2col-split .dev-presta-col-1 {
+  padding-right: 6mm;
+  border-right: 1px solid var(--ai-gris);
+}
+.dev-presta--2col-split .dev-presta-col-2 {
+  padding-left: 6mm;
+}
+.dev-presta--2col-split .dev-presta-body p { margin: 0 0 2mm; text-align: justify; hyphens: auto; }
 `;
 
 function clampPercent(v: number): number {
@@ -458,11 +473,28 @@ export function renderDev(projet: Projet, configIn?: ManualConfig): TemplateBund
     // surchargé par ManualConfig.prestationAssemblage.style (override fiche).
     const mergedPrestaStyle = { ...projet.bandeauConfig?.prestationAssemblage, ...presta?.style };
     const prStyle = styleToCss(mergedPrestaStyle);
-    const cls = `dev-presta${presta?.columns === 2 ? ' dev-presta--2col' : ''}`;
-    prestaHtml = `<section class="${cls}" style="--photo-x-offset:${prXMm}mm; --photo-y-offset:${prYMm}mm${prStyle ? `;${prStyle}` : ''}">
-      <div class="dev-presta-title">Prestation Assemblage</div>
-      <div class="dev-presta-body">${renderMarkdown(prestaText)}</div>
-    </section>`;
+    const styleAttr = `--photo-x-offset:${prXMm}mm; --photo-y-offset:${prYMm}mm${prStyle ? `;${prStyle}` : ''}`;
+
+    if (presta?.columns === 2) {
+      // Mode 2 colonnes piloté par sliders col1/col2 (par défaut 50/50).
+      // col1=100 + col2=0 → tout le texte en col 1 (largeur = moitié de page,
+      // col 2 vide). Même mécanique que la description (cf. splitDescription).
+      const c1 = clampPercent(presta.col1Percent ?? 50);
+      const c2 = clampPercent(presta.col2Percent ?? 50);
+      const [leftHtml, rightHtml] = splitDescription(prestaText, c1, c2);
+      prestaHtml = `<section class="dev-presta dev-presta--2col-split" style="${styleAttr}">
+        <div class="dev-presta-title">Prestation Assemblage</div>
+        <div class="dev-presta-body">
+          <div class="dev-presta-col-1">${leftHtml}</div>
+          <div class="dev-presta-col-2">${rightHtml}</div>
+        </div>
+      </section>`;
+    } else {
+      prestaHtml = `<section class="dev-presta" style="${styleAttr}">
+        <div class="dev-presta-title">Prestation Assemblage</div>
+        <div class="dev-presta-body">${renderMarkdown(prestaText)}</div>
+      </section>`;
+    }
   }
 
   // L'espacement titre ↔ bandeau est désormais géré par `BandeauConfig.titleMetaGap`

@@ -11,6 +11,7 @@ import { DEFAULT_MANUAL_CONFIG, ManualConfig } from '@/lib/pdf/manualConfig';
 import type { BandeauConfig } from '@/lib/pdf/bandeauConfig';
 import type { CropData } from '@/lib/pdf/photoCrop';
 import { DEFAULT_FICHE_STATUS, type FicheStatus } from '@/lib/pdf/projectConfig';
+import { ASSEMBLAGE_DEFAULT_BANDEAU, ASSEMBLAGE_DEFAULT_MANUAL } from '@/lib/pdf/assemblageDefaults';
 import ProjetToolbar from './ProjetToolbar';
 
 interface Props {
@@ -20,20 +21,32 @@ interface Props {
 
 export default function ProjetView({ projet, isPrint }: Props) {
   const [template, setTemplate] = useState<TemplateChoice>(projet.template);
+
+  // Application automatique des préréglages Assemblage pour les fiches non
+  // travaillées : si la fiche est en statut "Pas faite" ET qu'aucune config
+  // de mise en page n'a jamais été sauvegardée (pas de savedManualConfig,
+  // pas de bandeauConfig), on charge les défauts Assemblage en aperçu.
+  // Tant que l'utilisateur ne clique pas sur "Sauvegarder la mise en page",
+  // rien n'est écrit en base — `isDirty` reste false grâce au snapshot
+  // initialisé avec ces mêmes valeurs (cf. plus bas).
+  const initialStatus = projet.ficheStatus ?? DEFAULT_FICHE_STATUS;
+  const useAssemblageDefaults =
+    initialStatus === 'Pas faite' &&
+    !projet.savedManualConfig &&
+    (!projet.bandeauConfig || Object.keys(projet.bandeauConfig).length === 0);
+
   const [manualConfig, setManualConfig] = useState<ManualConfig>(
-    projet.savedManualConfig ?? DEFAULT_MANUAL_CONFIG
+    projet.savedManualConfig ?? (useAssemblageDefaults ? ASSEMBLAGE_DEFAULT_MANUAL : DEFAULT_MANUAL_CONFIG)
   );
   const [bandeauConfig, setBandeauConfig] = useState<BandeauConfig>(
-    projet.bandeauConfig ?? {}
+    projet.bandeauConfig ?? (useAssemblageDefaults ? ASSEMBLAGE_DEFAULT_BANDEAU : {})
   );
   const [photoCrops, setPhotoCrops] = useState<Record<string, CropData>>(
     projet.photoCrops ?? {}
   );
   const [cropEditMode, setCropEditMode] = useState(false);
   const [measureTrigger, setMeasureTrigger] = useState(0);
-  const [ficheStatus, setFicheStatus] = useState<FicheStatus>(
-    projet.ficheStatus ?? DEFAULT_FICHE_STATUS
-  );
+  const [ficheStatus, setFicheStatus] = useState<FicheStatus>(initialStatus);
 
   // Popup visible à l'ouverture de la fiche (sauf en mode print).
   const [showPopup, setShowPopup] = useState(!isPrint);
@@ -52,12 +65,15 @@ export default function ProjetView({ projet, isPrint }: Props) {
   const readOnly = ficheStatus === 'Prête pour publication' && !forceEdit;
 
   // Snapshot des valeurs initiales (à l'ouverture de la fiche) pour détecter
-  // si la mise en page a été modifiée sans être sauvegardée. Mis à jour
+  // si la mise en page a été modifiée sans être sauvegardée. Le snapshot
+  // utilise les mêmes valeurs que les state initiaux (y compris les
+  // préréglages Assemblage pour les fiches "Pas faite") → `isDirty` est
+  // false à l'ouverture, même si les défauts sont injectés. Mis à jour
   // après chaque save réussi via `onSave` (cf. ProjetToolbar).
   const initialSnapshotRef = useRef<string>(
     JSON.stringify({
-      manualConfig: projet.savedManualConfig ?? DEFAULT_MANUAL_CONFIG,
-      bandeauConfig: projet.bandeauConfig ?? {},
+      manualConfig: projet.savedManualConfig ?? (useAssemblageDefaults ? ASSEMBLAGE_DEFAULT_MANUAL : DEFAULT_MANUAL_CONFIG),
+      bandeauConfig: projet.bandeauConfig ?? (useAssemblageDefaults ? ASSEMBLAGE_DEFAULT_BANDEAU : {}),
       photoCrops: projet.photoCrops ?? {},
     }),
   );

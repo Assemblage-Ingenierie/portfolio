@@ -411,6 +411,14 @@ function PrestationSection({ projet, config, onChange }: { projet: Projet; confi
               </button>
             ))}
           </div>
+          {pa.columns === 2 && (
+            <>
+              {/* Sliders de répartition du texte entre col 1 et col 2. col1=100
+                  + col2=0 → tout le texte en col 1 (largeur = moitié de page). */}
+              <Slider label="% col 1" value={pa.col1Percent ?? 50} onChange={v => update({ col1Percent: v })} min={0} max={100} step={5} />
+              <Slider label="% col 2" value={pa.col2Percent ?? 50} onChange={v => update({ col2Percent: v })} min={0} max={100} step={5} />
+            </>
+          )}
           <Slider label="Horizontal" value={pa.offsetPercent ?? 50} onChange={v => update({ offsetPercent: v })} min={0} max={100} step={5} />
           <Slider label="Vertical" value={pa.offsetVerticalPercent ?? 50} onChange={v => update({ offsetVerticalPercent: v })} min={0} max={100} step={5} />
           <div style={{ marginTop: 6 }}>
