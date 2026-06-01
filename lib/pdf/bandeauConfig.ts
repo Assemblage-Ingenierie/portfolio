@@ -115,11 +115,17 @@ export const CANONICAL_META_LABELS = [
   'Bailleur',
   'Architecte',
   'BET associés',
-  'Budget',
-  'Surface',
+  // 'Budget' + 'Surface' fusionnés en 'Budget/Surface' depuis 2026 — une
+  // seule cellule à deux lignes pour gagner de la largeur dans le bandeau.
+  // Les configs existantes (weights/breaks) référençant 'Budget' ou 'Surface'
+  // sont silencieusement ignorées (metaGridHtml ne les pousse plus dans items).
+  'Budget/Surface',
   'Entreprise',
   'Mission AI',
   'Programme',
+  // Matériaux : nouveau multi-select positionné après Programme dans les
+  // deux templates. Sauts de ligne par valeur configurables via breaks.
+  'Matériaux',
 ] as const;
 
 export type MetaLabel = typeof CANONICAL_META_LABELS[number];

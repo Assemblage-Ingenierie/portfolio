@@ -425,28 +425,44 @@ export function metaGridHtml(projet: Projet, options?: { isDev?: boolean }): str
       }
     : null;
 
+  // Cellule fusionnée "Budget/Surface" — depuis 2026, une seule colonne à
+  // deux lignes (budget en ligne 1, surface en ligne 2). Gain de largeur
+  // pour les autres cellules. Le saut de ligne entre les deux valeurs est
+  // forcé dans `breaksOf` (cf. plus bas), donc l'utilisateur ne peut pas
+  // l'inliner. Si l'une des deux valeurs manque, la cellule reste affichée
+  // avec la seule disponible.
+  const budgetSurfaceValues: string[] = [];
+  if (projet.budgetHT) budgetSurfaceValues.push(projet.budgetHT);
+  if (projet.surface)  budgetSurfaceValues.push(`${projet.surface.toLocaleString('fr-FR')} m²`);
+
+  // Matériaux — multi-select Airtable, exposé après Programme dans les deux
+  // templates. Sauts de ligne par valeur configurables via `breaks.Matériaux`.
+  const materiauxValues = projet.materiaux && projet.materiaux.length > 0 ? projet.materiaux : [];
+
   if (options?.isDev) {
     // Bandeau Dev — ordre fixé par le métier :
-    // MOA · Bailleur · Architecte · Budget · Programme · Mission AI · BET associés.
+    // MOA · Bailleur · Architecte · Budget/Surface · Programme · Matériaux · Mission AI · BET associés.
     // Seuls les champs renseignés apparaissent.
-    if (projet.moa)         items.push({ label: 'MOA',              values: splitCsv(projet.moa) });
-    if (projet.bailleur)    items.push({ label: 'Bailleur',         values: splitCsv(projet.bailleur) });
-    if (projet.architecte)  items.push({ label: 'Architecte',       values: splitCsv(projet.architecte) });
-    if (projet.budgetHT)    items.push({ label: 'Budget',           values: [projet.budgetHT] });
-    if (programmeItem)      items.push(programmeItem);
-    if (projet.missionAi)   items.push({ label: 'Mission AI',       values: projet.missionAiValues && projet.missionAiValues.length > 0 ? projet.missionAiValues : splitCsv(projet.missionAi) });
-    if (projet.betAssocies) items.push({ label: 'BET associés',     values: splitCsv(projet.betAssocies) });
+    if (projet.moa)                   items.push({ label: 'MOA',              values: splitCsv(projet.moa) });
+    if (projet.bailleur)              items.push({ label: 'Bailleur',         values: splitCsv(projet.bailleur) });
+    if (projet.architecte)            items.push({ label: 'Architecte',       values: splitCsv(projet.architecte) });
+    if (budgetSurfaceValues.length)   items.push({ label: 'Budget/Surface',   values: budgetSurfaceValues });
+    if (programmeItem)                items.push(programmeItem);
+    if (materiauxValues.length)       items.push({ label: 'Matériaux',        values: materiauxValues });
+    if (projet.missionAi)             items.push({ label: 'Mission AI',       values: projet.missionAiValues && projet.missionAiValues.length > 0 ? projet.missionAiValues : splitCsv(projet.missionAi) });
+    if (projet.betAssocies)           items.push({ label: 'BET associés',     values: splitCsv(projet.betAssocies) });
   } else {
     // Bandeau Str-Env — ordre historique + BET associés inséré juste après
     // Architecte (même nature : linked record Sync CRM "acteurs du projet").
-    if (projet.moa)         items.push({ label: 'MOA',              values: splitCsv(projet.moa) });
-    if (projet.architecte)  items.push({ label: 'Architecte',       values: splitCsv(projet.architecte) });
-    if (projet.betAssocies) items.push({ label: 'BET associés',     values: splitCsv(projet.betAssocies) });
-    if (projet.budgetHT)    items.push({ label: 'Budget',           values: [projet.budgetHT] });
-    if (projet.surface)     items.push({ label: 'Surface',          values: [`${projet.surface.toLocaleString('fr-FR')} m²`] });
-    if (projet.entreprise)  items.push({ label: 'Entreprise',       values: splitCsv(projet.entreprise) });
-    if (projet.missionAi)   items.push({ label: 'Mission AI',       values: projet.missionAiValues && projet.missionAiValues.length > 0 ? projet.missionAiValues : splitCsv(projet.missionAi) });
-    if (programmeItem)      items.push(programmeItem);
+    // Budget/Surface remplace les deux cellules historiques. Matériaux après Programme.
+    if (projet.moa)                   items.push({ label: 'MOA',              values: splitCsv(projet.moa) });
+    if (projet.architecte)            items.push({ label: 'Architecte',       values: splitCsv(projet.architecte) });
+    if (projet.betAssocies)           items.push({ label: 'BET associés',     values: splitCsv(projet.betAssocies) });
+    if (budgetSurfaceValues.length)   items.push({ label: 'Budget/Surface',   values: budgetSurfaceValues });
+    if (projet.entreprise)            items.push({ label: 'Entreprise',       values: splitCsv(projet.entreprise) });
+    if (projet.missionAi)             items.push({ label: 'Mission AI',       values: projet.missionAiValues && projet.missionAiValues.length > 0 ? projet.missionAiValues : splitCsv(projet.missionAi) });
+    if (programmeItem)                items.push(programmeItem);
+    if (materiauxValues.length)       items.push({ label: 'Matériaux',        values: materiauxValues });
   }
 
   if (items.length === 0) return '';
@@ -503,7 +519,12 @@ export function metaGridHtml(projet: Projet, options?: { isDev?: boolean }): str
   // périmée après ajout/suppression d'une valeur).
   const breaksOf = (label: string): Set<number> => {
     const arr = cellsCfg?.breaks?.[label as keyof NonNullable<typeof cellsCfg.breaks>];
-    return new Set(Array.isArray(arr) ? arr : []);
+    const set = new Set(Array.isArray(arr) ? arr : []);
+    // 'Budget/Surface' : saut de ligne TOUJOURS entre budget (idx 0) et
+    // surface (idx 1) — la cellule est conçue 2-lignes par design, pas
+    // configurable par l'utilisateur (contrairement aux autres multi-valeurs).
+    if (label === 'Budget/Surface') set.add(0);
+    return set;
   };
   const renderValues = (label: string, values: string[]): string => {
     if (values.length === 0) return '';

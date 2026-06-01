@@ -90,7 +90,12 @@ export async function updateProjetFields(slug: string, fields: ProjetEditableFie
   if (fields.pole !== undefined)           update[FIELD_POLE]           = fields.pole;
   if (fields.departement !== undefined)    update['Département']        = fields.departement;
   if (fields.rehabNeufValues !== undefined) update[FIELD_REHAB_NEUF]    = fields.rehabNeufValues;
-  if (fields.statutValues !== undefined)    update[FIELD_STATUT]        = fields.statutValues;
+  // `fldxXNdE0uNaomeby` (FIELD_STATUT) est en réalité un **single-select**
+  // ("État avancement") côté Airtable, malgré son usage multi-valeur côté
+  // lecture (cf. `allValues()` dans queries.ts qui accepte string OU array).
+  // On envoie donc la première valeur comme string ; envoyer un array
+  // déclenche `INVALID_VALUE_FOR_COLUMN: Cannot parse value`.
+  if (fields.statutValues !== undefined)    update[FIELD_STATUT]        = fields.statutValues[0] ?? null;
   if (fields.materiaux !== undefined)       update[FIELD_MATERIAUX]     = fields.materiaux;
   if (fields.template !== undefined)       update['Template']           = fields.template;
   if (fields.certifications !== undefined) update[FIELD_CERTIFICATION]  = fields.certifications.join('\n');
