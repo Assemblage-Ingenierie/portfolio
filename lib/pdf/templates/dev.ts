@@ -251,7 +251,6 @@ const CSS = `
 }
 .dev-presta--2col-split .dev-presta-col-1 {
   padding-right: 6mm;
-  border-right: 1px solid var(--ai-gris);
 }
 .dev-presta--2col-split .dev-presta-col-2 {
   padding-left: 6mm;
