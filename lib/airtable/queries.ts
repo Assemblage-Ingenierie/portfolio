@@ -144,12 +144,17 @@ async function fetchAuxByFieldId(
 export async function getProjets(): Promise<Projet[]> {
   'use cache';
   cacheTag(PROJETS_LIST_TAG);
-  // Profil `max` (revalidate 30j / expire 1 an) : la donnée Airtable ne change
-  // que sur sauvegarde, qui invalide déjà ce tag à la demande via
-  // revalidateTag(PROJETS_LIST_TAG, 'max'). On désactive donc de fait la
-  // régénération temporelle (15 min en profil `default`) qui consommait des
-  // ISR writes inutiles sur chaque lecture/poll/crawl. Cf. CLAUDE.md (quota ISR).
-  cacheLife('max');
+  // Profil `hours` (revalidate 1h / expire 1j) — PAS `max`. Le payload caché
+  // contient les URLs d'attachement Airtable (photoCouverture/photosProjet),
+  // qui sont SIGNÉES ET TEMPORAIRES : Airtable les fait expirer au bout de
+  // ~2h. Avec un cache plus long (ex. `max` = 30j), les URLs cachées meurent
+  // et les vignettes cassent pour tout le monde (cache serveur partagé). On
+  // cale donc le revalidate sous le seuil d'expiration : 1h << 2h → URLs
+  // toujours fraîches. Reste très en-dessous du quota ISR (cf. CLAUDE.md) :
+  // ~24 régénérations/jour par entrée au pire, vs 96 avant (profil `default`).
+  // La fraîcheur des DONNÉES (édition) reste garantie à la demande par
+  // revalidateTag(PROJETS_LIST_TAG, 'max') à chaque sauvegarde.
+  cacheLife('hours');
   if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) return [];
   try {
     const filter = '{Visible portfolio} = TRUE()';
@@ -211,10 +216,11 @@ export async function getProjets(): Promise<Projet[]> {
 export async function getProjet(slug: string): Promise<Projet | null> {
   'use cache';
   cacheTag(projetTag(slug));
-  // Cf. getProjets : on s'appuie sur le revalidateTag(projetTag(slug), 'max')
-  // émis à chaque sauvegarde de fiche plutôt que sur une régénération toutes
-  // les 15 min. Évite N writes ISR par fiche et par jour sous trafic/crawl.
-  cacheLife('max');
+  // Profil `hours` (cf. getProjets) : la fiche embarque des URLs d'attachement
+  // Airtable temporaires (~2h d'expiration). Un cache > 2h casserait les
+  // images. 1h de revalidate garde les URLs fraîches ; l'édition reste
+  // propagée à la demande via revalidateTag(projetTag(slug), 'max').
+  cacheLife('hours');
   if (!/^[a-zA-Z0-9_-]+$/.test(slug)) return null;
   if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) return null;
   try {

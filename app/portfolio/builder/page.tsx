@@ -5,9 +5,10 @@ import { getProjets } from '@/lib/airtable';
 import PortfolioBuilder from '@/components/portfolio/PortfolioBuilder';
 
 export default async function BuilderPage() {
-  // Cf. app/page.tsx : profil `max` pour éviter la régénération 15 min du
-  // cache de page (fraîcheur garantie par revalidateTag à la sauvegarde).
-  cacheLife('max');
+  // Cf. app/page.tsx : profil `hours` (et non `max`) car la page rend les URLs
+  // d'attachement Airtable temporaires (~2h). 1h de revalidate garde les
+  // vignettes valides ; un cache plus long les casserait.
+  cacheLife('hours');
   const projets = await getProjets();
   return <PortfolioBuilder projets={projets} />;
 }
