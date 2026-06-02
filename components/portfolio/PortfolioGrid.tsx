@@ -110,13 +110,21 @@ export default function PortfolioGrid({ projets }: Props) {
   }, [projets]);
 
   const [workflowOpen, setWorkflowOpen] = useState(true);
-  // Statuts dont la liste déroulante de projets est ouverte. Cliquer sur la
-  // ligne d'un statut (hors "Pas faite") toggle la liste.
+  // Statuts dont la liste déroulante de projets est ouverte.
   const [expandedStatuses, setExpandedStatuses] = useState<Set<FicheStatus>>(
     new Set(['En attente de validation'])
   );
   const toggleStatusExpanded = (s: FicheStatus) => {
     setExpandedStatuses((prev) => {
+      const next = new Set(prev);
+      if (next.has(s)) next.delete(s); else next.add(s);
+      return next;
+    });
+  };
+  // Filtre par état de publication (set vide = tous).
+  const [selectedFicheStatuses, setSelectedFicheStatuses] = useState<Set<FicheStatus>>(new Set());
+  const toggleFicheStatus = (s: FicheStatus) => {
+    setSelectedFicheStatuses((prev) => {
       const next = new Set(prev);
       if (next.has(s)) next.delete(s); else next.add(s);
       return next;
@@ -243,12 +251,16 @@ export default function PortfolioGrid({ projets }: Props) {
         // OR : au moins un programme du projet doit être sélectionné.
         if (!projetProgs.some(v => selectedProgrammes.has(v))) return false;
       }
+      if (selectedFicheStatuses.size > 0) {
+        const fs = p.ficheStatus ?? DEFAULT_FICHE_STATUS;
+        if (!selectedFicheStatuses.has(fs)) return false;
+      }
       if (p.anneeLivraison && (p.anneeLivraison < yearMin || p.anneeLivraison > yearMax)) return false;
       return true;
     });
-  }, [projets, search, selectedRehabNeuf, selectedMateriaux, selectedStatuts, selectedPoles, selectedProgrammes, yearMin, yearMax]);
+  }, [projets, search, selectedRehabNeuf, selectedMateriaux, selectedStatuts, selectedPoles, selectedProgrammes, selectedFicheStatuses, yearMin, yearMax]);
 
-  const hasFilters = search || selectedRehabNeuf.size > 0 || selectedMateriaux.size > 0 || selectedStatuts.size > 0 || selectedPoles.size > 0 || selectedProgrammes.size > 0 || yearMin !== years.min || yearMax !== years.max;
+  const hasFilters = search || selectedRehabNeuf.size > 0 || selectedMateriaux.size > 0 || selectedStatuts.size > 0 || selectedPoles.size > 0 || selectedProgrammes.size > 0 || selectedFicheStatuses.size > 0 || yearMin !== years.min || yearMax !== years.max;
   const resetFilters = () => {
     setSearch('');
     setSelectedRehabNeuf(new Set());
@@ -256,6 +268,7 @@ export default function PortfolioGrid({ projets }: Props) {
     setSelectedStatuts(new Set());
     setSelectedPoles(new Set());
     setSelectedProgrammes(new Set());
+    setSelectedFicheStatuses(new Set());
     setYearMin(years.min);
     setYearMax(years.max);
   };
@@ -377,37 +390,59 @@ export default function PortfolioGrid({ projets }: Props) {
           {workflowOpen && (
             <div style={{ padding: '6px 12px 10px' }}>
               {FICHE_STATUS_VALUES.map((s) => {
-                // "Pas faite" reste non-cliquable : pas de liste à dérouler
-                // (la majorité des fiches y sont par défaut, peu utile).
-                const isClickable = s !== 'Pas faite' && workflowCounts[s] > 0;
+                const isFiltered = selectedFicheStatuses.has(s);
+                const canExpand = s !== 'Pas faite' && workflowCounts[s] > 0;
                 const isOpen = expandedStatuses.has(s);
                 const list = projetsByStatus[s];
                 return (
                   <div key={s} style={{ borderBottom: '1px solid #F0F0F0' }}>
                     <div
-                      onClick={isClickable ? () => toggleStatusExpanded(s) : undefined}
                       style={{
                         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                        padding: '6px 0', fontSize: '8.5pt',
-                        cursor: isClickable ? 'pointer' : 'default',
-                        userSelect: 'none',
+                        padding: '5px 0', gap: 4,
                       }}
-                      title={isClickable ? (isOpen ? 'Replier' : 'Voir les fiches') : undefined}
                     >
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--ai-noir70)' }}>
-                        <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: statusColor[s] }} />
-                        {s}
-                        {isClickable && (
-                          <span style={{ fontSize: '9pt', color: 'var(--ai-noir70)', marginLeft: 2 }}>
-                            {isOpen ? '▾' : '▸'}
-                          </span>
-                        )}
-                      </span>
-                      <span style={{ fontWeight: 700, color: 'var(--ai-noir)' }}>
-                        {workflowCounts[s]} / {totalProjets}
-                      </span>
+                      {/* Bouton filtre — toute la largeur sauf la flèche */}
+                      <button
+                        onClick={() => toggleFicheStatus(s)}
+                        style={{
+                          flex: 1, display: 'flex', alignItems: 'center', gap: 6,
+                          background: isFiltered ? statusColor[s] : 'transparent',
+                          border: isFiltered ? 'none' : `1px solid transparent`,
+                          borderRadius: 6, padding: '3px 6px',
+                          cursor: 'pointer', textAlign: 'left',
+                          fontFamily: 'var(--sans)', fontSize: '8.5pt',
+                          color: isFiltered ? 'white' : 'var(--ai-noir70)',
+                          userSelect: 'none',
+                        }}
+                        title={isFiltered ? 'Retirer le filtre' : 'Filtrer par cet état'}
+                      >
+                        <span style={{
+                          display: 'inline-block', flexShrink: 0,
+                          width: 8, height: 8, borderRadius: '50%',
+                          background: isFiltered ? 'white' : statusColor[s],
+                        }} />
+                        <span style={{ flex: 1 }}>{s}</span>
+                        <span style={{ fontWeight: 700, color: isFiltered ? 'white' : 'var(--ai-noir)' }}>
+                          {workflowCounts[s]}
+                        </span>
+                      </button>
+                      {/* Flèche expand — uniquement pour les statuts non vides (hors "Pas faite") */}
+                      {canExpand && (
+                        <button
+                          onClick={() => toggleStatusExpanded(s)}
+                          title={isOpen ? 'Replier' : 'Voir les fiches'}
+                          style={{
+                            background: 'transparent', border: 'none', cursor: 'pointer',
+                            padding: '3px 4px', fontSize: '9pt', color: 'var(--ai-noir70)',
+                            lineHeight: 1,
+                          }}
+                        >
+                          {isOpen ? '▾' : '▸'}
+                        </button>
+                      )}
                     </div>
-                    {isClickable && isOpen && (
+                    {canExpand && isOpen && (
                       <ul style={{
                         listStyle: 'none', padding: '2px 0 8px 14px', margin: 0,
                         display: 'flex', flexDirection: 'column', gap: 3,
