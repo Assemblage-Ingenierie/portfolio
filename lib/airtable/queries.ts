@@ -1,5 +1,5 @@
 import type { Projet } from '@/types/projet';
-import { cacheTag } from 'next/cache';
+import { cacheTag, cacheLife } from 'next/cache';
 import { base, TABLE } from './client';
 import { recordToProjet, type AuxValues, FIELD_PROGRAMME_PRINCIPAL, FIELD_PROGRAMME_SECONDAIRE, FIELD_POLE, FIELD_VIGNETTE_POLE, FIELD_PRESTATION_ASSEMBLAGE, FIELD_REHAB_NEUF, FIELD_MATERIAUX, FIELD_STATUT } from './mappers';
 import { fetchCrmNames } from './crm';
@@ -144,6 +144,12 @@ async function fetchAuxByFieldId(
 export async function getProjets(): Promise<Projet[]> {
   'use cache';
   cacheTag(PROJETS_LIST_TAG);
+  // Profil `max` (revalidate 30j / expire 1 an) : la donnée Airtable ne change
+  // que sur sauvegarde, qui invalide déjà ce tag à la demande via
+  // revalidateTag(PROJETS_LIST_TAG, 'max'). On désactive donc de fait la
+  // régénération temporelle (15 min en profil `default`) qui consommait des
+  // ISR writes inutiles sur chaque lecture/poll/crawl. Cf. CLAUDE.md (quota ISR).
+  cacheLife('max');
   if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) return [];
   try {
     const filter = '{Visible portfolio} = TRUE()';
@@ -205,6 +211,10 @@ export async function getProjets(): Promise<Projet[]> {
 export async function getProjet(slug: string): Promise<Projet | null> {
   'use cache';
   cacheTag(projetTag(slug));
+  // Cf. getProjets : on s'appuie sur le revalidateTag(projetTag(slug), 'max')
+  // émis à chaque sauvegarde de fiche plutôt que sur une régénération toutes
+  // les 15 min. Évite N writes ISR par fiche et par jour sous trafic/crawl.
+  cacheLife('max');
   if (!/^[a-zA-Z0-9_-]+$/.test(slug)) return null;
   if (!process.env.AIRTABLE_API_KEY || !process.env.AIRTABLE_BASE_ID) return null;
   try {
