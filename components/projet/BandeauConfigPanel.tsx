@@ -105,7 +105,7 @@ function singleLongCellsFromProjet(projet: Projet | undefined): Map<MetaLabel, s
   return result;
 }
 
-type StyleSectionKey = Exclude<keyof BandeauConfig, 'lines' | 'titleMetaGap' | 'photoTextGap' | 'programme' | 'cells'>;
+type StyleSectionKey = Exclude<keyof BandeauConfig, 'lines' | 'titleMetaGap' | 'photoTextGap' | 'bandeauPhotoGap' | 'programme' | 'cells' | 'hiddenCells'>;
 
 const SECTIONS: { key: StyleSectionKey; label: string; help: string }[] = [
   { key: 'titre',       label: 'Titre de la fiche',           help: 'Le nom du projet (titre principal h1).' },
@@ -116,6 +116,15 @@ const SECTIONS: { key: StyleSectionKey; label: string; help: string }[] = [
   { key: 'description', label: 'Description projet',          help: 'Le texte courant de la fiche (paragraphes Markdown). Appliqué sur tous les templates.' },
   { key: 'prestationAssemblage', label: 'Prestation Assemblage', help: 'Bloc rich text dédié, rendu uniquement par le template Dev (titre + valeur).' },
 ];
+
+/** Sections typographiques HORS du sous-menu « Bandeau » (titre, statut,
+ *  description, prestation). Affichées au premier niveau, admin uniquement. */
+const TOP_SECTION_KEYS: StyleSectionKey[] = ['titre', 'status', 'description', 'prestationAssemblage'];
+/** Sections typographiques regroupées DANS le sous-menu « Bandeau » (admin). */
+const BANDEAU_SECTION_KEYS: StyleSectionKey[] = ['labels', 'values', 'metaSub'];
+
+const TOP_SECTIONS = SECTIONS.filter((s) => TOP_SECTION_KEYS.includes(s.key));
+const BANDEAU_SECTIONS = SECTIONS.filter((s) => BANDEAU_SECTION_KEYS.includes(s.key));
 
 const LABEL_S: React.CSSProperties = {
   display: 'block', fontFamily: 'var(--sans)', fontSize: '7pt', fontWeight: 700,
@@ -369,6 +378,58 @@ export default function BandeauConfigPanel({ value, onChange, projet, onResetAll
     else onChange({});
   }
 
+  // Handlers extraits (réutilisés dans le sous-menu « Bandeau »).
+  const cellsOnChange = (c: BandeauCellsConfig | undefined) => {
+    const empty = !c || (
+      !c.layout &&
+      !c.gap &&
+      (!c.weights || Object.keys(c.weights).length === 0) &&
+      (!c.breaks || Object.keys(c.breaks).length === 0) &&
+      (!c.wordBreaks || Object.keys(c.wordBreaks).length === 0)
+    );
+    // Reconstruction explicite (nouvelle réf d'objet) — cf. fix du toggle.
+    if (empty) {
+      const { cells: _omitCells, ...rest } = value;
+      void _omitCells;
+      onChange(rest);
+    } else {
+      onChange({ ...value, cells: c });
+    }
+  };
+  const programmeOnChange = (p: ProgrammeCellOptions | undefined) => {
+    const next = { ...value };
+    if (!p || p.hideSecondaire !== true) delete next.programme;
+    else next.programme = p;
+    onChange(next);
+  };
+  const gapOnChange = (key: 'titleMetaGap' | 'photoTextGap' | 'bandeauPhotoGap') => (v: number | undefined) => {
+    const next = { ...value };
+    if (v === undefined || v === 50) delete next[key];
+    else next[key] = v;
+    onChange(next);
+  };
+  const hiddenCellsOnChange = (h: MetaLabel[]) => {
+    const next = { ...value };
+    if (h.length === 0) delete next.hiddenCells;
+    else next.hiddenCells = h;
+    onChange(next);
+  };
+
+  const renderStyleSection = (s: { key: StyleSectionKey; label: string; help: string }) => (
+    <div key={s.key} style={{ marginBottom: '14px', paddingBottom: '14px', borderBottom: `1px dotted ${color.gris}` }}>
+      <label style={LABEL_S}>{s.label}</label>
+      <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', margin: '0 0 6px' }}>{s.help}</p>
+      <StyleRow style={value[s.key] ?? {}} onChange={(st) => updateSection(s.key, st)} />
+    </div>
+  );
+
+  const bandeauSummaryStyle: React.CSSProperties = {
+    cursor: 'pointer',
+    fontFamily: 'var(--sans)', fontSize: '8.5pt', fontWeight: 700,
+    letterSpacing: '0.08em', textTransform: 'uppercase',
+    color: color.violet, padding: '8px 0',
+  };
+
   return (
     <div>
       {!isUserView && (
@@ -388,75 +449,33 @@ export default function BandeauConfigPanel({ value, onChange, projet, onResetAll
           </button>
         </div>
       )}
-      {!isUserView && SECTIONS.map((s) => (
-        <div key={s.key} style={{ marginBottom: '14px', paddingBottom: '14px', borderBottom: `1px dotted ${color.gris}` }}>
-          <label style={LABEL_S}>{s.label}</label>
-          <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', margin: '0 0 6px' }}>{s.help}</p>
-          <StyleRow style={value[s.key] ?? {}} onChange={(st) => updateSection(s.key, st)} />
+
+      {/* Sections typographiques hors bandeau (titre, statut, description,
+          prestation) — admin uniquement, au premier niveau. */}
+      {!isUserView && TOP_SECTIONS.map(renderStyleSection)}
+
+      {/* Sous-menu déroulant « Bandeau ». Admin : typo + cellules + lignes +
+          espacements + visibilité. User : cellules + espacements + visibilité. */}
+      <details open style={{ marginTop: '4px', borderTop: `1px solid ${color.gris}` }}>
+        <summary style={bandeauSummaryStyle}>Bandeau</summary>
+        <div style={{ paddingTop: '8px' }}>
+          {!isUserView && BANDEAU_SECTIONS.map(renderStyleSection)}
+          <CellsLayoutRow
+            value={value.cells}
+            multiValueCells={multiValueCells}
+            singleLongCells={singleLongCells}
+            onChange={cellsOnChange}
+          />
+          <ProgrammeOptionsRow value={value.programme} onChange={programmeOnChange} />
+          {!isUserView && (
+            <LinesRow value={value.lines ?? {}} onChange={(l) => onChange({ ...value, lines: l })} />
+          )}
+          <TitleMetaGapRow value={value.titleMetaGap} onChange={gapOnChange('titleMetaGap')} />
+          <PhotoTextGapRow value={value.photoTextGap} onChange={gapOnChange('photoTextGap')} />
+          <BandeauPhotoGapRow value={value.bandeauPhotoGap} onChange={gapOnChange('bandeauPhotoGap')} />
+          <FieldVisibilityRow hidden={value.hiddenCells ?? []} onChange={hiddenCellsOnChange} />
         </div>
-      ))}
-      <CellsLayoutRow
-        value={value.cells}
-        multiValueCells={multiValueCells}
-        singleLongCells={singleLongCells}
-        onChange={(c) => {
-          const empty = !c || (
-            !c.layout &&
-            !c.gap &&
-            (!c.weights || Object.keys(c.weights).length === 0) &&
-            (!c.breaks || Object.keys(c.breaks).length === 0) &&
-            (!c.wordBreaks || Object.keys(c.wordBreaks).length === 0)
-          );
-          // Reconstruction explicite : on retire la clé `cells` via destructuration
-          // au lieu de `delete next.cells` sur un shallow spread. Garantit une
-          // nouvelle référence d'objet à chaque toggle (fix du bug "le bandeau
-          // ne se met pas à jour quand on annule le dernier saut de ligne").
-          if (empty) {
-            const { cells: _omitCells, ...rest } = value;
-            void _omitCells;
-            onChange(rest);
-          } else {
-            onChange({ ...value, cells: c });
-          }
-        }}
-      />
-      <ProgrammeOptionsRow
-        value={value.programme}
-        onChange={(p) => {
-          const next = { ...value };
-          // Si toutes les options sont à leur valeur par défaut, on retire
-          // la clé pour garder un JSON minimal.
-          if (!p || (p.hideSecondaire !== true)) {
-            delete next.programme;
-          } else {
-            next.programme = p;
-          }
-          onChange(next);
-        }}
-      />
-      {!isUserView && (
-        <>
-          <LinesRow value={value.lines ?? {}} onChange={(l) => onChange({ ...value, lines: l })} />
-          <TitleMetaGapRow
-            value={value.titleMetaGap}
-            onChange={(v) => {
-              const next = { ...value };
-              if (v === undefined || v === 50) delete next.titleMetaGap;
-              else next.titleMetaGap = v;
-              onChange(next);
-            }}
-          />
-          <PhotoTextGapRow
-            value={value.photoTextGap}
-            onChange={(v) => {
-              const next = { ...value };
-              if (v === undefined || v === 50) delete next.photoTextGap;
-              else next.photoTextGap = v;
-              onChange(next);
-            }}
-          />
-        </>
-      )}
+      </details>
     </div>
   );
 }
@@ -490,6 +509,78 @@ function PhotoTextGapRow({ value, onChange }: { value: number | undefined; onCha
         <button type="button" onClick={() => onChange(undefined)} style={{ ...TOGGLE, fontSize: '8pt' }} title="Réinitialiser à la valeur par défaut">
           Reset
         </button>
+      </div>
+    </div>
+  );
+}
+
+function BandeauPhotoGapRow({ value, onChange }: { value: number | undefined; onChange: (v: number | undefined) => void }) {
+  const v = value ?? 50;
+  return (
+    <div style={{ marginBottom: '14px', paddingBottom: '14px' }}>
+      <label style={LABEL_S}>Espacement photo ↔ bandeau</label>
+      <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', margin: '0 0 6px' }}>
+        Rapproche ou éloigne la photo principale du bandeau métadonnées. 50 = défaut, &lt; 50 = rapproché, &gt; 50 = éloigné. Appliqué sur Str-Env et Dev.
+      </p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
+        <input
+          type="range"
+          min={0} max={100} step={5}
+          value={v}
+          onChange={(e) => onChange(Number(e.target.value))}
+          style={{ flex: '1 1 160px', accentColor: color.rouge }}
+        />
+        <input
+          type="number"
+          min={0} max={100} step={1}
+          value={v}
+          onChange={(e) => {
+            const n = Number(e.target.value);
+            if (Number.isFinite(n)) onChange(Math.max(0, Math.min(100, n)));
+          }}
+          style={{ ...INPUT_S, width: '70px', flex: '0 0 70px', textAlign: 'right' }}
+        />
+        <button type="button" onClick={() => onChange(undefined)} style={{ ...TOGGLE, fontSize: '8pt' }} title="Réinitialiser à la valeur par défaut">
+          Reset
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Libellés des cellules dont l'affichage est togglable par l'utilisateur,
+ *  pour réduire la largeur du bandeau. */
+const TOGGLEABLE_CELLS: MetaLabel[] = ['BET associés', 'Programme', 'Matériaux'];
+
+function FieldVisibilityRow({ hidden, onChange }: { hidden: MetaLabel[]; onChange: (next: MetaLabel[]) => void }) {
+  const hiddenSet = new Set(hidden);
+  const toggle = (label: MetaLabel) => {
+    const next = new Set(hiddenSet);
+    if (next.has(label)) next.delete(label);
+    else next.add(label);
+    onChange([...next]);
+  };
+  return (
+    <div style={{ marginBottom: '14px', paddingBottom: '14px' }}>
+      <label style={LABEL_S}>Activer / désactiver les champs</label>
+      <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', margin: '0 0 6px' }}>
+        Masque certains champs du bandeau pour gagner en largeur. Un champ désactivé n&apos;apparaît plus dans la fiche, même s&apos;il est renseigné dans Airtable.
+      </p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+        {TOGGLEABLE_CELLS.map((label) => {
+          const visible = !hiddenSet.has(label);
+          return (
+            <button
+              key={label}
+              type="button"
+              onClick={() => toggle(label)}
+              style={visible ? TOGGLE_ON : TOGGLE}
+              title={visible ? `« ${label} » affiché — cliquer pour masquer.` : `« ${label} » masqué — cliquer pour afficher.`}
+            >
+              {visible ? `✓ ${label}` : `✕ ${label}`}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
