@@ -1,17 +1,16 @@
-'use cache';
-
-import { cacheLife } from 'next/cache';
+import { connection } from 'next/server';
 import { getProjets } from '@/lib/airtable';
 import PortfolioGrid from '@/components/portfolio/PortfolioGrid';
 
 export default async function HomePage() {
-  // `hours` (revalidate 1h) — PAS `max`. La page rend en HTML les URLs
-  // d'attachement Airtable (vignettes), qui expirent ~2h après émission. Un
-  // cache externe explicite a précédence sur le `hours` interne de
-  // getProjets() : il faut donc poser `hours` ICI aussi, sinon le HTML (URLs
-  // incluses) resterait figé et les images casseraient. 1h << 2h → vignettes
-  // toujours valides, tout en restant loin du quota ISR (cf. CLAUDE.md).
-  cacheLife('hours');
+  // Page DYNAMIQUE (hors ISR) — même traitement que /portfolio/builder et
+  // /portfolio/tableau. En page ISR/statique, la home embarquait tout le
+  // dataset (getProjets) et le PPR la découpait en segments (_full, __PAGE__…)
+  // réécrits à chaque sauvegarde liste (revalidateTag(PROJETS_LIST_TAG)) →
+  // ~956 write units + segments par fenêtre d'édition. En dynamique, la page
+  // n'écrit plus dans l'ISR ; les données viennent de getProjets() (caché,
+  // 1 entrée invalidée à la demande). Cf. CLAUDE.md (quota ISR).
+  await connection();
   const projets = await getProjets();
   return <PortfolioGrid projets={projets} />;
 }
