@@ -301,6 +301,7 @@ export default function PortfolioGrid({ projets }: Props) {
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 6 }}>
             <Link
               href="/portfolio/builder"
+              prefetch={false}
               style={{
                 padding: '8px 16px',
                 background: 'var(--ai-rouge)',
@@ -318,6 +319,7 @@ export default function PortfolioGrid({ projets }: Props) {
             </Link>
             <Link
               href="/portfolio/tableau"
+              prefetch={false}
               style={{
                 padding: '8px 16px',
                 background: 'var(--ai-rouge)',
@@ -451,6 +453,7 @@ export default function PortfolioGrid({ projets }: Props) {
                           <li key={p.slug}>
                             <Link
                               href={`/projet/${p.slug}`}
+                              prefetch={false}
                               style={{
                                 display: 'block', fontSize: '8.5pt', color: 'var(--ai-violet)',
                                 textDecoration: 'none', lineHeight: 1.3,
@@ -571,7 +574,7 @@ export default function PortfolioGrid({ projets }: Props) {
       {viewMode === 'grid' ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '16px' }}>
           {filtered.map(projet => (
-            <Link key={projet.slug} href={`/projet/${projet.slug}`} style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}>
+            <Link key={projet.slug} href={`/projet/${projet.slug}`} prefetch={false} style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}>
               {/* Tuile uniforme : height 100% (la grille align-items: stretch
                   par défaut + height 100% sur le Link force toutes les tuiles
                   d'une même rangée à la même hauteur). Image en aspect-ratio
@@ -604,7 +607,7 @@ export default function PortfolioGrid({ projets }: Props) {
       ) : (
         <div style={{ background: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
           {filtered.map((projet, i) => (
-            <Link key={projet.slug} href={`/projet/${projet.slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+            <Link key={projet.slug} href={`/projet/${projet.slug}`} prefetch={false} style={{ textDecoration: 'none', color: 'inherit' }}>
               <div style={{
                 display: 'grid',
                 gridTemplateColumns: '56px 1fr 120px 80px 60px 80px',
