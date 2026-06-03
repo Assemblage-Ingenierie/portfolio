@@ -337,10 +337,11 @@ export function headerHtml(projet: Projet, options?: { isDev?: boolean }): strin
   const statusStyle = styleToCss(projet.bandeauConfig?.status);
   const vignettesHtml = buildHeaderVignettes(projet);
 
-  // Mots-clés en position figée sous le statut. Format #tag#tag sans
-  // séparateur, en couleur #30323E. Affiché pour toutes les fiches.
+  // Mots-clés en position figée sous le statut. Le « # » sert de séparateur
+  // entre les tags (pas de # en tête), en couleur #30323E. Ex. tag1#tag2#tag3.
+  // Affiché pour toutes les fiches.
   const keywordsHtml = (projet.motsCles && projet.motsCles.length > 0)
-    ? `<div class="t-header-keywords">${projet.motsCles.map((k) => `#${esc(k)}`).join('')}</div>`
+    ? `<div class="t-header-keywords">${projet.motsCles.map((k) => esc(k)).join('#')}</div>`
     : '';
 
   // Template Dev : affiche la période de prestation au lieu du statut + année.
