@@ -637,6 +637,19 @@ export default function LayoutSidebar({ projet, config, onChange, bandeauConfig,
     <div style={{ display: 'flex', alignSelf: 'stretch', flexShrink: 0 }}>
       {/* Navigation accordion */}
       <nav style={{ width: 170, background: 'white', borderRight: `1px solid ${color.gris}`, display: 'flex', flexDirection: 'column' }}>
+        {/* Code affaire (champ Airtable "Affaire", fldjks1eYKuwqPtcs) en tête
+            de nav, au-dessus de "Éditer les champs" — repère la fiche éditée. */}
+        {projet.affaire && (
+          <div style={{
+            padding: '10px 14px', borderBottom: `1px solid ${color.gris}`,
+            fontFamily: 'var(--sans)', fontSize: '8.5pt', fontWeight: 700,
+            letterSpacing: '0.06em', textTransform: 'uppercase',
+            color: 'var(--ai-violet)', background: 'white',
+            wordBreak: 'break-word',
+          }}>
+            {projet.affaire}
+          </div>
+        )}
         {/* Boutons d'édition (déplacés depuis la toolbar) */}
         <Link
           href={`/projet/${projet.slug}/edit`}
@@ -700,19 +713,6 @@ export default function LayoutSidebar({ projet, config, onChange, bandeauConfig,
             width: panelWidth, background: 'white',
             overflowY: 'auto', maxHeight: 'calc(100vh - 48px)',
           }}>
-            {/* Titre du panneau = code affaire (champ Airtable "Affaire",
-                fld jks1eYKuwqPtcs). Permet de repérer la fiche en cours
-                d'édition dans le menu déroulant de mise en page. */}
-            {projet.affaire && (
-              <div style={{
-                padding: '10px 16px', borderBottom: `1px solid ${color.gris}`,
-                fontFamily: 'var(--sans)', fontSize: '8.5pt', fontWeight: 700,
-                letterSpacing: '0.06em', textTransform: 'uppercase',
-                color: 'var(--ai-violet)', background: 'white',
-              }}>
-                {projet.affaire}
-              </div>
-            )}
             {renderContent()}
           </div>
           {/* Handle de resize */}

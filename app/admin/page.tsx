@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/supabase/useAuth';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import AdminTable from './AdminTable';
+import TemplateDefaultsPanel from './TemplateDefaultsPanel';
 import styles from './admin.module.css';
 
 interface Profile {
@@ -43,6 +44,7 @@ export default function AdminPage() {
         <h1 className={styles.title}>Gestion des accès</h1>
       </header>
       {loaded && <AdminTable profiles={profiles} />}
+      <TemplateDefaultsPanel />
     </div>
   );
 }
