@@ -268,7 +268,7 @@ export default function PortfolioBuilder({ projets }: Props) {
     textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 6,
   };
   const btn = (active: boolean): React.CSSProperties => ({
-    padding: '4px 12px', borderRadius: '2px', cursor: 'pointer',
+    padding: '4px 12px', borderRadius: '6px', cursor: 'pointer',
     fontFamily: 'var(--sans)', fontSize: '8pt', fontWeight: 700,
     border: active ? 'none' : `1px solid ${color.gris}`,
     background: active ? 'var(--ai-rouge)' : 'white',
@@ -309,7 +309,7 @@ export default function PortfolioBuilder({ projets }: Props) {
           onChange={e => setSearch(e.target.value)}
           style={{
             width: '100%', padding: '8px 12px', fontFamily: 'var(--sans)', fontSize: '9pt',
-            border: `1px solid ${color.gris}`, borderRadius: '2px', outline: 'none', background: 'white',
+            border: `1px solid ${color.gris}`, borderRadius: '8px', outline: 'none', background: 'white',
             marginBottom: 16,
           }}
         />
@@ -318,7 +318,7 @@ export default function PortfolioBuilder({ projets }: Props) {
             Row 1 : Pôle · Statut · Type
             Row 2 : Programme (pleine largeur)
             Row 3 : Matériaux (gauche, flex) · Année slider (droite) */}
-        <div style={{ background: 'white', border: `1px solid ${color.gris}`, borderRadius: '2px', padding: '14px 16px', marginBottom: 20, display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'flex-start' }}>
+        <div style={{ background: 'white', border: `1px solid ${color.gris}`, borderRadius: '12px', padding: '14px 16px', marginBottom: 20, display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'flex-start' }}>
           <div>
             <div style={chipLabel}>Pôle</div>
             <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
@@ -406,7 +406,7 @@ export default function PortfolioBuilder({ projets }: Props) {
         </div>
 
         {/* Liste */}
-        <div style={{ background: 'white', borderRadius: '2px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+        <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
           {filtered.map((projet, i) => {
             const isSelected = selection.has(projet.slug);
             const currentTemplate = selection.get(projet.slug);
@@ -440,7 +440,7 @@ export default function PortfolioBuilder({ projets }: Props) {
                   disabled={!isSelected}
                   style={{
                     padding: '4px 6px', fontSize: '8pt', fontFamily: 'var(--sans)',
-                    border: `1px solid ${color.gris}`, borderRadius: 2,
+                    border: `1px solid ${color.gris}`, borderRadius: 8,
                     background: isSelected ? 'white' : color.grisTresClair,
                     color: isSelected ? 'var(--ai-noir)' : 'var(--ai-noir70)',
                     cursor: isSelected ? 'pointer' : 'not-allowed',
@@ -465,7 +465,7 @@ export default function PortfolioBuilder({ projets }: Props) {
         )}
 
         {step === 'order' && (
-          <div style={{ background: 'white', borderRadius: '2px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+          <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
             {orderedSlugs.map((slug, i) => {
               const projet = projetsBySlug.get(slug);
               if (!projet) return null;
@@ -487,7 +487,7 @@ export default function PortfolioBuilder({ projets }: Props) {
                       aria-label="Monter"
                       style={{
                         padding: '2px 6px', fontSize: '10pt', lineHeight: 1,
-                        border: `1px solid ${color.gris}`, borderRadius: 2,
+                        border: `1px solid ${color.gris}`, borderRadius: 8,
                         background: 'white',
                         color: isFirst ? '#CCC' : 'var(--ai-noir70)',
                         cursor: isFirst ? 'not-allowed' : 'pointer',
@@ -499,7 +499,7 @@ export default function PortfolioBuilder({ projets }: Props) {
                       aria-label="Descendre"
                       style={{
                         padding: '2px 6px', fontSize: '10pt', lineHeight: 1,
-                        border: `1px solid ${color.gris}`, borderRadius: 2,
+                        border: `1px solid ${color.gris}`, borderRadius: 8,
                         background: 'white',
                         color: isLast ? '#CCC' : 'var(--ai-noir70)',
                         cursor: isLast ? 'not-allowed' : 'pointer',
@@ -522,7 +522,7 @@ export default function PortfolioBuilder({ projets }: Props) {
                     onChange={e => setItemTemplate(slug, e.target.value as TemplateChoice)}
                     style={{
                       padding: '4px 6px', fontSize: '8pt', fontFamily: 'var(--sans)',
-                      border: `1px solid ${color.gris}`, borderRadius: 2,
+                      border: `1px solid ${color.gris}`, borderRadius: 8,
                       background: 'white', color: 'var(--ai-noir)', cursor: 'pointer',
                     }}
                   >
@@ -536,7 +536,7 @@ export default function PortfolioBuilder({ projets }: Props) {
                     title="Retirer du portfolio"
                     style={{
                       padding: '4px 6px', fontSize: '10pt', lineHeight: 1,
-                      border: `1px solid ${color.gris}`, borderRadius: 2,
+                      border: `1px solid ${color.gris}`, borderRadius: 8,
                       background: 'white', color: 'var(--ai-noir70)', cursor: 'pointer',
                     }}
                   >✕</button>
@@ -571,7 +571,7 @@ export default function PortfolioBuilder({ projets }: Props) {
             style={{
               padding: '10px 16px',
               background: 'transparent',
-              color: 'white', border: '1px solid rgba(255,255,255,0.4)', borderRadius: 2,
+              color: 'white', border: '1px solid rgba(255,255,255,0.4)', borderRadius: 8,
               fontFamily: 'var(--sans)', fontSize: '10pt', fontWeight: 600,
               cursor: 'pointer',
             }}
@@ -586,7 +586,7 @@ export default function PortfolioBuilder({ projets }: Props) {
             style={{
               padding: '10px 20px',
               background: selection.size === 0 ? '#666' : 'var(--ai-rouge)',
-              color: 'white', border: 'none', borderRadius: 2,
+              color: 'white', border: 'none', borderRadius: 8,
               fontFamily: 'var(--sans)', fontSize: '10pt', fontWeight: 700,
               cursor: selection.size === 0 ? 'not-allowed' : 'pointer',
               letterSpacing: '0.05em',
@@ -601,7 +601,7 @@ export default function PortfolioBuilder({ projets }: Props) {
             style={{
               padding: '10px 20px',
               background: orderedSlugs.length === 0 ? '#666' : 'var(--ai-rouge)',
-              color: 'white', border: 'none', borderRadius: 2,
+              color: 'white', border: 'none', borderRadius: 8,
               fontFamily: 'var(--sans)', fontSize: '10pt', fontWeight: 700,
               cursor: orderedSlugs.length === 0 ? 'not-allowed' : 'pointer',
               letterSpacing: '0.05em',

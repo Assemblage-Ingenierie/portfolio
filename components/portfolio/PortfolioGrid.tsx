@@ -597,7 +597,7 @@ export default function PortfolioGrid({ projets }: Props) {
                   {projet.moa && <p style={{ fontSize: '8pt', color: 'var(--ai-noir70)', marginBottom: '2px' }}>{projet.moa}</p>}
                   <div style={{ display: 'flex', gap: '8px', marginTop: 'auto', paddingTop: '4px' }}>
                     {projet.anneeLivraison && <span style={{ fontSize: '8pt', color: 'var(--ai-rouge)', fontWeight: 600 }}>{projet.anneeLivraison}</span>}
-                    {projet.pole && <span style={{ fontSize: '7pt', color: 'var(--ai-noir70)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{projet.pole}</span>}
+                    {(projet.vignettePoles ?? []).length > 0 && <span style={{ fontSize: '7pt', color: 'var(--ai-noir70)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{(projet.vignettePoles ?? []).join(' · ')}</span>}
                   </div>
                 </div>
               </article>
@@ -630,7 +630,7 @@ export default function PortfolioGrid({ projets }: Props) {
                 </div>
                 <div style={{ fontSize: '7.5pt', color: 'var(--ai-noir70)' }}>{projet.programme ?? '—'}</div>
                 <div style={{ fontSize: '8pt', color: 'var(--ai-rouge)', fontWeight: 600 }}>{projet.anneeLivraison ?? '—'}</div>
-                <div style={{ fontSize: '7.5pt', fontWeight: 700, color: 'var(--ai-noir70)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{projet.pole ?? '—'}</div>
+                <div style={{ fontSize: '7.5pt', fontWeight: 700, color: 'var(--ai-noir70)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{(projet.vignettePoles ?? []).length > 0 ? (projet.vignettePoles ?? []).join(' · ') : '—'}</div>
                 <Badge statut={projet.statut} />
               </div>
             </Link>
