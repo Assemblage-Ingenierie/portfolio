@@ -5,6 +5,7 @@ import Link from 'next/link';
 import type { Projet, Statut } from '@/types/projet';
 import { RangeSlider } from './RangeSlider';
 import { FICHE_STATUS_VALUES, DEFAULT_FICHE_STATUS, type FicheStatus } from '@/lib/pdf/projectConfig';
+import { useAuth } from '@/lib/supabase/useAuth';
 import { color, feedback } from '@/lib/ui/tokens';
 
 const STATUT_BG: Record<string, string> = {
@@ -44,6 +45,8 @@ function Badge({ statut }: { statut: Statut }) {
 }
 
 export default function PortfolioGrid({ projets }: Props) {
+  const { profile } = useAuth();
+  const isAdmin = profile?.role === 'admin';
   const years = useMemo(() => {
     const ys = projets.map(p => p.anneeLivraison).filter((y): y is number => !!y);
     return { min: Math.min(...ys), max: Math.max(...ys) };
@@ -335,6 +338,27 @@ export default function PortfolioGrid({ projets }: Props) {
             >
               Constituer le tableau
             </Link>
+            {isAdmin && (
+              <Link
+                href="/admin"
+                prefetch={false}
+                style={{
+                  padding: '8px 16px',
+                  background: 'white',
+                  color: 'var(--ai-violet)',
+                  border: '1px solid var(--ai-violet)',
+                  fontFamily: 'var(--sans)',
+                  fontSize: '9pt',
+                  fontWeight: 700,
+                  letterSpacing: '0.05em',
+                  textDecoration: 'none',
+                  borderRadius: 8,
+                  textAlign: 'center',
+                }}
+              >
+                ⚙ Admin
+              </Link>
+            )}
           </div>
         </div>
         <p style={{ fontSize: '9pt', color: 'var(--ai-noir70)', marginTop: '4px' }}>
