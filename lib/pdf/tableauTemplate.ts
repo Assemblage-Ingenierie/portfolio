@@ -209,7 +209,7 @@ export function renderTableau({
       width: 100%;
       border-collapse: collapse;
       font-family: var(--sans);
-      font-size: 9pt;
+      font-size: 8pt;
       line-height: 1.35;
       color: var(--ai-noir);
       /* Pas de flex: 1 1 auto — les lignes gardent leur hauteur naturelle
@@ -220,7 +220,7 @@ export function renderTableau({
       border: 1pt solid var(--ai-noir);
     }
     .tab-grid thead th {
-      font-size: 9pt;
+      font-size: 8pt;
       font-weight: 400;
       letter-spacing: 0.02em;
       color: var(--ai-rouge);

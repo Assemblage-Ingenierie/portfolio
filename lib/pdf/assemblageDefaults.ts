@@ -25,32 +25,35 @@ const FONT_SANS = 'sans' as const;
 /**
  * Préréglages du BandeauConfig (typo + cellules + lignes + espacements).
  *
- * Tailles (pt) — issues du brief utilisateur :
- *   Titre 18 · Status 11 · Labels 11 · Values 10
- *   metaSub 9 · Description 9 · Prestation Assemblage 9
+ * Tailles (pt) — issues du brief utilisateur (révisé 2026) :
+ *   Titre 15 · Statut 10 · Libellés 10 · Valeurs 10
+ *   Sous-titre Programme (metaSub) 9 · Description 9 · Prestation Assemblage 9
  *
- * Cellules : distribution adaptée au contenu (`layout: 'content'` —
- * c'est déjà le défaut depuis 2026 mais on l'écrit explicitement pour
- * que la réinitialisation soit déterministe).
+ * Cellules : distribution adaptée au contenu (`layout: 'content'`).
  *
- * Lignes horizontales : masquées.
+ * Cellule Programme : Programme secondaire visible → on n'ajoute PAS de clé
+ * `programme` (l'absence de `hideSecondaire: true` = secondaire affiché).
+ *
+ * Lignes horizontales : masquées (`lines.show = false`).
  *
  * Espacements (0..100, 50 = neutre) :
- *   titleMetaGap = 20 (titre rapproché du bandeau)
- *   photoTextGap = 45 (texte légèrement rapproché de la photo)
+ *   titleMetaGap    = 30 (titre ↔ bandeau)
+ *   photoTextGap    = 45 (photo ↔ description)
+ *   bandeauPhotoGap = 30 (photo ↔ bandeau)
  */
 export const ASSEMBLAGE_DEFAULT_BANDEAU: BandeauConfig = {
-  titre:                { fontFamily: FONT_SANS, fontSize: 18 },
-  status:               { fontFamily: FONT_SANS, fontSize: 11 },
-  labels:               { fontFamily: FONT_SANS, fontSize: 11 },
+  titre:                { fontFamily: FONT_SANS, fontSize: 15 },
+  status:               { fontFamily: FONT_SANS, fontSize: 10 },
+  labels:               { fontFamily: FONT_SANS, fontSize: 10 },
   values:               { fontFamily: FONT_SANS, fontSize: 10 },
   metaSub:              { fontFamily: FONT_SANS, fontSize: 9 },
   description:          { fontFamily: FONT_SANS, fontSize: 9 },
   prestationAssemblage: { fontFamily: FONT_SANS, fontSize: 9 },
   cells: { layout: 'content' },
   lines: { show: false },
-  titleMetaGap: 20,
+  titleMetaGap: 30,
   photoTextGap: 45,
+  bandeauPhotoGap: 30,
 };
 
 /**

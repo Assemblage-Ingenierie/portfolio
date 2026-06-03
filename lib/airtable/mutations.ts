@@ -6,9 +6,14 @@ import {
   PROJECT_CONFIG_FIELD,
   deserializeProjectConfig,
   serializeProjectConfig,
+  DEFAULT_FICHE_STATUS,
   type ProjectConfig,
   type FicheStatus,
 } from '@/lib/pdf/projectConfig';
+import {
+  ASSEMBLAGE_DEFAULT_BANDEAU,
+  ASSEMBLAGE_DEFAULT_MANUAL,
+} from '@/lib/pdf/assemblageDefaults';
 import {
   FIELD_PROGRAMME_PRINCIPAL,
   FIELD_PROGRAMME_SECONDAIRE,
@@ -128,6 +133,49 @@ export async function updateProjetFields(slug: string, fields: ProjetEditableFie
   const updated = await base(TABLE).find(records[0].id);
   const newSlug = String(updated.fields['Slug'] ?? slug);
   return { slug: newSlug };
+}
+
+/**
+ * Applique les préréglages Assemblage (`ASSEMBLAGE_DEFAULT_BANDEAU` +
+ * `ASSEMBLAGE_DEFAULT_MANUAL`) à TOUTES les fiches dont le statut interne
+ * (`ProjectConfig.ficheStatus`) vaut « Pas faite » (ou est absent → défaut
+ * 'Pas faite'). Écrit le JSON unifié dans le champ Airtable « Config template
+ * manuel » de chaque fiche concernée.
+ *
+ * Sémantique d'écrasement : les sous-configs `bandeau` et `manuel` sont
+ * remplacées par les défauts dans TOUS les cas (même si la fiche avait déjà
+ * une config). Les autres clés du `ProjectConfig` (photoCrops, portfolio,
+ * ficheStatus) sont préservées.
+ *
+ * Renvoie la liste des slugs mis à jour (pour invalidation de cache côté API).
+ */
+export async function applyAssemblageDefaultsToUnfinished(): Promise<{ slugs: string[] }> {
+  const records = await base(TABLE).select().all();
+
+  const updates: { id: string; fields: Record<string, string> }[] = [];
+  const slugs: string[] = [];
+
+  for (const rec of records) {
+    const existing = deserializeProjectConfig(rec.fields[PROJECT_CONFIG_FIELD]) ?? {};
+    const status = existing.ficheStatus ?? DEFAULT_FICHE_STATUS;
+    if (status !== 'Pas faite') continue;
+
+    const merged: ProjectConfig = {
+      ...existing,
+      bandeau: ASSEMBLAGE_DEFAULT_BANDEAU,
+      manuel: ASSEMBLAGE_DEFAULT_MANUAL,
+    };
+    updates.push({ id: rec.id, fields: { [PROJECT_CONFIG_FIELD]: serializeProjectConfig(merged) } });
+    const slug = rec.fields['Slug'];
+    if (typeof slug === 'string' && slug) slugs.push(slug);
+  }
+
+  // Airtable limite chaque appel update() à 10 records.
+  for (let i = 0; i < updates.length; i += 10) {
+    await base(TABLE).update(updates.slice(i, i + 10), { typecast: true });
+  }
+
+  return { slugs };
 }
 
 export async function updateProjetUrl(slug: string, url: string): Promise<void> {

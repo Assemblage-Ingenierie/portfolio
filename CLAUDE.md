@@ -76,7 +76,7 @@ await fetch('/api/projet/foo/fields', {
 
 **Pas de `<a href>` direct** vers une route protégée (impossible d'attacher un header à un lien) — utiliser un bouton + fetch + `URL.createObjectURL(blob)` pour les téléchargements (cf. `handleDownloadPdf` dans `ProjetEditor.tsx` / `ProjetToolbar.tsx`).
 
-Routes protégées actuelles : `/api/projet/[slug]/{fields,publish,pdf}` et `/api/admin/users/[id]`.
+Routes protégées actuelles : `/api/projet/[slug]/{fields,publish,pdf}`, `/api/admin/users/[id]` et `/api/admin/apply-defaults` (admin only).
 
 ### Data flow (Airtable → app)
 
@@ -127,6 +127,7 @@ Airtable ──► lib/airtable/queries.ts (getProjets / getProjet)
 | `/api/projet/[slug]/publish` | POST | Upload médias → WordPress, crée **toujours** un nouveau draft (jamais d'UPDATE sur post existant), write-back URL dans Airtable |
 | `/api/projet/[slug]/update-prod` | POST | Promeut le contenu du dernier draft tracké dans Airtable vers le post publié existant (lookup par slug + status=publish) |
 | `/api/admin/users/[id]` | PATCH | Met à jour `role` / `is_approved` dans `portfolio_profiles` (vérifie le rôle admin côté serveur) |
+| `/api/admin/apply-defaults` | POST | **Admin only.** Écrit `ASSEMBLAGE_DEFAULT_BANDEAU` + `ASSEMBLAGE_DEFAULT_MANUAL` dans le champ « Config template manuel » de toutes les fiches `ficheStatus === 'Pas faite'` (écrase bandeau+manuel, préserve le reste). Invalide les tags `projet:<slug>` concernés. |
 | `/api/airtable/select-options` | GET | Lit les options canoniques des multi-selects via l'API Metadata Airtable (scope `schema.bases:read`). Alimente les `MultiSelectField` de l'éditeur. Cache 5 min via `next: { revalidate: 300 }`. |
 | `/api/public/portfolio` | GET | Endpoint public lecture seule (extranet) : liste sanitisée des fiches `visiblePortfolio`. Filtres optionnels en query params. |
 
@@ -175,7 +176,7 @@ Les mots-clés (`Projet.motsCles`, depuis Airtable « Mots-clés ») sont rendus
 - **Sidebar gauche** (`components/projet/LayoutSidebar.tsx`) : uniquement affichée pour les templates **Str-Env** et **Dev**. En haut de la nav : boutons **Éditer les champs** (lien vers `/projet/[slug]/edit`) + **Recadrer les photos** (toggle `cropEditMode`). En dessous, les sections accordion (Mise en page typographique, Photo principale, Texte description, Photos additionnelles, Certifications, [Dev] Prestation Assemblage).
 - Pour les templates **Solo / Diptyque / Triptyque** : pas de sidebar — le bouton "Éditer les champs" reste dans la toolbar du haut (`ProjetToolbar`).
 - **Modale unsaved-changes** : `ProjetView` calcule `isDirty = JSON.stringify({manualConfig, bandeauConfig, photoCrops}) !== initialSnapshot` (via `useRef` + `useMemo`). Le clic sur "← Portfolio" déclenche une modale dans `ProjetToolbar` si `isDirty`, avec deux options : *Quitter sans sauvegarder* / *Sauvegarder la mise en page*. Le snapshot est réinitialisé après chaque save réussi (callback `onSave`).
-- **Préréglages auto sur fiches "Pas faite"** : si `ficheStatus === 'Pas faite'` ET aucune config sauvegardée (`savedManualConfig` + `bandeauConfig` absents/vides), `ProjetView` charge `ASSEMBLAGE_DEFAULT_MANUAL` + `ASSEMBLAGE_DEFAULT_BANDEAU` (`lib/pdf/assemblageDefaults.ts`) comme state initial. Le snapshot `isDirty` est initialisé avec ces mêmes valeurs → pas de "modifications non sauvegardées" parasite à l'ouverture. Rien n'est écrit en Airtable tant que l'utilisateur ne sauvegarde pas. (Le défaut du statut PDF est font-size 11pt.)
+- **Préréglages auto sur fiches "Pas faite"** : si `ficheStatus === 'Pas faite'` ET aucune config sauvegardée (`savedManualConfig` + `bandeauConfig` absents/vides), `ProjetView` charge `ASSEMBLAGE_DEFAULT_MANUAL` + `ASSEMBLAGE_DEFAULT_BANDEAU` (`lib/pdf/assemblageDefaults.ts`) comme state initial. Le snapshot `isDirty` est initialisé avec ces mêmes valeurs → pas de "modifications non sauvegardées" parasite à l'ouverture. Rien n'est écrit en Airtable tant que l'utilisateur ne sauvegarde pas. (Le défaut du statut PDF est font-size 10pt.) Les valeurs précises des préréglages vivent **en dur** dans `assemblageDefaults.ts` (pas d'édition runtime) ; le bouton « Réinitialiser » du panneau de mise en page les applique en aperçu. Pour les **propager en masse** dans Airtable sur toutes les fiches « Pas faite », l'admin dispose du bouton dédié dans `/admin` (cf. `/api/admin/apply-defaults`).
 - **Slider de taille photo grisé à saturation** : `LayoutSidebar` mesure la taille naturelle de chaque photo (`useImageNaturalSize`) ; si la photo est plus petite que son conteneur (≈186mm de large), le slider Taille est grisé au-delà du % où la photo atteint sa taille naturelle (helper `photoSaturationPercent`, conversion px→mm à 96 DPI). Couvre la photo principale paysage + les photos additionnelles.
 - **Prestation Assemblage (Dev) en 2 colonnes** : `PrestationAssemblageConfig` expose `col1Percent`/`col2Percent` (sliders en mode 2-col). `col1=100` + `col2=0` → tout le texte dans la colonne 1 (largeur = demi-page, col 2 vide). Rendu via `splitDescription` dans `dev.ts` (grille `dev-presta--2col-split`).
 
