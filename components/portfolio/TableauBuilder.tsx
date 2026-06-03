@@ -355,7 +355,7 @@ export default function TableauBuilder({ projets }: Props) {
 
   // ----- Styles partagés -----
   const btn = (active: boolean): React.CSSProperties => ({
-    padding: '4px 12px', borderRadius: 2, cursor: 'pointer',
+    padding: '4px 12px', borderRadius: 6, cursor: 'pointer',
     fontFamily: 'var(--sans)', fontSize: '8pt', fontWeight: 700,
     border: active ? 'none' : `1px solid ${color.gris}`,
     background: active ? 'var(--ai-rouge)' : 'white',
@@ -459,7 +459,7 @@ export default function TableauBuilder({ projets }: Props) {
             onClick={() => setStep(step === 'order' ? 'select' : 'order')}
             style={{
               padding: '10px 16px', background: 'transparent', color: 'white',
-              border: '1px solid rgba(255,255,255,0.4)', borderRadius: 2,
+              border: '1px solid rgba(255,255,255,0.4)', borderRadius: 8,
               fontFamily: 'var(--sans)', fontSize: '10pt', fontWeight: 600, cursor: 'pointer',
             }}
           >
@@ -493,7 +493,7 @@ function primaryBtn(disabled: boolean): React.CSSProperties {
   return {
     padding: '10px 20px',
     background: disabled ? '#666' : 'var(--ai-rouge)',
-    color: 'white', border: 'none', borderRadius: 2,
+    color: 'white', border: 'none', borderRadius: 8,
     fontFamily: 'var(--sans)', fontSize: '10pt', fontWeight: 700,
     cursor: disabled ? 'not-allowed' : 'pointer',
     letterSpacing: '0.05em',
@@ -542,14 +542,14 @@ function SelectStep(p: SelectStepProps) {
         onChange={e => p.setSearch(e.target.value)}
         style={{
           width: '100%', padding: '8px 12px', fontFamily: 'var(--sans)', fontSize: '9pt',
-          border: `1px solid ${color.gris}`, borderRadius: 2, outline: 'none', background: 'white', marginBottom: 16,
+          border: `1px solid ${color.gris}`, borderRadius: 8, outline: 'none', background: 'white', marginBottom: 16,
         }}
       />
       {/* Filtres — layout aligné sur la page publique :
           Row 1 : Pôle · Statut · Type
           Row 2 : Programme (pleine largeur)
           Row 3 : Matériaux (gauche, flex) · Année slider (droite) */}
-      <div style={{ background: 'white', border: `1px solid ${color.gris}`, borderRadius: 2, padding: '14px 16px', marginBottom: 20, display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'flex-start' }}>
+      <div style={{ background: 'white', border: `1px solid ${color.gris}`, borderRadius: 12, padding: '14px 16px', marginBottom: 20, display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'flex-start' }}>
         <div>
           <div style={chipLabel}>Pôle</div>
           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
@@ -628,7 +628,7 @@ function SelectStep(p: SelectStepProps) {
         <button onClick={p.clearSelection} style={p.btn(false)}>Tout désélectionner</button>
         <span style={{ marginLeft: 'auto', fontWeight: 600 }}>{p.selection.size} sélectionnée{p.selection.size > 1 ? 's' : ''}</span>
       </div>
-      <div style={{ background: 'white', borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+      <div style={{ background: 'white', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
         {p.filtered.map((projet, i) => {
           const isSelected = p.selection.has(projet.slug);
           return (
@@ -672,7 +672,7 @@ interface OrderStepProps {
 }
 function OrderStep({ orderedSlugs, projetsBySlug, moveItem, removeFromOrder }: OrderStepProps) {
   return (
-    <div style={{ background: 'white', borderRadius: 2, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
+    <div style={{ background: 'white', borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
       {orderedSlugs.map((slug, i) => {
         const projet = projetsBySlug.get(slug);
         if (!projet) return null;
@@ -703,7 +703,7 @@ function OrderStep({ orderedSlugs, projetsBySlug, moveItem, removeFromOrder }: O
             <div style={{ fontSize: '7.5pt', color: 'var(--ai-noir70)' }}>{projet.programme ?? '—'}</div>
             <div style={{ fontSize: '8pt', color: 'var(--ai-rouge)', fontWeight: 600 }}>{projet.anneeLivraison ?? '—'}</div>
             <button onClick={() => removeFromOrder(slug)} aria-label="Retirer"
-              style={{ padding: '4px 6px', fontSize: '10pt', lineHeight: 1, border: `1px solid ${color.gris}`, borderRadius: 2, background: 'white', color: 'var(--ai-noir70)', cursor: 'pointer' }}>✕</button>
+              style={{ padding: '4px 6px', fontSize: '10pt', lineHeight: 1, border: `1px solid ${color.gris}`, borderRadius: 8, background: 'white', color: 'var(--ai-noir70)', cursor: 'pointer' }}>✕</button>
           </div>
         );
       })}
@@ -719,7 +719,7 @@ function OrderStep({ orderedSlugs, projetsBySlug, moveItem, removeFromOrder }: O
 function arrowBtn(disabled: boolean): React.CSSProperties {
   return {
     padding: '2px 6px', fontSize: '10pt', lineHeight: 1,
-    border: `1px solid ${color.gris}`, borderRadius: 2, background: 'white',
+    border: `1px solid ${color.gris}`, borderRadius: 8, background: 'white',
     color: disabled ? '#CCC' : 'var(--ai-noir70)',
     cursor: disabled ? 'not-allowed' : 'pointer',
   };
@@ -902,7 +902,7 @@ function PreviewStep({
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 20 }}>
       {/* Sidebar config */}
-      <aside style={{ position: 'sticky', top: 16, alignSelf: 'start', background: 'white', border: `1px solid ${color.gris}`, borderRadius: 2, padding: 16 }}>
+      <aside style={{ position: 'sticky', top: 16, alignSelf: 'start', background: 'white', border: `1px solid ${color.gris}`, borderRadius: 12, padding: 16 }}>
         <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 8 }}>Mode</div>
         <div style={{ display: 'flex', gap: 4, marginBottom: 18 }}>
           {(['Str-Env', 'Dev'] as const).map(m => (
@@ -912,7 +912,7 @@ function PreviewStep({
                 border: mode === m ? 'none' : `1px solid ${color.gris}`,
                 background: mode === m ? 'var(--ai-rouge)' : 'white',
                 color: mode === m ? 'white' : 'var(--ai-noir70)',
-                cursor: 'pointer', borderRadius: 2,
+                cursor: 'pointer', borderRadius: 8,
               }}>{m}</button>
           ))}
         </div>
@@ -925,7 +925,7 @@ function PreviewStep({
                 border: orientation === o ? 'none' : `1px solid ${color.gris}`,
                 background: orientation === o ? 'var(--ai-rouge)' : 'white',
                 color: orientation === o ? 'white' : 'var(--ai-noir70)',
-                cursor: 'pointer', borderRadius: 2, textTransform: 'capitalize',
+                cursor: 'pointer', borderRadius: 8, textTransform: 'capitalize',
               }}>{o}</button>
           ))}
         </div>
@@ -957,7 +957,7 @@ function PreviewStep({
                     title="Configurer le champ libre"
                     style={{
                       padding: '2px 6px', fontSize: '7.5pt', fontWeight: 700,
-                      background: 'white', border: `1px solid ${color.gris}`, borderRadius: 2,
+                      background: 'white', border: `1px solid ${color.gris}`, borderRadius: 8,
                       color: 'var(--ai-noir70)', cursor: 'pointer',
                     }}
                   >
@@ -975,7 +975,7 @@ function PreviewStep({
           <div role="alert" style={{
             width: `${previewWidthMm}mm`, marginBottom: 12, padding: '10px 16px',
             background: 'var(--ai-rouge)', color: 'white', fontFamily: 'var(--sans)',
-            fontSize: '9pt', fontWeight: 600, borderRadius: 2,
+            fontSize: '9pt', fontWeight: 600, borderRadius: 8,
           }}>
             Le tableau dépasse la page de {overflow!.overflowMm} mm — réduit le nombre de lignes/colonnes ou bascule en {orientation === 'portrait' ? 'paysage' : 'portrait'}.
           </div>
@@ -984,7 +984,7 @@ function PreviewStep({
           <div style={{
             width: `${previewWidthMm}mm`, marginBottom: 12, padding: '8px 14px',
             background: 'var(--ai-violet)', color: 'white', fontFamily: 'var(--sans)',
-            fontSize: '9pt', fontWeight: 600, borderRadius: 2,
+            fontSize: '9pt', fontWeight: 600, borderRadius: 8,
           }}>
             Tableau réparti automatiquement sur {pageCount} pages ({autoRowsPerPage} lignes par page).
           </div>
@@ -1047,7 +1047,7 @@ function ChampLibreModal({
       <div
         onClick={e => e.stopPropagation()}
         style={{
-          background: 'white', borderRadius: 4, width: '100%',
+          background: 'white', borderRadius: 12, width: '100%',
           maxWidth: 720, maxHeight: '90vh', display: 'flex',
           flexDirection: 'column', boxShadow: '0 12px 48px rgba(0,0,0,0.25)',
           fontFamily: 'var(--sans)',
@@ -1077,7 +1077,7 @@ function ChampLibreModal({
               placeholder="ex. Lot Assemblage, Particularités…"
               style={{
                 width: '100%', padding: '8px 12px', fontSize: '10pt',
-                border: `1px solid ${color.gris}`, borderRadius: 2, outline: 'none',
+                border: `1px solid ${color.gris}`, borderRadius: 8, outline: 'none',
                 fontFamily: 'var(--sans)',
               }}
             />
@@ -1089,7 +1089,7 @@ function ChampLibreModal({
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {orderedProjets.map((p, i) => (
               <div key={p.slug} style={{
-                border: `1px solid ${color.gris}`, borderRadius: 2, padding: 10,
+                border: `1px solid ${color.gris}`, borderRadius: 8, padding: 10,
                 background: '#FAFAFA',
               }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
@@ -1104,7 +1104,7 @@ function ChampLibreModal({
                   placeholder="Description pour cette référence…"
                   style={{
                     width: '100%', padding: '8px 10px', fontSize: '9.5pt',
-                    border: `1px solid ${color.gris}`, borderRadius: 2, outline: 'none',
+                    border: `1px solid ${color.gris}`, borderRadius: 8, outline: 'none',
                     resize: 'vertical', fontFamily: 'var(--sans)',
                     minHeight: 60,
                   }}
@@ -1128,7 +1128,7 @@ function ChampLibreModal({
             onClick={onCancel}
             style={{
               padding: '8px 16px', background: 'white', color: 'var(--ai-noir70)',
-              border: `1px solid ${color.gris}`, borderRadius: 2,
+              border: `1px solid ${color.gris}`, borderRadius: 8,
               fontFamily: 'var(--sans)', fontSize: '9.5pt', fontWeight: 600, cursor: 'pointer',
             }}
           >
@@ -1140,7 +1140,7 @@ function ChampLibreModal({
             style={{
               padding: '8px 18px',
               background: canConfirm ? 'var(--ai-rouge)' : '#999',
-              color: 'white', border: 'none', borderRadius: 2,
+              color: 'white', border: 'none', borderRadius: 8,
               fontFamily: 'var(--sans)', fontSize: '9.5pt', fontWeight: 700,
               cursor: canConfirm ? 'pointer' : 'not-allowed',
               letterSpacing: '0.03em',
