@@ -48,6 +48,10 @@ export type WpFieldKey =
   | 'entreprise'
   | 'missionAi'
   | 'programme'
+  // `programmeSecondaire` n'est PAS une cellule autonome : sa valeur est rendue
+  // dans la cellule Programme (après le principal, séparée d'un point médian).
+  // Présente dans l'ordre uniquement pour exposer ses options typo dans l'UI.
+  | 'programmeSecondaire'
   | 'materiaux';
 
 /** Libellés affichés (mêmes sigles que le bandeau PDF). */
@@ -60,18 +64,19 @@ export const WP_FIELD_LABELS: Record<WpFieldKey, string> = {
   surface: 'Surface',
   entreprise: 'Entreprise',
   missionAi: 'Mission AI',
-  programme: 'Programme',
+  programme: 'Programme principal',
+  programmeSecondaire: 'Programme secondaire',
   materiaux: 'Matériaux',
 };
 
 /** Ordre des champs du bandeau WP Str-Env (miroir de `metaGridHtml` Str-Env). */
 export const WP_FIELDS_STR_ENV: WpFieldKey[] = [
-  'moa', 'architecte', 'betAssocies', 'budget', 'surface', 'entreprise', 'missionAi', 'programme', 'materiaux',
+  'moa', 'architecte', 'betAssocies', 'budget', 'surface', 'entreprise', 'missionAi', 'programme', 'programmeSecondaire', 'materiaux',
 ];
 
 /** Ordre des champs du bandeau WP Dev (miroir de `metaGridHtml` isDev). */
 export const WP_FIELDS_DEV: WpFieldKey[] = [
-  'moa', 'bailleur', 'architecte', 'budget', 'surface', 'programme', 'materiaux', 'missionAi', 'betAssocies',
+  'moa', 'bailleur', 'architecte', 'budget', 'surface', 'programme', 'programmeSecondaire', 'materiaux', 'missionAi', 'betAssocies',
 ];
 
 export function wpFieldOrder(template: WpTemplate): WpFieldKey[] {
@@ -89,6 +94,8 @@ export interface WpFieldStyle {
   sizePt?: number;
   /** Valeur rendue en petites capitales (font-variant: small-caps). Défaut false. */
   smallCaps?: boolean;
+  /** Valeur rendue en grandes capitales (text-transform: uppercase). Défaut false. */
+  upperCase?: boolean;
 }
 
 export interface WpConfig {
@@ -228,5 +235,6 @@ export function effectiveFieldStyle(resolved: ResolvedWpConfig, key: WpFieldKey)
     valueColor: ov.valueColor ?? resolved.fields.valueColor,
     sizePt: ov.sizePt,
     smallCaps: ov.smallCaps ?? false,
+    upperCase: ov.upperCase ?? false,
   };
 }

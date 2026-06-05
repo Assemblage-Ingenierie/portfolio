@@ -249,10 +249,29 @@ function buildWpEditorial(
   const crm = (key: CrmField, plain?: string): string =>
     crmCellHtml(projet.crmLinks?.[key], plain);
 
-  // Programme : principal en valeur, secondaire en complément entre parenthèses.
-  const programme = projet.programmePrincipal && projet.programmeSecondaire
-    ? `${projet.programmePrincipal} (${projet.programmeSecondaire})`
-    : projet.programmePrincipal ?? projet.programmeSecondaire;
+  // Style inline d'une valeur de champ (utilisé pour le span « Programme
+  // secondaire » rendu DANS la cellule Programme, avec sa propre typo).
+  const valueSpanStyle = (key: WpFieldKey): string => {
+    const st = effectiveFieldStyle(resolved, key);
+    const sizePt = st.sizePt ?? typo.fieldsSizePt;
+    return `font-family:${SANS} !important;letter-spacing:normal !important;font-size:${sizePt}pt !important;`
+      + `text-transform:${st.upperCase ? 'uppercase' : 'none'} !important;`
+      + `font-variant:${st.smallCaps ? 'small-caps' : 'normal'} !important;`
+      + `font-weight:${st.valueBold ? 700 : 400} !important;color:${st.valueColor} !important;`;
+  };
+
+  // Programme : principal dans la cellule « Programme principal » ; le
+  // secondaire est rendu APRÈS, séparé d'un point médian, avec sa propre typo
+  // (clé `programmeSecondaire`). Masquable via son option « Masquer ».
+  const principal = projet.programmePrincipal;
+  const secondaire = projet.programmeSecondaire;
+  const secHidden = effectiveFieldStyle(resolved, 'programmeSecondaire').hidden;
+  const programmeHtml = (principal || secondaire)
+    ? `${esc(principal ?? secondaire ?? '')}`
+      + (principal && secondaire && !secHidden
+        ? ` · <span style="${valueSpanStyle('programmeSecondaire')}">${esc(secondaire)}</span>`
+        : '')
+    : undefined;
 
   const materiaux = projet.materiaux && projet.materiaux.length > 0
     ? projet.materiaux.join(', ')
@@ -270,7 +289,8 @@ function buildWpEditorial(
     surface:     { value: projet.surface ? `${projet.surface.toLocaleString('fr-FR')} m²` : undefined },
     entreprise:  { value: projet.entreprise,  html: crm('entreprise', projet.entreprise) },
     missionAi:   { value: projet.missionAi },
-    programme:   { value: programme },
+    programme:   { html: programmeHtml },
+    // `programmeSecondaire` : pas de cellule autonome (rendu dans Programme).
     materiaux:   { value: materiaux },
   };
 
@@ -319,11 +339,12 @@ function buildWpEditorial(
         // Resets !important pour neutraliser le thème WP, + style par champ
         // (libellé vs valeur indépendants : poids, couleur, taille).
         const sizePt = f.style.sizePt ?? typo.fieldsSizePt;
-        // `reset` ne fige PAS font-variant : il est défini par span (le libellé
-        // reste normal, la valeur peut passer en petites capitales).
-        const reset = `font-family:${SANS} !important;text-transform:none !important;letter-spacing:normal !important;font-size:${sizePt}pt !important;`;
-        const labelStyle = `${reset}font-variant:normal !important;font-weight:${f.style.labelBold ? 700 : 400} !important;color:${f.style.labelColor} !important;`;
-        const valueStyle = `${reset}font-variant:${f.style.smallCaps ? 'small-caps' : 'normal'} !important;font-weight:${f.style.valueBold ? 700 : 400} !important;color:${f.style.valueColor} !important;`;
+        // `reset` ne fige NI text-transform NI font-variant : définis par span
+        // (le libellé reste normal ; la valeur peut être en petites/grandes
+        // capitales).
+        const reset = `font-family:${SANS} !important;letter-spacing:normal !important;font-size:${sizePt}pt !important;`;
+        const labelStyle = `${reset}text-transform:none !important;font-variant:normal !important;font-weight:${f.style.labelBold ? 700 : 400} !important;color:${f.style.labelColor} !important;`;
+        const valueStyle = `${reset}text-transform:${f.style.upperCase ? 'uppercase' : 'none'} !important;font-variant:${f.style.smallCaps ? 'small-caps' : 'normal'} !important;font-weight:${f.style.valueBold ? 700 : 400} !important;color:${f.style.valueColor} !important;`;
         return `
         <li style="padding:8px 0;${reset}">
           <span style="${labelStyle}">${esc(f.label)} :</span> <span style="${valueStyle}">${f.html ?? esc(f.value!)}</span>
