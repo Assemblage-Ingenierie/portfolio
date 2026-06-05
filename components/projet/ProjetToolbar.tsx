@@ -283,6 +283,13 @@ export default function ProjetToolbar({
       >
         Télécharger PDF
       </button>
+      <Link
+        href={`/projet/${projet.slug}/wordpress`}
+        style={{ ...btn, background: 'transparent', border: '1px solid var(--ai-gris)', color: 'white', textDecoration: 'none' }}
+        title="Aperçu et stylisation du rendu WordPress avant export"
+      >
+        Aperçu WordPress
+      </Link>
       <button
         style={{ ...btn, background: 'white', color: 'var(--ai-violet)', border: 'none' }}
         onClick={() => handlePublish('v1')}

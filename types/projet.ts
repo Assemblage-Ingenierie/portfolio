@@ -2,6 +2,22 @@ import type { ManualConfig } from '@/lib/pdf/manualConfig';
 import type { BandeauConfig } from '@/lib/pdf/bandeauConfig';
 import type { CropData } from '@/lib/pdf/photoCrop';
 import type { FicheStatus } from '@/lib/pdf/projectConfig';
+import type { WpConfig } from '@/lib/wordpress/wpConfig';
+
+/** Entité CRM résolue pour rendu en lien hypertexte (nom + URL site éventuelle). */
+export interface CrmLink {
+  name: string;
+  url?: string;
+}
+
+/** Clés des 6 champs liés à la table « Sync CRM ». */
+export type CrmField =
+  | 'moa'
+  | 'architecte'
+  | 'mandataire'
+  | 'entreprise'
+  | 'betAssocies'
+  | 'bailleur';
 
 export type Statut =
   | 'En étude'
@@ -32,6 +48,11 @@ export interface Projet {
   entreprise?: string;
   bailleur?: string;
   referentAi?: string;
+
+  /** Versions structurées (nom + URL site) des 6 champs liés à « Sync CRM »,
+   *  pour rendu en lien hypertexte (export WordPress). Les champs string
+   *  ci-dessus restent la valeur jointe des noms (rétro-compat PDF/tableaux). */
+  crmLinks?: Partial<Record<CrmField, CrmLink[]>>;
 
   surface?: number;
   budgetHT?: string;
@@ -114,4 +135,8 @@ export interface Projet {
    *  ProjectConfig (champ Airtable "Config template manuel"). Par défaut
    *  "Pas faite" si absent. Distinct de `statut` qui est le statut métier. */
   ficheStatus?: FicheStatus;
+
+  /** Stylisation de l'export WordPress (builder Editorial / WP1). Stockée dans
+   *  le ProjectConfig (champ Airtable "Config template manuel" → clé `wp`). */
+  wpConfig?: WpConfig;
 }

@@ -64,7 +64,7 @@ export async function POST(
     // 3. Build styled WordPress HTML matching the defined layout
     const content = variant === 'v2'
       ? buildWpContentV2(projet, coverUrl, photoUrls)
-      : buildWpContent(projet, coverUrl, photoUrls);
+      : buildWpContent(projet, coverUrl, photoUrls, projet.wpConfig);
 
     // 4. TOUJOURS créer un nouveau draft.
     //    On ne réutilise jamais l'ID d'un post existant (extractWpPostId est

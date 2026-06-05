@@ -1,5 +1,6 @@
-import type { Projet } from '@/types/projet';
+import type { Projet, CrmField, CrmLink } from '@/types/projet';
 import { renderMarkdown } from '@/lib/utils/markdown';
+import { resolveWpConfig, type WpConfig, type ResolvedWpConfig } from './wpConfig';
 
 export function esc(value: string | number | undefined | null): string {
   if (value === undefined || value === null) return '';
@@ -16,6 +17,37 @@ export const GRIS   = '#DFE4E8';
 export const NOIR70 = '#4D4D4D';
 export const SERIF  = 'Georgia, serif';
 export const SANS   = "'Open Sans', system-ui, sans-serif";
+
+/**
+ * Sécurise une URL pour un attribut href : n'autorise que http(s).
+ * Retourne undefined si le schéma n'est pas sûr (évite javascript:, data:, …).
+ */
+function safeHref(url?: string): string | undefined {
+  if (!url) return undefined;
+  const trimmed = url.trim();
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  // Tolère les URLs sans schéma saisies dans Airtable (ex. "www.exemple.fr")
+  if (/^[\w-]+(\.[\w-]+)+/.test(trimmed)) return `https://${trimmed}`;
+  return undefined;
+}
+
+/**
+ * Rend une valeur de champ CRM (MOA, Architecte, …) en chaîne HTML : chaque
+ * entité dont l'URL site est connue devient un lien hypertexte (nouvel onglet),
+ * les autres restent en texte simple. Fallback sur la string jointe `plain`
+ * quand aucune entrée structurée n'est disponible (fiche non résolue).
+ */
+function crmCellHtml(links: CrmLink[] | undefined, plain: string | undefined): string {
+  if (!links || links.length === 0) return esc(plain ?? '');
+  return links
+    .map((l) => {
+      const href = safeHref(l.url);
+      return href
+        ? `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:underline;">${esc(l.name)}</a>`
+        : esc(l.name);
+    })
+    .join(', ');
+}
 
 function infoItem(label: string, value?: string | number, sub?: string): string {
   if (!value && value !== 0) return '';
@@ -120,13 +152,22 @@ function buildWpMagazine(projet: Projet, coverUrl: string | undefined, photoUrls
 }
 
 // startIdx : index lightbox de la première photo (0 = couverture, 1+ = galerie)
-export function imageGallery(urls: string[], alt: string, startIdx = 1): string {
+export function imageGallery(
+  urls: string[],
+  alt: string,
+  startIdx = 1,
+  photos?: ResolvedWpConfig['photos'],
+): string {
   if (urls.length === 0) return '';
-  const cols = urls.length === 1 ? 1 : urls.length === 2 ? 2 : 3;
+  const p = photos ?? resolveWpConfig().photos;
+  // galleryColumns = 0 → auto (1/2/3 selon le nombre, comportement historique).
+  const cols = p.galleryColumns && p.galleryColumns > 0
+    ? Math.min(p.galleryColumns, urls.length)
+    : (urls.length === 1 ? 1 : urls.length === 2 ? 2 : 3);
   return `
-    <div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:12px;margin:40px 0;">
+    <div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:${p.galleryGapPx}px;margin:40px 0;">
       ${urls.map((u, i) => `
-        <figure data-ai-idx="${startIdx + i}" style="margin:0;aspect-ratio:4/3;overflow:hidden;background:${GRIS};cursor:pointer;">
+        <figure data-ai-idx="${startIdx + i}" style="margin:0;aspect-ratio:${p.galleryAspectRatio};overflow:hidden;background:${GRIS};cursor:pointer;">
           <img src="${esc(u)}" alt="${esc(alt)} — photo ${startIdx + i}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;" />
         </figure>`).join('')}
     </div>`;
@@ -179,11 +220,21 @@ export function lightboxHtml(allPhotos: string[], alt: string): string {
 </script>`;
 }
 
-function buildWpEditorial(projet: Projet, coverUrl: string | undefined, photoUrls: string[]): string {
+function buildWpEditorial(
+  projet: Projet,
+  coverUrl: string | undefined,
+  photoUrls: string[],
+  wpConfig?: WpConfig,
+): string {
+  const { typo, photos } = resolveWpConfig(wpConfig);
   const pitch = esc(projet.pitch ?? '');
   const description = projet.description ?? '';
   const chiffresCles = projet.chiffresCles ?? [];
   const allPhotos = [coverUrl, ...photoUrls].filter((u): u is string => !!u);
+
+  // Helper : rend un champ CRM en HTML cliquable (fallback string jointe).
+  const crm = (key: CrmField, plain?: string): string =>
+    crmCellHtml(projet.crmLinks?.[key], plain);
 
   // Champs clés affichés à droite de la photo de couverture, dans l'ordre souhaité.
   // Mission AI mise en valeur en rouge. Filtre les champs vides automatiquement.
@@ -198,20 +249,22 @@ function buildWpEditorial(projet: Projet, coverUrl: string | undefined, photoUrl
     ? `${projet.programmePrincipal} (${projet.programmeSecondaire})`
     : projet.programmePrincipal ?? projet.programmeSecondaire;
 
-  const champsCles: { label: string; value?: string; highlight?: boolean }[] = [
+  // `value` = texte brut (sera échappé) ; `html` = HTML déjà sûr (liens CRM,
+  // rendu tel quel). Un champ est conservé s'il a une valeur OU un html non vide.
+  const champsCles: { label: string; value?: string; html?: string; highlight?: boolean }[] = [
     { label: 'Lieu',              value: projet.lieu },
-    { label: "Maître d'ouvrage", value: projet.moa },
-    { label: 'Architecte',       value: projet.architecte },
+    { label: "Maître d'ouvrage", value: projet.moa,         html: crm('moa', projet.moa) },
+    { label: 'Architecte',       value: projet.architecte,  html: crm('architecte', projet.architecte) },
     { label: 'Mission AI',       value: projet.missionAi, highlight: true },
-    { label: 'Mandataire',       value: projet.mandataire },
-    { label: 'BET associés',     value: projet.betAssocies },
-    { label: 'Entreprise',       value: projet.entreprise },
-    { label: 'Bailleur',         value: projet.bailleur },
+    { label: 'Mandataire',       value: projet.mandataire,  html: crm('mandataire', projet.mandataire) },
+    { label: 'BET associés',     value: projet.betAssocies, html: crm('betAssocies', projet.betAssocies) },
+    { label: 'Entreprise',       value: projet.entreprise,  html: crm('entreprise', projet.entreprise) },
+    { label: 'Bailleur',         value: projet.bailleur,    html: crm('bailleur', projet.bailleur) },
     { label: 'Programme',        value: programme },
     { label: 'Surface',          value: projet.surface ? `${projet.surface.toLocaleString('fr-FR')} m²` : undefined },
     { label: 'Budget',           value: projet.budgetHT },
     { label: 'État',             value: etat },
-  ].filter(f => !!f.value);
+  ].filter(f => !!f.value || !!f.html);
 
   return `
 <article style="font-family:${SANS};color:#000;line-height:1.6;">
@@ -224,49 +277,55 @@ function buildWpEditorial(projet: Projet, coverUrl: string | undefined, photoUrl
           <div><strong style="font-weight:700;">${esc(c.valeur)}</strong> ${esc(c.label)}</div>
         `).join('')}
       </div>` : ''}
-    ${pitch ? `<p style="font-family:${SERIF};font-size:20px;font-style:italic;line-height:1.4;color:${VIOLET};margin:0;max-width:780px;">${pitch}</p>` : ''}
+    ${pitch ? `<p style="font-family:${SERIF};font-size:${typo.pitchSizePx}px;font-style:italic;line-height:1.4;color:${VIOLET};margin:0;max-width:780px;">${pitch}</p>` : ''}
   </header>
 
-  <!-- Photo couverture (gauche) + champs clés (droite) -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start;margin-bottom:48px;">
-    <div>
-      ${coverUrl
-        ? `<figure data-ai-idx="0" style="margin:0;aspect-ratio:4/3;overflow:hidden;background:${GRIS};cursor:pointer;">
-            <img src="${esc(coverUrl)}" alt="${esc(projet.nom)}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;" />
-          </figure>`
-        : ''}
-    </div>
-    <ul style="list-style:none;margin:0;padding:0;font-family:${SANS} !important;font-size:13pt !important;line-height:1.5 !important;color:#000;font-variant:normal !important;text-transform:none !important;letter-spacing:normal !important;">
+  <!-- Photo couverture + champs clés. coverFullWidth → photo pleine largeur
+       au-dessus de la liste ; sinon côte à côte (2 colonnes). -->
+  <div style="display:grid;grid-template-columns:${photos.coverFullWidth ? '1fr' : '1fr 1fr'};gap:48px;align-items:start;margin-bottom:48px;">
+    ${coverUrl
+      ? `<figure data-ai-idx="0" style="margin:0;aspect-ratio:${photos.coverAspectRatio};overflow:hidden;background:${GRIS};cursor:pointer;">
+          <img src="${esc(coverUrl)}" alt="${esc(projet.nom)}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;" />
+        </figure>`
+      : '<div></div>'}
+    <ul style="list-style:none;margin:0;padding:0;font-family:${SANS} !important;font-size:${typo.fieldsSizePt}pt !important;line-height:1.5 !important;color:#000;font-variant:normal !important;text-transform:none !important;letter-spacing:normal !important;">
       ${champsCles.map(f => `
-        <li style="padding:8px 0;font-family:${SANS} !important;font-size:13pt !important;font-weight:400 !important;font-variant:normal !important;text-transform:none !important;letter-spacing:normal !important;${f.highlight ? `color:${ROUGE} !important;` : 'color:#000 !important;'}">
-          <span style="font-family:${SANS} !important;font-variant:normal !important;text-transform:none !important;letter-spacing:normal !important;">${esc(f.label)} :</span> ${esc(f.value!)}
+        <li style="padding:8px 0;font-family:${SANS} !important;font-size:${typo.fieldsSizePt}pt !important;font-weight:400 !important;font-variant:normal !important;text-transform:none !important;letter-spacing:normal !important;${f.highlight ? `color:${ROUGE} !important;` : 'color:#000 !important;'}">
+          <span style="font-family:${SANS} !important;font-variant:normal !important;text-transform:none !important;letter-spacing:normal !important;">${esc(f.label)} :</span> ${f.html ?? esc(f.value!)}
         </li>`).join('')}
     </ul>
   </div>
 
   <!-- Description pleine largeur, 1 colonne — markdown rendu -->
-  <div class="ai-md" style="padding-top:32px;margin-bottom:48px;font-family:${SANS};font-size:16px;line-height:1.7;color:#1a1a1a;">
+  <div class="ai-md" style="padding-top:32px;margin-bottom:48px;font-family:${SANS};font-size:${typo.descriptionSizePx}px;line-height:${typo.descriptionLineHeight};color:#1a1a1a;">
     ${renderMarkdown(description)}
   </div>
 
   ${projet.template === 'Dev' && (projet.prestationAssemblage ?? '').trim() ? `
   <!-- Bloc Prestation Assemblage (template Dev uniquement) -->
-  <section class="ai-md" style="margin:0 0 48px;font-family:${SANS};font-size:16px;line-height:1.7;color:#1a1a1a;">
-    <h2 style="font-family:${SERIF};font-size:22px;font-weight:500;line-height:1.2;color:${VIOLET};margin:0 0 16px;letter-spacing:-0.01em;">Prestation Assemblage</h2>
+  <section class="ai-md" style="margin:0 0 48px;font-family:${SANS};font-size:${typo.descriptionSizePx}px;line-height:${typo.descriptionLineHeight};color:#1a1a1a;">
+    <h2 style="font-family:${SERIF};font-size:${typo.sectionTitleSizePx}px;font-weight:500;line-height:1.2;color:${VIOLET};margin:0 0 16px;letter-spacing:-0.01em;">Prestation Assemblage</h2>
     ${renderMarkdown(projet.prestationAssemblage!)}
   </section>` : ''}
 
   <!-- Galerie des photos restantes (cover déjà affichée en haut, idx 0) -->
-  ${imageGallery(photoUrls, projet.nom, 1)}
+  ${imageGallery(photoUrls, projet.nom, 1, photos)}
 
   ${lightboxHtml(allPhotos, projet.nom)}
 
 </article>`;
 }
 
-export function buildWpContent(projet: Projet, coverUrl: string | undefined, photoUrls: string[]): string {
+export function buildWpContent(
+  projet: Projet,
+  coverUrl: string | undefined,
+  photoUrls: string[],
+  wpConfig?: WpConfig,
+): string {
   // Tous les templates restants (Solo, Diptyque, Triptyque, Manuel) routent
   // vers le builder Editorial pour la publication WordPress. buildWpMagazine
   // est conservé en parallèle pour archivage mais n'est plus appelé.
-  return buildWpEditorial(projet, coverUrl, photoUrls);
+  // `wpConfig` (optionnel) pilote la typo + la disposition des photos ;
+  // absent → DEFAULT_WP_CONFIG = rendu historique.
+  return buildWpEditorial(projet, coverUrl, photoUrls, wpConfig);
 }

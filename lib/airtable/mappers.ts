@@ -1,4 +1,5 @@
-import type { Projet, TemplateChoice } from '@/types/projet';
+import type { Projet, TemplateChoice, CrmLink } from '@/types/projet';
+import type { CrmEntity } from './crm';
 import { normalizeStatut } from '@/lib/utils/normalize';
 import { parseChiffresCles, parseTagsSiteWeb, formatBudget } from '@/lib/utils/parsers';
 import { formulaValue } from './client';
@@ -58,7 +59,8 @@ export interface AuxValues {
   materiauxValues?: string[];
   /** Valeurs brutes du multi-select "Statut" (field fldxXNdE0uNaomeby). */
   statutValues?: string[];
-  crmNames?: Map<string, string>;
+  /** Map<recordId → { nom, url }> des entités CRM (table « Sync CRM »). */
+  crmNames?: Map<string, CrmEntity>;
 }
 
 /**
@@ -67,7 +69,7 @@ export interface AuxValues {
  * Si un ID n'est pas trouvé dans la map, il est omis (pas d'ID brut affiché).
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function resolveCrm(field: any, crmNames?: Map<string, string>): string | undefined {
+function resolveCrm(field: any, crmNames?: Map<string, CrmEntity>): string | undefined {
   if (!field) return undefined;
   const ids: string[] = Array.isArray(field)
     ? field.filter((x) => typeof x === 'string')
@@ -75,7 +77,7 @@ function resolveCrm(field: any, crmNames?: Map<string, string>): string | undefi
   if (ids.length === 0) return undefined;
 
   if (crmNames) {
-    const resolved = ids.map((id) => crmNames.get(id)).filter(Boolean) as string[];
+    const resolved = ids.map((id) => crmNames.get(id)?.nom).filter(Boolean) as string[];
     if (resolved.length > 0) return resolved.join(', ');
     // Tous les IDs sont inconnus de la map CRM (base non configurée ou PAT sans accès)
     // → on retourne undefined plutôt que d'afficher les IDs bruts
@@ -83,6 +85,24 @@ function resolveCrm(field: any, crmNames?: Map<string, string>): string | undefi
   }
   // Pas de map CRM du tout : comportement legacy (affiche le 1er ID si présent)
   return ids[0] ?? undefined;
+}
+
+/**
+ * Résout un champ linked records CRM vers une liste structurée { name, url }
+ * (pour rendu en liens hypertexte dans l'export WordPress).
+ * Retourne `undefined` si aucun nom n'a pu être résolu.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function resolveCrmLinks(field: any, crmNames?: Map<string, CrmEntity>): CrmLink[] | undefined {
+  if (!field || !crmNames) return undefined;
+  const ids: string[] = Array.isArray(field)
+    ? field.filter((x) => typeof x === 'string')
+    : typeof field === 'string' ? [field] : [];
+  const links: CrmLink[] = ids
+    .map((id) => crmNames.get(id))
+    .filter((e): e is CrmEntity => !!e?.nom)
+    .map((e) => ({ name: e.nom, url: e.url }));
+  return links.length > 0 ? links : undefined;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -212,6 +232,22 @@ export function recordToProjet(record: any, aux?: AuxValues): Projet {
     bailleur: resolveCrm(f['Bailleur'], aux?.crmNames) ?? (typeof f['Bailleur'] === 'string' ? f['Bailleur'] : undefined),
     referentAi: f['Référent AI'] ?? undefined,
 
+    // Versions structurées (nom + URL site) pour les liens hypertexte WordPress.
+    // Seuls les champs effectivement résolus apparaissent (filtre les undefined).
+    crmLinks: (() => {
+      const entries: [keyof NonNullable<Projet['crmLinks']>, CrmLink[] | undefined][] = [
+        ['moa', resolveCrmLinks(f["Maître d'ouvrage"], aux?.crmNames)],
+        ['architecte', resolveCrmLinks(f['Architecte'], aux?.crmNames)],
+        ['mandataire', resolveCrmLinks(f['Mandataire'], aux?.crmNames)],
+        ['entreprise', resolveCrmLinks(f['Entreprise'], aux?.crmNames)],
+        ['betAssocies', resolveCrmLinks(f['BET associés'], aux?.crmNames)],
+        ['bailleur', resolveCrmLinks(f['Bailleur'], aux?.crmNames)],
+      ];
+      const out: NonNullable<Projet['crmLinks']> = {};
+      for (const [key, val] of entries) if (val) out[key] = val;
+      return Object.keys(out).length > 0 ? out : undefined;
+    })(),
+
     surface: f['Surface(m²)'] ?? undefined,
     budgetHT,
     anneeLivraison: f['Année livraison'] ?? undefined,
@@ -307,6 +343,7 @@ export function recordToProjet(record: any, aux?: AuxValues): Projet {
       return {
         savedManualConfig: cfg?.manuel ?? undefined,
         bandeauConfig: cfg?.bandeau ?? undefined,
+        wpConfig: cfg?.wp ?? undefined,
         photoCrops: cfg?.photoCrops ?? undefined,
         portfolioPeriod: hasDate
           ? {

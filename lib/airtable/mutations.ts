@@ -2,6 +2,7 @@ import { base, TABLE } from './client';
 import type { ManualConfig } from '@/lib/pdf/manualConfig';
 import type { BandeauConfig } from '@/lib/pdf/bandeauConfig';
 import type { CropData } from '@/lib/pdf/photoCrop';
+import type { WpConfig } from '@/lib/wordpress/wpConfig';
 import {
   PROJECT_CONFIG_FIELD,
   deserializeProjectConfig,
@@ -62,6 +63,8 @@ export interface ProjetEditableFields {
   photoCrops?: Record<string, CropData>;
   /** Statut interne de production. Mergé dans `ProjectConfig.ficheStatus`. */
   ficheStatus?: FicheStatus;
+  /** Stylisation export WordPress. Mergé dans `ProjectConfig.wp`. */
+  wpConfig?: WpConfig;
 }
 
 export async function updateProjetFields(slug: string, fields: ProjetEditableFields): Promise<{ slug: string }> {
@@ -113,7 +116,8 @@ export async function updateProjetFields(slug: string, fields: ProjetEditableFie
     fields.savedManualConfig !== undefined ||
     fields.bandeauConfig !== undefined ||
     fields.photoCrops !== undefined ||
-    fields.ficheStatus !== undefined
+    fields.ficheStatus !== undefined ||
+    fields.wpConfig !== undefined
   ) {
     const existing = deserializeProjectConfig(records[0].fields[PROJECT_CONFIG_FIELD]) ?? {};
     const merged: ProjectConfig = {
@@ -122,6 +126,7 @@ export async function updateProjetFields(slug: string, fields: ProjetEditableFie
       ...(fields.savedManualConfig !== undefined ? { manuel: fields.savedManualConfig } : {}),
       ...(fields.photoCrops !== undefined ? { photoCrops: fields.photoCrops } : {}),
       ...(fields.ficheStatus !== undefined ? { ficheStatus: fields.ficheStatus } : {}),
+      ...(fields.wpConfig !== undefined ? { wp: fields.wpConfig } : {}),
     };
     update[PROJECT_CONFIG_FIELD] = serializeProjectConfig(merged);
   }
