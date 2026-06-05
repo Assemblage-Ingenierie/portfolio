@@ -179,9 +179,13 @@ html, body { background: white; }
   margin-bottom: 2mm;
 }
 .t-surtitre-row .t-surtitre { margin-bottom: 0; }
+/* Mission AI : mêmes paramètres typographiques que le statut
+   (.t-header-statut) — taille 9pt, weight 500, letter-spacing 0.06em,
+   rouge --ai-rouge. La surcharge bandeauConfig.status est aussi appliquée
+   inline (cf. titleBlockHtml) pour rester identique au statut. */
 .t-surtitre-mission {
-  font-family: var(--sans); font-size: 9pt; font-weight: 600;
-  color: var(--ai-rouge); letter-spacing: 0.05em;
+  font-family: var(--sans); font-size: 9pt; font-weight: 500;
+  color: var(--ai-rouge); letter-spacing: 0.06em;
   margin-left: auto; white-space: nowrap;
 }
 .t-h1 {
@@ -447,9 +451,12 @@ export function titleBlockHtml(
   const missionAiVals = options?.showMissionAi ? missionAiResolved(projet) : [];
   let surtitre: string;
   if (options?.showMissionAi && missionAiVals.length > 0) {
+    // Mission AI calque le statut : on lui applique la même surcharge typo
+    // (bandeauConfig.status) que `.t-header-statut`, en plus du CSS de base.
+    const statusStyle = styleToCss(projet.bandeauConfig?.status);
     surtitre = `<div class="t-surtitre-row">
       <span class="t-surtitre">${projet.lieu ? esc(projet.lieu) : ''}</span>
-      <span class="t-surtitre-mission">Mission AI : ${esc(missionAiVals.join(', '))}</span>
+      <span class="t-surtitre-mission"${statusStyle ? ` style="${statusStyle}"` : ''}>Mission AI : ${esc(missionAiVals.join(', '))}</span>
     </div>`;
   } else {
     surtitre = projet.lieu ? `<div class="t-surtitre">${esc(projet.lieu)}</div>` : '';
