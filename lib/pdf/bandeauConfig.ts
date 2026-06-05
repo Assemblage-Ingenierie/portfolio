@@ -22,6 +22,9 @@ export interface BandeauStyle {
   bold?: boolean;
   italic?: boolean;
   underline?: boolean;
+  /** Petites capitales (`font-variant: small-caps`). Indépendant de
+   *  `textTransform` (qui agit sur la casse réelle du texte). */
+  smallCaps?: boolean;
   /** Hex (#rrggbb) ou keyword CSS. */
   color?: string;
   /** Surlignage : couleur de fond derrière le texte. */
@@ -61,6 +64,10 @@ export interface BandeauConfig {
   titre?: BandeauStyle;
   /** Statut + année (coin droit du header). */
   status?: BandeauStyle;
+  /** Champ « Mission AI » affiché en face du Lieu, au-dessus du titre
+   *  (templates Str-Env et Dev uniquement). Appliqué inline sur
+   *  `.t-surtitre-mission` (cf. `titleBlockHtml` dans shared.ts). */
+  missionAi?: BandeauStyle;
   /** Libellés du bandeau métadonnées (ARCHITECTE, BUDGET…). */
   labels?: BandeauStyle;
   /** Valeurs du bandeau métadonnées. */
@@ -251,6 +258,7 @@ export function styleToCss(style?: BandeauStyle): string {
   if (style.bold) parts.push('font-weight:700');
   if (style.italic) parts.push('font-style:italic');
   if (style.underline) parts.push('text-decoration:underline');
+  if (style.smallCaps) parts.push('font-variant:small-caps');
   if (style.color) parts.push(`color:${style.color}`);
   if (style.background) parts.push(`background:${style.background}`);
   if (style.lineHeight !== undefined && Number.isFinite(style.lineHeight)) {
