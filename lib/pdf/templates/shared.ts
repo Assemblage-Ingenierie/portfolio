@@ -456,7 +456,7 @@ export function titleBlockHtml(
     const statusStyle = styleToCss(projet.bandeauConfig?.status);
     surtitre = `<div class="t-surtitre-row">
       <span class="t-surtitre">${projet.lieu ? esc(projet.lieu) : ''}</span>
-      <span class="t-surtitre-mission"${statusStyle ? ` style="${statusStyle}"` : ''}>Mission AI : ${esc(missionAiVals.join(', '))}</span>
+      <span class="t-surtitre-mission"${statusStyle ? ` style="${statusStyle}"` : ''}>${esc(missionAiVals.join(', '))}</span>
     </div>`;
   } else {
     surtitre = projet.lieu ? `<div class="t-surtitre">${esc(projet.lieu)}</div>` : '';
