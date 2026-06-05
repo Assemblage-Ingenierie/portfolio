@@ -23,11 +23,12 @@ import { color, font, radius, ui } from '@/lib/ui/tokens';
  * disposition photos). La liste des champs dépend du `template` (Str-Env/Dev).
  */
 
-type SectionId = 'typo' | 'fields' | 'categories' | 'photos';
+type SectionId = 'typo' | 'fields' | 'spacing' | 'categories' | 'photos';
 
 const SECTIONS: { id: SectionId; label: string }[] = [
   { id: 'typo', label: 'Typographie générale' },
   { id: 'fields', label: 'Champs du bandeau' },
+  { id: 'spacing', label: 'Espacements' },
   { id: 'categories', label: 'Catégories' },
   { id: 'photos', label: 'Photos' },
 ];
@@ -115,11 +116,12 @@ export default function WpLayoutSidebar({
   const [active, setActive] = useState<SectionId | null>('fields');
 
   const resolved = resolveWpConfig(config);
-  const { typo, fields, photos } = resolved;
+  const { typo, fields, photos, spacing } = resolved;
   const aspectOptions = WP_ASPECT_RATIOS.map((r) => ({ value: r, label: r }));
 
   const setTypo = (patch: Partial<typeof typo>) => onChange({ ...config, typo: { ...config.typo, ...patch } });
   const setPhotos = (patch: Partial<typeof photos>) => onChange({ ...config, photos: { ...config.photos, ...patch } });
+  const setSpacing = (patch: Partial<typeof spacing>) => onChange({ ...config, spacing: { ...config.spacing, ...patch } });
   const setFieldsGlobal = (patch: { labelBold?: boolean; valueBold?: boolean; labelColor?: string; valueColor?: string }) =>
     onChange({ ...config, fields: { ...(config.fields ?? {}), ...patch } });
 
@@ -197,16 +199,23 @@ export default function WpLayoutSidebar({
                   </div>
                   {!eff.hidden && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70 }}>Libellé</span>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: '8pt', color: color.noir70, cursor: 'pointer' }}>
-                            <input type="checkbox" checked={eff.labelBold} onChange={(e) => setOverride(key, { labelBold: e.target.checked })} /> gras
-                          </label>
-                          <Palette value={eff.labelColor} canReset={ov.labelColor !== undefined}
-                            onChange={(hex) => setOverride(key, { labelColor: hex })} onReset={() => clearOverrideProp(key, 'labelColor')} />
-                        </span>
-                      </div>
+                      {key === 'programmeSecondaire' && (
+                        <p style={{ fontFamily: font.sans, fontSize: '7.5pt', color: color.noir70, margin: 0, lineHeight: 1.35, fontStyle: 'italic' }}>
+                          Rendu après le Programme principal, séparé d&apos;un point médian (pas de libellé propre).
+                        </p>
+                      )}
+                      {key !== 'programmeSecondaire' && (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70 }}>Libellé</span>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: '8pt', color: color.noir70, cursor: 'pointer' }}>
+                              <input type="checkbox" checked={eff.labelBold} onChange={(e) => setOverride(key, { labelBold: e.target.checked })} /> gras
+                            </label>
+                            <Palette value={eff.labelColor} canReset={ov.labelColor !== undefined}
+                              onChange={(hex) => setOverride(key, { labelColor: hex })} onReset={() => clearOverrideProp(key, 'labelColor')} />
+                          </span>
+                        </div>
+                      )}
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <span style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70 }}>Valeur</span>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
@@ -232,11 +241,26 @@ export default function WpLayoutSidebar({
                         <input type="checkbox" checked={eff.smallCaps} onChange={(e) => setOverride(key, { smallCaps: e.target.checked })} />
                         Valeur en petites capitales
                       </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: font.sans, fontSize: '8pt', color: color.noir70, cursor: 'pointer' }}>
+                        <input type="checkbox" checked={eff.upperCase} onChange={(e) => setOverride(key, { upperCase: e.target.checked })} />
+                        Valeur en grandes capitales
+                      </label>
                     </div>
                   )}
                 </div>
               );
             })}
+          </>
+        )}
+
+        {active === 'spacing' && (
+          <>
+            <Slider label="Titre ↔ accroche" value={spacing.titlePitchPx} min={0} max={120} suffix="px" onChange={(v) => setSpacing({ titlePitchPx: v })} />
+            <Slider label="Accroche ↔ photo" value={spacing.pitchPhotoPx} min={0} max={120} suffix="px" onChange={(v) => setSpacing({ pitchPhotoPx: v })} />
+            <Slider label="Photo ↔ description" value={spacing.photoDescPx} min={0} max={120} suffix="px" onChange={(v) => setSpacing({ photoDescPx: v })} />
+            <p style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70, margin: '4px 0 0', lineHeight: 1.4 }}>
+              « Titre ↔ accroche » = marge au-dessus du contenu (le titre est rendu par le thème WordPress).
+            </p>
           </>
         )}
 

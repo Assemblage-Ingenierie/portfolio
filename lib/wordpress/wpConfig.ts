@@ -48,6 +48,10 @@ export type WpFieldKey =
   | 'entreprise'
   | 'missionAi'
   | 'programme'
+  // `programmeSecondaire` n'est PAS une cellule autonome : sa valeur est rendue
+  // dans la cellule Programme (après le principal, séparée d'un point médian).
+  // Présente dans l'ordre uniquement pour exposer ses options typo dans l'UI.
+  | 'programmeSecondaire'
   | 'materiaux';
 
 /** Libellés affichés (mêmes sigles que le bandeau PDF). */
@@ -61,17 +65,18 @@ export const WP_FIELD_LABELS: Record<WpFieldKey, string> = {
   entreprise: 'Entreprise',
   missionAi: 'Mission AI',
   programme: 'Programme',
+  programmeSecondaire: 'Programme secondaire',
   materiaux: 'Matériaux',
 };
 
 /** Ordre des champs du bandeau WP Str-Env (miroir de `metaGridHtml` Str-Env). */
 export const WP_FIELDS_STR_ENV: WpFieldKey[] = [
-  'moa', 'architecte', 'betAssocies', 'budget', 'surface', 'entreprise', 'missionAi', 'programme', 'materiaux',
+  'moa', 'architecte', 'betAssocies', 'budget', 'surface', 'entreprise', 'missionAi', 'programme', 'programmeSecondaire', 'materiaux',
 ];
 
 /** Ordre des champs du bandeau WP Dev (miroir de `metaGridHtml` isDev). */
 export const WP_FIELDS_DEV: WpFieldKey[] = [
-  'moa', 'bailleur', 'architecte', 'budget', 'surface', 'programme', 'materiaux', 'missionAi', 'betAssocies',
+  'moa', 'bailleur', 'architecte', 'budget', 'surface', 'programme', 'programmeSecondaire', 'materiaux', 'missionAi', 'betAssocies',
 ];
 
 export function wpFieldOrder(template: WpTemplate): WpFieldKey[] {
@@ -89,6 +94,8 @@ export interface WpFieldStyle {
   sizePt?: number;
   /** Valeur rendue en petites capitales (font-variant: small-caps). Défaut false. */
   smallCaps?: boolean;
+  /** Valeur rendue en grandes capitales (text-transform: uppercase). Défaut false. */
+  upperCase?: boolean;
 }
 
 export interface WpConfig {
@@ -116,6 +123,16 @@ export interface WpConfig {
     valueColor?: string;
     /** Surcharges par champ (priorité sur les défauts globaux ci-dessus). */
     overrides?: Partial<Record<WpFieldKey, WpFieldStyle>>;
+  };
+  /** Espacements verticaux (px) du haut de la fiche. */
+  spacing?: {
+    /** Entre le titre (thème WP) et la phrase d'accroche — marge au-dessus
+     *  du bloc d'en-tête. Défaut 0. */
+    titlePitchPx?: number;
+    /** Entre la phrase d'accroche et la photo. Défaut 40. */
+    pitchPhotoPx?: number;
+    /** Entre la photo et la description. Défaut 48. */
+    photoDescPx?: number;
   };
   /** Catégories (« Tags site web ») rendues en tête de contenu. */
   categories?: {
@@ -160,6 +177,11 @@ export const DEFAULT_WP_CONFIG = {
       missionAi: { labelColor: ROUGE },
     } as Partial<Record<WpFieldKey, WpFieldStyle>>,
   },
+  spacing: {
+    titlePitchPx: 0,
+    pitchPhotoPx: 40,
+    photoDescPx: 48,
+  },
   categories: {
     show: true,
     sizePx: 11,
@@ -192,6 +214,7 @@ export function resolveWpConfig(cfg?: WpConfig) {
         ...(cfg?.fields?.overrides ?? {}),
       } as Partial<Record<WpFieldKey, WpFieldStyle>>,
     },
+    spacing: { ...DEFAULT_WP_CONFIG.spacing, ...(cfg?.spacing ?? {}) },
     categories: { ...DEFAULT_WP_CONFIG.categories, ...(cfg?.categories ?? {}) },
     photos: { ...DEFAULT_WP_CONFIG.photos, ...(cfg?.photos ?? {}) },
   };
@@ -212,5 +235,6 @@ export function effectiveFieldStyle(resolved: ResolvedWpConfig, key: WpFieldKey)
     valueColor: ov.valueColor ?? resolved.fields.valueColor,
     sizePt: ov.sizePt,
     smallCaps: ov.smallCaps ?? false,
+    upperCase: ov.upperCase ?? false,
   };
 }
