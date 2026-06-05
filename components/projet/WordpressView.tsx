@@ -25,7 +25,7 @@ export default function WordpressView({ projet }: { projet: Projet }) {
   const [wpConfig, setWpConfig] = useState<WpConfig>(projet.wpConfig ?? DEFAULT_WP_CONFIG);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [publishing, setPublishing] = useState(false);
-  const [result, setResult] = useState<{ url?: string; error?: string; id?: number } | null>(null);
+  const [result, setResult] = useState<{ url?: string; error?: string; id?: number; categoryNames?: string[]; categoryCount?: number } | null>(null);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
 
   const initialSnapshotRef = useRef<string>(
@@ -68,7 +68,7 @@ export default function WordpressView({ projet }: { projet: Projet }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Erreur inconnue');
-      setResult({ url: data.url, id: data.id });
+      setResult({ url: data.url, id: data.id, categoryNames: data.categoryNames, categoryCount: data.categoryCount });
     } catch (e) {
       setResult({ error: e instanceof Error ? e.message : 'Erreur' });
     } finally {
@@ -147,6 +147,11 @@ export default function WordpressView({ projet }: { projet: Projet }) {
           <span style={{ color: feedback.succesClair, fontWeight: 600 }}>
             ✓ Publié #{result.id} —{' '}
             <a href={result.url} target="_blank" rel="noopener noreferrer" style={{ color: feedback.succesClair }}>voir le brouillon</a>
+            {result.categoryNames && result.categoryNames.length > 0 && (
+              <span style={{ color: result.categoryCount ? feedback.succesClair : '#ffdd88', marginLeft: 8, fontWeight: 400 }}>
+                · catégories : {result.categoryCount}/{result.categoryNames.length} assignées ({result.categoryNames.join(', ')})
+              </span>
+            )}
           </span>
         )}
         {result?.error && <span style={{ color: feedback.erreurClair, fontWeight: 600 }}>✗ {result.error}</span>}

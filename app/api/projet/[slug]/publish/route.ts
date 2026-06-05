@@ -83,14 +83,16 @@ export async function POST(
     // Catégories WordPress (panneau « Catégories ») depuis le champ Airtable
     // « Tags export WP ». Résolues en IDs (créées si manquantes). Non bloquant.
     let categories: number[] | undefined;
+    let categoryIds: number[] = [];
     try {
       if (projet.tagsExportWp.length > 0) {
-        const ids = await ensureCategoryIds(projet.tagsExportWp);
-        if (ids.length > 0) categories = ids;
+        categoryIds = await ensureCategoryIds(projet.tagsExportWp);
+        if (categoryIds.length > 0) categories = categoryIds;
       }
     } catch (catErr) {
       console.warn('Catégories WP non assignées (non-fatal):', catErr);
     }
+    console.log('[WP-PUBLISH] categories', { tags: projet.tagsExportWp, ids: categoryIds });
 
     const previousUrl = projet.urlWordpress;
     const { id, url, status, type, author } = await createOrUpdatePost({
@@ -115,7 +117,12 @@ export async function POST(
       airtableWarning = 'URL non sauvegardée dans Airtable';
     }
 
-    return NextResponse.json({ id, url, status, type, author, previousUrl, warning: airtableWarning });
+    return NextResponse.json({
+      id, url, status, type, author, previousUrl, warning: airtableWarning,
+      // Diagnostic catégories : noms demandés (Airtable) + nb d'IDs WP assignés.
+      categoryNames: projet.tagsExportWp,
+      categoryCount: categoryIds.length,
+    });
   } catch (err) {
     console.error('Publish error:', err);
     return NextResponse.json(
