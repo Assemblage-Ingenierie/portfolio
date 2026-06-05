@@ -205,7 +205,13 @@ Indépendants du système de templates PDF. `lib/wordpress/builders.ts` (Editori
 
 #### Aperçu & stylisation WordPress (`WpConfig`)
 
-`buildWpContent(projet, coverUrl, photoUrls, wpConfig?)` accepte une config optionnelle **`WpConfig`** (`lib/wordpress/wpConfig.ts`) qui pilote la typographie (tailles description / champs clés / pitch / titre section, interlignage) et la disposition des photos (ratio couverture, pleine largeur, colonnes/ratio/gap galerie). `DEFAULT_WP_CONFIG` reproduit **exactement** le rendu historique → une fiche sans config ne change pas.
+`buildWpContent(projet, coverUrl, photoUrls, wpConfig?)` accepte une config optionnelle **`WpConfig`** (`lib/wordpress/wpConfig.ts`) qui pilote :
+- **typographie globale** (tailles description / champs clés / pitch / titre section, interlignage) ;
+- **typographie par champ du bandeau** (`fields`) : libellé et valeur stylés **indépendamment** (gras + couleur), via des défauts globaux (`labelBold:false`, `valueBold:true`, couleurs) + surcharges par clé `WpFieldKey` (`overrides`). Défaut : libellé « Mission AI » en rouge, valeur en noir. Helper `effectiveFieldStyle(resolved, key)`. Le rendu sépare libellé/valeur en deux `<span>` (avec resets `!important` anti-thème) ;
+- **catégories** (`categories`) : la ligne « Tags site web » (`projet.tagsSiteWeb`, déjà mappée) rendue en **tête de contenu** avec un point médian `·` (sur le vrai WP elle apparaît sous le titre du thème, le contenu venant après `post.title`) ;
+- **disposition photos** (ratio couverture, pleine largeur, colonnes/ratio/gap galerie).
+
+`DEFAULT_WP_CONFIG` est le **rendu de référence** (libellés non gras, valeurs en gras, « Mission AI » libellé rouge).
 
 - **Persistance** : `WpConfig` vit sous la clé `wp` du `ProjectConfig` unifié (même champ Airtable « Config template manuel » que `bandeau`/`manuel`), exposé en `Projet.wpConfig`. Écrit via la route `/fields` (`wpConfig` ∈ `FICHE_ONLY_FIELDS`). `publish/route.ts` passe `projet.wpConfig` au builder.
 - **Page de preview dédiée** : `/projet/[slug]/wordpress` (`components/projet/WordpressView` + `WpLayoutSidebar` + `WordpressPreview`). L'aperçu exécute `buildWpContent` **côté client** avec les URLs Airtable et l'injecte en `srcDoc` (pas d'export PDF, pas d'upload WP pour l'aperçu). Bouton « Aperçu WordPress » dans `ProjetToolbar`.

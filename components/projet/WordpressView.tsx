@@ -114,6 +114,14 @@ export default function WordpressView({ projet }: { projet: Projet }) {
         <span style={{ color: 'white', fontWeight: 700 }}>Aperçu WordPress — {projet.nom}</span>
         <div style={{ flex: 1 }} />
 
+        <Link
+          href={`/projet/${projet.slug}/edit`}
+          style={{ ...btn, background: 'transparent', border: '1px solid var(--ai-gris)', color: 'white', textDecoration: 'none' }}
+          title="Éditer les champs (dont la Description projet en texte enrichi)"
+        >
+          Éditer les champs
+        </Link>
+
         <button
           onClick={handleSave}
           disabled={saveState === 'saving'}

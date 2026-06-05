@@ -1,6 +1,14 @@
 import type { Projet, CrmField, CrmLink } from '@/types/projet';
 import { renderMarkdown } from '@/lib/utils/markdown';
-import { resolveWpConfig, type WpConfig, type ResolvedWpConfig } from './wpConfig';
+import {
+  resolveWpConfig,
+  effectiveFieldStyle,
+  WP_FIELD_LABELS,
+  WP_FIELD_ORDER,
+  type WpConfig,
+  type WpFieldKey,
+  type ResolvedWpConfig,
+} from './wpConfig';
 
 export function esc(value: string | number | undefined | null): string {
   if (value === undefined || value === null) return '';
@@ -226,7 +234,7 @@ function buildWpEditorial(
   photoUrls: string[],
   wpConfig?: WpConfig,
 ): string {
-  const { typo, photos } = resolveWpConfig(wpConfig);
+  const { typo, fields, categories, photos } = resolveWpConfig(wpConfig);
   const pitch = esc(projet.pitch ?? '');
   const description = projet.description ?? '';
   const chiffresCles = projet.chiffresCles ?? [];
@@ -249,25 +257,48 @@ function buildWpEditorial(
     ? `${projet.programmePrincipal} (${projet.programmeSecondaire})`
     : projet.programmePrincipal ?? projet.programmeSecondaire;
 
-  // `value` = texte brut (sera échappé) ; `html` = HTML déjà sûr (liens CRM,
-  // rendu tel quel). Un champ est conservé s'il a une valeur OU un html non vide.
-  const champsCles: { label: string; value?: string; html?: string; highlight?: boolean }[] = [
-    { label: 'Lieu',              value: projet.lieu },
-    { label: "Maître d'ouvrage", value: projet.moa,         html: crm('moa', projet.moa) },
-    { label: 'Architecte',       value: projet.architecte,  html: crm('architecte', projet.architecte) },
-    { label: 'Mission AI',       value: projet.missionAi, highlight: true },
-    { label: 'Mandataire',       value: projet.mandataire,  html: crm('mandataire', projet.mandataire) },
-    { label: 'BET associés',     value: projet.betAssocies, html: crm('betAssocies', projet.betAssocies) },
-    { label: 'Entreprise',       value: projet.entreprise,  html: crm('entreprise', projet.entreprise) },
-    { label: 'Bailleur',         value: projet.bailleur,    html: crm('bailleur', projet.bailleur) },
-    { label: 'Programme',        value: programme },
-    { label: 'Surface',          value: projet.surface ? `${projet.surface.toLocaleString('fr-FR')} m²` : undefined },
-    { label: 'Budget',           value: projet.budgetHT },
-    { label: 'État',             value: etat },
-  ].filter(f => !!f.value || !!f.html);
+  // Valeur de chaque champ par clé. `value` = texte brut (échappé au rendu) ;
+  // `html` = HTML déjà sûr (liens CRM, rendu tel quel).
+  const fieldData: Partial<Record<WpFieldKey, { value?: string; html?: string }>> = {
+    lieu:        { value: projet.lieu },
+    moa:         { value: projet.moa,         html: crm('moa', projet.moa) },
+    architecte:  { value: projet.architecte,  html: crm('architecte', projet.architecte) },
+    missionAi:   { value: projet.missionAi },
+    mandataire:  { value: projet.mandataire,  html: crm('mandataire', projet.mandataire) },
+    betAssocies: { value: projet.betAssocies, html: crm('betAssocies', projet.betAssocies) },
+    entreprise:  { value: projet.entreprise,  html: crm('entreprise', projet.entreprise) },
+    bailleur:    { value: projet.bailleur,    html: crm('bailleur', projet.bailleur) },
+    programme:   { value: programme },
+    surface:     { value: projet.surface ? `${projet.surface.toLocaleString('fr-FR')} m²` : undefined },
+    budget:      { value: projet.budgetHT },
+    etat:        { value: etat },
+  };
+
+  // Champs effectivement rendus : valeur/html non vide, non masqués, dans
+  // l'ordre canonique. Chaque champ porte son style effectif (override > global).
+  const champsCles = WP_FIELD_ORDER
+    .map((key) => {
+      const d = fieldData[key];
+      if (!d || (!d.value && !d.html)) return null;
+      const st = effectiveFieldStyle({ typo, fields, categories, photos }, key);
+      if (st.hidden) return null;
+      return { key, label: WP_FIELD_LABELS[key], value: d.value, html: d.html, style: st };
+    })
+    .filter((f): f is NonNullable<typeof f> => f !== null);
+
+  // Ligne de catégories (« Tags site web ») rendue en tête de contenu, avec
+  // un point médian comme séparateur. Apparaît visuellement sous le titre du
+  // thème WordPress (le HTML du contenu vient après le titre de post).
+  const tags = projet.tagsSiteWeb ?? [];
+  const categoriesHtml = categories.show && tags.length > 0
+    ? `<div style="font-family:${SANS};font-size:${categories.sizePx}px;font-weight:600;letter-spacing:0.04em;color:${categories.color};margin:0 0 16px;${categories.uppercase ? 'text-transform:uppercase;' : ''}">${tags.map(esc).join('&nbsp;·&nbsp;')}</div>`
+    : '';
 
   return `
 <article style="font-family:${SANS};color:#000;line-height:1.6;">
+
+  <!-- Catégories (Tags site web) en tête de contenu, séparées par un point médian. -->
+  ${categoriesHtml}
 
   <!-- Le titre est rendu par le thème WP depuis post.title (ne pas dupliquer ici). -->
   <header style="margin:0 0 40px;">
@@ -289,10 +320,17 @@ function buildWpEditorial(
         </figure>`
       : '<div></div>'}
     <ul style="list-style:none;margin:0;padding:0;font-family:${SANS} !important;font-size:${typo.fieldsSizePt}pt !important;line-height:1.5 !important;color:#000;font-variant:normal !important;text-transform:none !important;letter-spacing:normal !important;">
-      ${champsCles.map(f => `
-        <li style="padding:8px 0;font-family:${SANS} !important;font-size:${typo.fieldsSizePt}pt !important;font-weight:400 !important;font-variant:normal !important;text-transform:none !important;letter-spacing:normal !important;${f.highlight ? `color:${ROUGE} !important;` : 'color:#000 !important;'}">
-          <span style="font-family:${SANS} !important;font-variant:normal !important;text-transform:none !important;letter-spacing:normal !important;">${esc(f.label)} :</span> ${f.html ?? esc(f.value!)}
-        </li>`).join('')}
+      ${champsCles.map(f => {
+        // Resets !important pour neutraliser le thème WP, + style par champ
+        // (libellé vs valeur indépendants : poids + couleur).
+        const reset = `font-family:${SANS} !important;font-variant:normal !important;text-transform:none !important;letter-spacing:normal !important;`;
+        const labelStyle = `${reset}font-weight:${f.style.labelBold ? 700 : 400} !important;color:${f.style.labelColor} !important;`;
+        const valueStyle = `${reset}font-weight:${f.style.valueBold ? 700 : 400} !important;color:${f.style.valueColor} !important;`;
+        return `
+        <li style="padding:8px 0;font-size:${typo.fieldsSizePt}pt !important;${reset}">
+          <span style="${labelStyle}">${esc(f.label)} :</span> <span style="${valueStyle}">${f.html ?? esc(f.value!)}</span>
+        </li>`;
+      }).join('')}
     </ul>
   </div>
 
