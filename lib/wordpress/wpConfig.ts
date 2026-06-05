@@ -64,7 +64,7 @@ export const WP_FIELD_LABELS: Record<WpFieldKey, string> = {
   surface: 'Surface',
   entreprise: 'Entreprise',
   missionAi: 'Mission AI',
-  programme: 'Programme principal',
+  programme: 'Programme',
   programmeSecondaire: 'Programme secondaire',
   materiaux: 'Matériaux',
 };
