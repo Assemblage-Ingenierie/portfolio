@@ -3,6 +3,7 @@ import { renderMarkdown } from '@/lib/utils/markdown';
 import {
   resolveWpConfig,
   effectiveFieldStyle,
+  effectivePhotoSettings,
   wpTemplateFor,
   wpFieldOrder,
   WP_FIELD_LABELS,
@@ -10,6 +11,13 @@ import {
   type WpFieldKey,
   type ResolvedWpConfig,
 } from './wpConfig';
+
+/** Photo passée au builder : URL effective (Airtable ou WP uploadée) + filename
+ *  pour retrouver les réglages utilisateur (`wpConfig.photos.perPhoto[filename]`). */
+export interface WpPhoto {
+  url: string;
+  filename: string;
+}
 
 export function esc(value: string | number | undefined | null): string {
   if (value === undefined || value === null) return '';
@@ -160,7 +168,8 @@ function buildWpMagazine(projet: Projet, coverUrl: string | undefined, photoUrls
 </div>`;
 }
 
-// startIdx : index lightbox de la première photo (0 = couverture, 1+ = galerie)
+// Helpers d'export pour rendre la galerie depuis un array d'URLs simples
+// (rétro-compat — usage legacy/tests). Utiliser `renderGallery` côté builder.
 export function imageGallery(
   urls: string[],
   alt: string,
@@ -168,17 +177,43 @@ export function imageGallery(
   photos?: ResolvedWpConfig['photos'],
 ): string {
   if (urls.length === 0) return '';
-  const p = photos ?? resolveWpConfig().photos;
-  // galleryColumns = 0 → auto (1/2/3 selon le nombre, comportement historique).
-  const cols = p.galleryColumns && p.galleryColumns > 0
-    ? Math.min(p.galleryColumns, urls.length)
-    : (urls.length === 1 ? 1 : urls.length === 2 ? 2 : 3);
+  return renderGallery(
+    urls.map((u, i) => ({ url: u, filename: `photo-${i + 1}` })),
+    alt,
+    startIdx,
+    photos ?? resolveWpConfig().photos,
+    {}, // pas de map perPhoto en mode rétro-compat
+  );
+}
+
+/**
+ * Rend la galerie HTML. Chaque photo porte son filename → applique les réglages
+ * utilisateur (object-position via offsets) issus de `resolved.photos.perPhoto`.
+ * `perPhoto` est passé directement plutôt que via `resolved` pour permettre au
+ * builder de filtrer/réordonner les photos en amont sans re-construire `resolved`.
+ */
+function renderGallery(
+  photos: WpPhoto[],
+  alt: string,
+  startIdx: number,
+  cfgPhotos: ResolvedWpConfig['photos'],
+  perPhoto: ResolvedWpConfig['photos']['perPhoto'],
+): string {
+  if (photos.length === 0) return '';
+  const cols = cfgPhotos.galleryColumns && cfgPhotos.galleryColumns > 0
+    ? Math.min(cfgPhotos.galleryColumns, photos.length)
+    : (photos.length === 1 ? 1 : photos.length === 2 ? 2 : 3);
   return `
-    <div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:${p.galleryGapPx}px;margin:40px 0;">
-      ${urls.map((u, i) => `
-        <figure data-ai-idx="${startIdx + i}" style="margin:0;aspect-ratio:${p.galleryAspectRatio};overflow:hidden;background:${GRIS};cursor:pointer;">
-          <img src="${esc(u)}" alt="${esc(alt)} — photo ${startIdx + i}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;" />
-        </figure>`).join('')}
+    <div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:${cfgPhotos.galleryGapPx}px;margin:40px 0;">
+      ${photos.map((p, i) => {
+        const ov = perPhoto[p.filename] ?? {};
+        const x = ov.offsetX ?? 50;
+        const y = ov.offsetY ?? 50;
+        return `
+        <figure data-ai-idx="${startIdx + i}" style="margin:0;aspect-ratio:${cfgPhotos.galleryAspectRatio};overflow:hidden;background:${GRIS};cursor:pointer;">
+          <img src="${esc(p.url)}" alt="${esc(alt)} — photo ${startIdx + i}" loading="lazy" style="width:100%;height:100%;object-fit:cover;object-position:${x}% ${y}%;display:block;pointer-events:none;" />
+        </figure>`;
+      }).join('')}
     </div>`;
 }
 
@@ -231,8 +266,8 @@ export function lightboxHtml(allPhotos: string[], alt: string): string {
 
 function buildWpEditorial(
   projet: Projet,
-  coverUrl: string | undefined,
-  photoUrls: string[],
+  defaultCover: WpPhoto | undefined,
+  galleryInput: WpPhoto[],
   wpConfig?: WpConfig,
 ): string {
   const resolved = resolveWpConfig(wpConfig);
@@ -240,7 +275,33 @@ function buildWpEditorial(
   const pitch = esc(projet.pitch ?? '');
   const description = projet.description ?? '';
   const chiffresCles = projet.chiffresCles ?? [];
-  const allPhotos = [coverUrl, ...photoUrls].filter((u): u is string => !!u);
+
+  // Pool de toutes les photos disponibles (cover Airtable + photos projet),
+  // indexées par filename. C'est dans ce pool qu'on pioche la couverture
+  // effective (selon `wpConfig.photos.coverFilename`) et qu'on filtre la galerie.
+  const pool: WpPhoto[] = [];
+  if (defaultCover) pool.push(defaultCover);
+  for (const p of galleryInput) {
+    if (!pool.some((q) => q.filename === p.filename)) pool.push(p);
+  }
+  const byFilename = new Map(pool.map((p) => [p.filename, p]));
+
+  // Couverture effective : choisie par l'utilisateur (coverFilename) si
+  // disponible, sinon la photo de couverture Airtable par défaut.
+  const cover = (photos.coverFilename && byFilename.get(photos.coverFilename))
+    || defaultCover
+    || undefined;
+  const coverUrl = cover?.url;
+  const coverOffsetX = photos.coverOffsetX ?? 50;
+  const coverOffsetY = photos.coverOffsetY ?? 50;
+
+  // Galerie : toutes les photos du pool SAUF la couverture, filtrées par
+  // `perPhoto[filename].enabled` (par défaut true).
+  const galleryPhotos: WpPhoto[] = pool
+    .filter((p) => !cover || p.filename !== cover.filename)
+    .filter((p) => effectivePhotoSettings(resolved, p.filename).enabled);
+
+  const allPhotos = [coverUrl, ...galleryPhotos.map((p) => p.url)].filter((u): u is string => !!u);
 
   // Template d'export dérivé de la Vignette pôle (DEV → Dev, sinon Str-Env).
   const wpTemplate = wpTemplateFor(projet.vignettePoles);
@@ -331,7 +392,7 @@ function buildWpEditorial(
   <div style="display:grid;grid-template-columns:${photos.coverFullWidth ? '1fr' : '1fr 1fr'};gap:48px;align-items:start;margin-bottom:${spacing.photoDescPx}px;">
     ${coverUrl
       ? `<figure data-ai-idx="0" style="margin:0;aspect-ratio:${photos.coverAspectRatio};overflow:hidden;background:${GRIS};cursor:pointer;">
-          <img src="${esc(coverUrl)}" alt="${esc(projet.nom)}" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;" />
+          <img src="${esc(coverUrl)}" alt="${esc(projet.nom)}" loading="lazy" style="width:100%;height:100%;object-fit:cover;object-position:${coverOffsetX}% ${coverOffsetY}%;display:block;pointer-events:none;" />
         </figure>`
       : '<div></div>'}
     <ul style="list-style:none;margin:0;padding:0;font-family:${SANS} !important;font-size:${typo.fieldsSizePt}pt !important;line-height:1.5 !important;color:#000;font-variant:normal !important;text-transform:none !important;letter-spacing:normal !important;">
@@ -353,21 +414,28 @@ function buildWpEditorial(
     </ul>
   </div>
 
-  <!-- Description pleine largeur, 1 colonne — markdown rendu. L'espacement
-       photo ↔ description est porté par le margin-bottom de la grille ci-dessus. -->
+  ${(() => {
+    // Blocs textuels et galerie réordonnables. La position du bloc
+    // « Prestation Assemblage » (template Dev) est pilotée par
+    // `photos.prestationPosition`.
+    const descBlock = `
   <div class="ai-md" style="margin-bottom:48px;font-family:${SANS};font-size:${typo.descriptionSizePx}px;line-height:${typo.descriptionLineHeight};color:#1a1a1a;">
     ${renderMarkdown(description)}
-  </div>
-
-  ${wpTemplate === 'Dev' && (projet.prestationAssemblage ?? '').trim() ? `
-  <!-- Bloc Prestation Assemblage (template Dev uniquement) -->
+  </div>`;
+    const hasPresta = wpTemplate === 'Dev' && (projet.prestationAssemblage ?? '').trim();
+    const prestaBlock = hasPresta ? `
   <section class="ai-md" style="margin:0 0 48px;font-family:${SANS};font-size:${typo.descriptionSizePx}px;line-height:${typo.descriptionLineHeight};color:#1a1a1a;">
     <h2 style="font-family:${SERIF};font-size:${typo.sectionTitleSizePx}px;font-weight:500;line-height:1.2;color:${VIOLET};margin:0 0 16px;letter-spacing:-0.01em;">Prestation Assemblage</h2>
     ${renderMarkdown(projet.prestationAssemblage!)}
-  </section>` : ''}
+  </section>` : '';
+    const galleryBlock = renderGallery(galleryPhotos, projet.nom, 1, photos, photos.perPhoto);
 
-  <!-- Galerie des photos restantes (cover déjà affichée en haut, idx 0) -->
-  ${imageGallery(photoUrls, projet.nom, 1, photos)}
+    const position = photos.prestationPosition ?? 'after-description';
+    if (!hasPresta) return descBlock + galleryBlock;
+    if (position === 'before-description') return prestaBlock + descBlock + galleryBlock;
+    if (position === 'after-photos') return descBlock + galleryBlock + prestaBlock;
+    return descBlock + prestaBlock + galleryBlock; // after-description (défaut)
+  })()}
 
   ${lightboxHtml(allPhotos, projet.nom)}
 
@@ -376,8 +444,8 @@ function buildWpEditorial(
 
 export function buildWpContent(
   projet: Projet,
-  coverUrl: string | undefined,
-  photoUrls: string[],
+  cover: WpPhoto | undefined,
+  gallery: WpPhoto[],
   wpConfig?: WpConfig,
 ): string {
   // Tous les templates restants (Solo, Diptyque, Triptyque, Manuel) routent
@@ -385,5 +453,5 @@ export function buildWpContent(
   // est conservé en parallèle pour archivage mais n'est plus appelé.
   // `wpConfig` (optionnel) pilote la typo + la disposition des photos ;
   // absent → DEFAULT_WP_CONFIG = rendu historique.
-  return buildWpEditorial(projet, coverUrl, photoUrls, wpConfig);
+  return buildWpEditorial(projet, cover, gallery, wpConfig);
 }

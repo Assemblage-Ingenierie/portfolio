@@ -9,12 +9,17 @@ import {
   wpFieldOrder,
   resolveWpConfig,
   effectiveFieldStyle,
+  effectivePhotoSettings,
   type WpConfig,
   type WpTemplate,
   type WpFieldKey,
   type WpFieldStyle,
 } from '@/lib/wordpress/wpConfig';
 import { color, font, radius, ui } from '@/lib/ui/tokens';
+
+/** Photo connue du projet (cover + photosProjet), passée à la sidebar pour
+ *  l'éditeur de réglages individuels. */
+export interface KnownPhoto { url: string; filename: string; isCover?: boolean }
 
 /**
  * Sidebar de contrôles de la stylisation de l'export WordPress.
@@ -66,6 +71,44 @@ function Select({
   );
 }
 
+/** Slider + champ numérique liés. Step 5 par défaut (cf. demande utilisateur :
+ *  variation par 5% via slider mais réglage manuel possible via le number input). */
+function StepSlider({
+  label, value, min, max, step = 5, suffix, onChange,
+}: {
+  label: string; value: number; min: number; max: number; step?: number; suffix?: string; onChange: (v: number) => void;
+}) {
+  const clamp = (n: number) => Math.max(min, Math.min(max, isFinite(n) ? n : min));
+  return (
+    <div style={{ ...rowStyle, marginBottom: 10 }}>
+      <span style={labelStyle}>
+        <span>{label}</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+          <input
+            type="number"
+            min={min}
+            max={max}
+            step={step}
+            value={value}
+            onChange={(e) => onChange(clamp(Number(e.target.value)))}
+            style={{ width: 52, fontFamily: font.sans, fontSize: '9pt', padding: '2px 4px', border: `1px solid ${color.gris}`, borderRadius: 4, textAlign: 'right' }}
+          />
+          {suffix && <span style={{ color: color.noir70, fontWeight: 400 }}>{suffix}</span>}
+        </span>
+      </span>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        style={{ accentColor: color.rouge as string, width: '100%' }}
+      />
+    </div>
+  );
+}
+
 function Toggle({
   label, checked, onChange,
 }: {
@@ -109,9 +152,9 @@ function Palette({
 }
 
 export default function WpLayoutSidebar({
-  config, onChange, template, slug, tagsExportWp,
+  config, onChange, template, slug, tagsExportWp, knownPhotos,
 }: {
-  config: WpConfig; onChange: (next: WpConfig) => void; template: WpTemplate; slug: string; tagsExportWp: string[];
+  config: WpConfig; onChange: (next: WpConfig) => void; template: WpTemplate; slug: string; tagsExportWp: string[]; knownPhotos: KnownPhoto[];
 }) {
   const [active, setActive] = useState<SectionId | null>('fields');
 
@@ -122,6 +165,12 @@ export default function WpLayoutSidebar({
   const setTypo = (patch: Partial<typeof typo>) => onChange({ ...config, typo: { ...config.typo, ...patch } });
   const setPhotos = (patch: Partial<typeof photos>) => onChange({ ...config, photos: { ...config.photos, ...patch } });
   const setSpacing = (patch: Partial<typeof spacing>) => onChange({ ...config, spacing: { ...config.spacing, ...patch } });
+  // Mise à jour d'un réglage par-photo (clé = filename).
+  const setPerPhoto = (filename: string, patch: { enabled?: boolean; offsetX?: number; offsetY?: number }) => {
+    const current = config.photos?.perPhoto ?? {};
+    const merged = { ...current, [filename]: { ...(current[filename] ?? {}), ...patch } };
+    onChange({ ...config, photos: { ...config.photos, perPhoto: merged } });
+  };
   const setFieldsGlobal = (patch: { labelBold?: boolean; valueBold?: boolean; labelColor?: string; valueColor?: string }) =>
     onChange({ ...config, fields: { ...(config.fields ?? {}), ...patch } });
 
@@ -283,13 +332,97 @@ export default function WpLayoutSidebar({
 
         {active === 'photos' && (
           <>
-            <Select label="Ratio photo de couverture" value={photos.coverAspectRatio} options={aspectOptions} onChange={(v) => setPhotos({ coverAspectRatio: v })} />
+            {/* ── Couverture ───────────────────────────────────────────── */}
+            <div style={{ fontFamily: font.sans, fontSize: '9pt', fontWeight: 700, color: color.violet, margin: '0 0 8px' }}>Couverture</div>
+            <Select
+              label="Photo utilisée comme couverture"
+              value={photos.coverFilename ?? '__default__'}
+              options={[
+                { value: '__default__', label: '(Défaut Airtable)' },
+                ...knownPhotos.map((p) => ({ value: p.filename, label: `${p.filename}${p.isCover ? ' (cover Airtable)' : ''}` })),
+              ]}
+              onChange={(v) => setPhotos({ coverFilename: v === '__default__' ? undefined : v })}
+            />
+            <Select label="Ratio couverture" value={photos.coverAspectRatio} options={aspectOptions} onChange={(v) => setPhotos({ coverAspectRatio: v })} />
             <Toggle label="Couverture pleine largeur" checked={photos.coverFullWidth} onChange={(v) => setPhotos({ coverFullWidth: v })} />
-            <Select label="Colonnes galerie" value={String(photos.galleryColumns)}
-              options={[{ value: '0', label: 'Auto' }, { value: '1', label: '1 colonne' }, { value: '2', label: '2 colonnes' }, { value: '3', label: '3 colonnes' }]}
-              onChange={(v) => setPhotos({ galleryColumns: Number(v) as 0 | 1 | 2 | 3 })} />
+            <StepSlider label="Cadrage horizontal" value={photos.coverOffsetX ?? 50} min={0} max={100} suffix="%" onChange={(v) => setPhotos({ coverOffsetX: v })} />
+            <StepSlider label="Cadrage vertical" value={photos.coverOffsetY ?? 50} min={0} max={100} suffix="%" onChange={(v) => setPhotos({ coverOffsetY: v })} />
+
+            <hr style={{ border: 'none', borderTop: `1px solid ${ui.separateur}`, margin: '12px 0' }} />
+
+            {/* ── Galerie : colonnes / ratio / gap ─────────────────────── */}
+            <div style={{ fontFamily: font.sans, fontSize: '9pt', fontWeight: 700, color: color.violet, margin: '0 0 8px' }}>Galerie</div>
+            <Select label="Nombre de photos en largeur" value={String(photos.galleryColumns)}
+              options={[{ value: '0', label: 'Auto' }, { value: '1', label: '1 colonne' }, { value: '2', label: '2 colonnes' }, { value: '3', label: '3 colonnes' }, { value: '4', label: '4 colonnes' }]}
+              onChange={(v) => setPhotos({ galleryColumns: Number(v) as 0 | 1 | 2 | 3 | 4 })} />
             <Select label="Ratio photos galerie" value={photos.galleryAspectRatio} options={aspectOptions} onChange={(v) => setPhotos({ galleryAspectRatio: v })} />
             <Slider label="Espacement galerie" value={photos.galleryGapPx} min={0} max={40} suffix="px" onChange={(v) => setPhotos({ galleryGapPx: v })} />
+
+            {/* ── Réglages par photo ───────────────────────────────────── */}
+            <hr style={{ border: 'none', borderTop: `1px solid ${ui.separateur}`, margin: '12px 0' }} />
+            <div style={{ fontFamily: font.sans, fontSize: '9pt', fontWeight: 700, color: color.violet, margin: '0 0 8px' }}>Photos individuelles</div>
+            <p style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70, margin: '0 0 12px', lineHeight: 1.4 }}>
+              Active / désactive chaque photo et règle son cadrage (% horizontal / vertical, pas de 5 %, saisie manuelle possible). La photo choisie comme couverture est retirée de la galerie.
+            </p>
+            {knownPhotos.length === 0 && (
+              <p style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70, fontStyle: 'italic' }}>Aucune photo détectée sur cette fiche.</p>
+            )}
+            {knownPhotos.map((p) => {
+              const eff = effectivePhotoSettings(resolved, p.filename);
+              const isCoverEffective = (photos.coverFilename ?? knownPhotos.find((q) => q.isCover)?.filename) === p.filename;
+              return (
+                <div key={p.filename} style={{ border: `1px solid ${color.gris}`, borderRadius: radius.action, padding: 8, marginBottom: 8, opacity: eff.enabled ? 1 : 0.55 }}>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 6 }}>
+                    <div style={{ width: 56, height: 42, flexShrink: 0, borderRadius: 4, overflow: 'hidden', background: color.gris as string, position: 'relative' }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={p.url} alt={p.filename}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: `${eff.offsetX}% ${eff.offsetY}%`, display: 'block' }} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontFamily: font.sans, fontSize: '8pt', fontWeight: 600, color: color.violet, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={p.filename}>
+                        {p.filename}
+                      </div>
+                      <div style={{ display: 'flex', gap: 10, marginTop: 4, flexWrap: 'wrap' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontFamily: font.sans, fontSize: '8pt', color: color.noir70, cursor: 'pointer' }}>
+                          <input type="checkbox" checked={eff.enabled} onChange={(e) => setPerPhoto(p.filename, { enabled: e.target.checked })} />
+                          Activée
+                        </label>
+                        {isCoverEffective && (
+                          <span style={{ fontFamily: font.sans, fontSize: '7.5pt', fontWeight: 700, color: color.rouge, letterSpacing: '0.05em' }}>• COUVERTURE</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  {eff.enabled && !isCoverEffective && (
+                    <>
+                      <StepSlider label="Horizontal" value={eff.offsetX} min={0} max={100} suffix="%" onChange={(v) => setPerPhoto(p.filename, { offsetX: v })} />
+                      <StepSlider label="Vertical" value={eff.offsetY} min={0} max={100} suffix="%" onChange={(v) => setPerPhoto(p.filename, { offsetY: v })} />
+                    </>
+                  )}
+                </div>
+              );
+            })}
+
+            {/* ── Prestation Assemblage (Dev uniquement) ──────────────── */}
+            {template === 'Dev' && (
+              <>
+                <hr style={{ border: 'none', borderTop: `1px solid ${ui.separateur}`, margin: '12px 0' }} />
+                <div style={{ fontFamily: font.sans, fontSize: '9pt', fontWeight: 700, color: color.violet, margin: '0 0 8px' }}>Prestation Assemblage</div>
+                <p style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70, margin: '0 0 8px', lineHeight: 1.4 }}>
+                  Position du bloc par rapport à la description et à la galerie (template Dev uniquement).
+                </p>
+                <Select
+                  label="Position du bloc"
+                  value={photos.prestationPosition ?? 'after-description'}
+                  options={[
+                    { value: 'before-description', label: 'Avant la description' },
+                    { value: 'after-description', label: 'Après la description (défaut)' },
+                    { value: 'after-photos', label: 'Après les photos' },
+                  ]}
+                  onChange={(v) => setPhotos({ prestationPosition: v as 'before-description' | 'after-description' | 'after-photos' })}
+                />
+              </>
+            )}
           </>
         )}
       </div>
