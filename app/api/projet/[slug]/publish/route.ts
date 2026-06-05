@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getProjet, updateProjetUrl } from '@/lib/airtable';
-import { uploadMedia, createOrUpdatePost } from '@/lib/wordpress';
+import { uploadMedia, createOrUpdatePost, ensureCategoryIds } from '@/lib/wordpress';
 import { buildWpContent } from '@/lib/wordpress/builders';
 import { buildWpContentV2 } from '@/lib/wordpress/buildersV2';
 import { requireApprovedUser } from '@/lib/supabase/requireApprovedUser';
@@ -80,6 +80,18 @@ export async function POST(
     //    par construction de mettre un post existant à la corbeille.
     //    WP gère automatiquement les collisions de slug en suffixant
     //    -2, -3, etc. — chaque draft est donc unique et visible.
+    // Catégories WordPress (panneau « Catégories ») depuis le champ Airtable
+    // « Tags export WP ». Résolues en IDs (créées si manquantes). Non bloquant.
+    let categories: number[] | undefined;
+    try {
+      if (projet.tagsExportWp.length > 0) {
+        const ids = await ensureCategoryIds(projet.tagsExportWp);
+        if (ids.length > 0) categories = ids;
+      }
+    } catch (catErr) {
+      console.warn('Catégories WP non assignées (non-fatal):', catErr);
+    }
+
     const previousUrl = projet.urlWordpress;
     const { id, url, status, type, author } = await createOrUpdatePost({
       title: projet.nom,
@@ -88,6 +100,7 @@ export async function POST(
       excerpt: projet.pitch,
       status: 'draft',
       featured_media: coverId,
+      categories,
     });
     console.log('[WP-PUBLISH]', { id, status, type, author, url, previousUrl });
 

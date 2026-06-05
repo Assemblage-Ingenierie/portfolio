@@ -102,6 +102,9 @@ export interface Projet {
   materiaux: string[];
   motsCles: string[];
   tagsSiteWeb: string[];
+  /** Multi-select Airtable « Tags export WP » (fld2y9rIk9DVEf9eo). Assigné
+   *  comme catégories WordPress (taxonomie) à l'export. */
+  tagsExportWp: string[];
 
   budgetRaw?: number;
 

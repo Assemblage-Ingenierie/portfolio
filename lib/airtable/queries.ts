@@ -1,7 +1,7 @@
 import type { Projet } from '@/types/projet';
 import { cacheTag, cacheLife } from 'next/cache';
 import { base, TABLE } from './client';
-import { recordToProjet, type AuxValues, FIELD_PROGRAMME_PRINCIPAL, FIELD_PROGRAMME_SECONDAIRE, FIELD_POLE, FIELD_VIGNETTE_POLE, FIELD_PRESTATION_ASSEMBLAGE, FIELD_REHAB_NEUF, FIELD_MATERIAUX, FIELD_STATUT } from './mappers';
+import { recordToProjet, type AuxValues, FIELD_PROGRAMME_PRINCIPAL, FIELD_PROGRAMME_SECONDAIRE, FIELD_POLE, FIELD_VIGNETTE_POLE, FIELD_PRESTATION_ASSEMBLAGE, FIELD_REHAB_NEUF, FIELD_MATERIAUX, FIELD_STATUT, FIELD_TAGS_EXPORT_WP } from './mappers';
 import { fetchCrmNames } from './crm';
 
 /** Tag de la liste complète (`getProjets`) — invalidé seulement quand un
@@ -71,6 +71,7 @@ interface AuxByFieldId {
   rehabNeuf?: string[];
   materiaux?: string[];
   statut?: string[];
+  tagsExportWp?: string[];
 }
 
 // Multi-select avec cellFormat: 'string' → CSV. Renvoie l'array complet
@@ -97,7 +98,7 @@ async function fetchAuxByFieldId(
     const records = await base(TABLE)
       .select({
         ...STRING_FORMAT,
-        fields: [FIELD_PROGRAMME_PRINCIPAL, FIELD_PROGRAMME_SECONDAIRE, FIELD_POLE, FIELD_VIGNETTE_POLE, FIELD_PRESTATION_ASSEMBLAGE, FIELD_REHAB_NEUF, FIELD_MATERIAUX, FIELD_STATUT],
+        fields: [FIELD_PROGRAMME_PRINCIPAL, FIELD_PROGRAMME_SECONDAIRE, FIELD_POLE, FIELD_VIGNETTE_POLE, FIELD_PRESTATION_ASSEMBLAGE, FIELD_REHAB_NEUF, FIELD_MATERIAUX, FIELD_STATUT, FIELD_TAGS_EXPORT_WP],
         returnFieldsByFieldId: true,
         ...(filterFormula ? { filterByFormula: filterFormula } : {}),
       })
@@ -133,6 +134,7 @@ async function fetchAuxByFieldId(
         rehabNeuf: allValues(r.fields[FIELD_REHAB_NEUF]) ?? [],
         materiaux: allValues(r.fields[FIELD_MATERIAUX]) ?? [],
         statut: allValues(r.fields[FIELD_STATUT]) ?? [],
+        tagsExportWp: allValues(r.fields[FIELD_TAGS_EXPORT_WP]) ?? [],
       });
     });
   } catch (err) {
@@ -203,6 +205,7 @@ export async function getProjets(): Promise<Projet[]> {
         rehabNeufValues: prog?.rehabNeuf,
         materiauxValues: prog?.materiaux,
         statutValues: prog?.statut,
+        tagsExportWp: prog?.tagsExportWp,
         crmNames,
       };
       return recordToProjet(r, aux);
@@ -267,6 +270,7 @@ export async function getProjet(slug: string): Promise<Projet | null> {
       rehabNeufValues: p?.rehabNeuf,
       materiauxValues: p?.materiaux,
       statutValues: p?.statut,
+      tagsExportWp: p?.tagsExportWp,
       crmNames,
     };
     return recordToProjet(r, aux);

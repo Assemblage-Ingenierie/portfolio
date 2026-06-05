@@ -36,13 +36,15 @@ export function wpTemplateFor(vignettePoles?: string[]): WpTemplate {
   return (vignettePoles ?? []).some((p) => String(p).toUpperCase() === 'DEV') ? 'Dev' : 'Str-Env';
 }
 
-/** Clés stables des champs du bandeau (alignées sur le bandeau PDF des fiches). */
+/** Clés stables des champs du bandeau (alignées sur le bandeau PDF des fiches,
+ *  mais Budget et Surface restent deux cellules distinctes côté WP). */
 export type WpFieldKey =
   | 'moa'
   | 'bailleur'
   | 'architecte'
   | 'betAssocies'
-  | 'budgetSurface'
+  | 'budget'
+  | 'surface'
   | 'entreprise'
   | 'missionAi'
   | 'programme'
@@ -54,7 +56,8 @@ export const WP_FIELD_LABELS: Record<WpFieldKey, string> = {
   bailleur: 'Bailleur',
   architecte: 'Architecte',
   betAssocies: 'BET associés',
-  budgetSurface: 'Budget/Surface',
+  budget: 'Budget',
+  surface: 'Surface',
   entreprise: 'Entreprise',
   missionAi: 'Mission AI',
   programme: 'Programme',
@@ -63,12 +66,12 @@ export const WP_FIELD_LABELS: Record<WpFieldKey, string> = {
 
 /** Ordre des champs du bandeau WP Str-Env (miroir de `metaGridHtml` Str-Env). */
 export const WP_FIELDS_STR_ENV: WpFieldKey[] = [
-  'moa', 'architecte', 'betAssocies', 'budgetSurface', 'entreprise', 'missionAi', 'programme', 'materiaux',
+  'moa', 'architecte', 'betAssocies', 'budget', 'surface', 'entreprise', 'missionAi', 'programme', 'materiaux',
 ];
 
 /** Ordre des champs du bandeau WP Dev (miroir de `metaGridHtml` isDev). */
 export const WP_FIELDS_DEV: WpFieldKey[] = [
-  'moa', 'bailleur', 'architecte', 'budgetSurface', 'programme', 'materiaux', 'missionAi', 'betAssocies',
+  'moa', 'bailleur', 'architecte', 'budget', 'surface', 'programme', 'materiaux', 'missionAi', 'betAssocies',
 ];
 
 export function wpFieldOrder(template: WpTemplate): WpFieldKey[] {
@@ -84,6 +87,8 @@ export interface WpFieldStyle {
   valueColor?: string;
   /** Taille de police du champ (pt). Si absent → défaut global `typo.fieldsSizePt`. */
   sizePt?: number;
+  /** Valeur rendue en petites capitales (font-variant: small-caps). Défaut false. */
+  smallCaps?: boolean;
 }
 
 export interface WpConfig {
@@ -206,5 +211,6 @@ export function effectiveFieldStyle(resolved: ResolvedWpConfig, key: WpFieldKey)
     labelColor: ov.labelColor ?? resolved.fields.labelColor,
     valueColor: ov.valueColor ?? resolved.fields.valueColor,
     sizePt: ov.sizePt,
+    smallCaps: ov.smallCaps ?? false,
   };
 }

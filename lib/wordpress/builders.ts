@@ -236,7 +236,7 @@ function buildWpEditorial(
   wpConfig?: WpConfig,
 ): string {
   const resolved = resolveWpConfig(wpConfig);
-  const { typo, categories, photos } = resolved;
+  const { typo, photos } = resolved;
   const pitch = esc(projet.pitch ?? '');
   const description = projet.description ?? '';
   const chiffresCles = projet.chiffresCles ?? [];
@@ -254,30 +254,24 @@ function buildWpEditorial(
     ? `${projet.programmePrincipal} (${projet.programmeSecondaire})`
     : projet.programmePrincipal ?? projet.programmeSecondaire;
 
-  // Budget/Surface : cellule fusionnée à deux lignes (miroir du bandeau PDF) —
-  // budget en ligne 1, surface en ligne 2, "NC" pour la valeur manquante.
-  const hasBudget = !!projet.budgetHT;
-  const hasSurface = !!projet.surface;
-  const budgetSurfaceHtml = (hasBudget || hasSurface)
-    ? `${esc(hasBudget ? projet.budgetHT! : 'NC')}<br>${esc(hasSurface ? `${projet.surface!.toLocaleString('fr-FR')} m²` : 'NC')}`
-    : undefined;
-
   const materiaux = projet.materiaux && projet.materiaux.length > 0
     ? projet.materiaux.join(', ')
     : undefined;
 
   // Valeur de chaque champ par clé. `value` = texte brut (échappé au rendu) ;
-  // `html` = HTML déjà sûr (liens CRM / sauts de ligne, rendu tel quel).
+  // `html` = HTML déjà sûr (liens CRM, rendu tel quel). Budget et Surface sont
+  // deux cellules distinctes.
   const fieldData: Partial<Record<WpFieldKey, { value?: string; html?: string }>> = {
-    moa:           { value: projet.moa,         html: crm('moa', projet.moa) },
-    bailleur:      { value: projet.bailleur,    html: crm('bailleur', projet.bailleur) },
-    architecte:    { value: projet.architecte,  html: crm('architecte', projet.architecte) },
-    betAssocies:   { value: projet.betAssocies, html: crm('betAssocies', projet.betAssocies) },
-    budgetSurface: { html: budgetSurfaceHtml },
-    entreprise:    { value: projet.entreprise,  html: crm('entreprise', projet.entreprise) },
-    missionAi:     { value: projet.missionAi },
-    programme:     { value: programme },
-    materiaux:     { value: materiaux },
+    moa:         { value: projet.moa,         html: crm('moa', projet.moa) },
+    bailleur:    { value: projet.bailleur,    html: crm('bailleur', projet.bailleur) },
+    architecte:  { value: projet.architecte,  html: crm('architecte', projet.architecte) },
+    betAssocies: { value: projet.betAssocies, html: crm('betAssocies', projet.betAssocies) },
+    budget:      { value: projet.budgetHT },
+    surface:     { value: projet.surface ? `${projet.surface.toLocaleString('fr-FR')} m²` : undefined },
+    entreprise:  { value: projet.entreprise,  html: crm('entreprise', projet.entreprise) },
+    missionAi:   { value: projet.missionAi },
+    programme:   { value: programme },
+    materiaux:   { value: materiaux },
   };
 
   // Champs effectivement rendus : valeur/html non vide, non masqués, dans
@@ -292,19 +286,13 @@ function buildWpEditorial(
     })
     .filter((f): f is NonNullable<typeof f> => f !== null);
 
-  // Ligne de catégories (« Tags site web ») rendue en tête de contenu, avec
-  // un point médian comme séparateur. Apparaît visuellement sous le titre du
-  // thème WordPress (le HTML du contenu vient après le titre de post).
-  const tags = projet.tagsSiteWeb ?? [];
-  const categoriesHtml = categories.show && tags.length > 0
-    ? `<div style="font-family:${SANS};font-size:${categories.sizePx}px;font-weight:600;letter-spacing:0.04em;color:${categories.color};margin:0 0 16px;${categories.uppercase ? 'text-transform:uppercase;' : ''}">${tags.map(esc).join('&nbsp;·&nbsp;')}</div>`
-    : '';
+  // Les catégories ne sont PLUS rendues dans le contenu : elles sont assignées
+  // comme catégories WordPress (taxonomie) à l'export, depuis le champ Airtable
+  // « Tags export WP » (cf. publish/route.ts → ensureCategoryIds). Le thème WP
+  // les affiche alors au-dessus du titre.
 
   return `
 <article style="font-family:${SANS};color:#000;line-height:1.6;">
-
-  <!-- Catégories (Tags site web) en tête de contenu, séparées par un point médian. -->
-  ${categoriesHtml}
 
   <!-- Le titre est rendu par le thème WP depuis post.title (ne pas dupliquer ici). -->
   <header style="margin:0 0 40px;">
@@ -330,9 +318,11 @@ function buildWpEditorial(
         // Resets !important pour neutraliser le thème WP, + style par champ
         // (libellé vs valeur indépendants : poids, couleur, taille).
         const sizePt = f.style.sizePt ?? typo.fieldsSizePt;
-        const reset = `font-family:${SANS} !important;font-variant:normal !important;text-transform:none !important;letter-spacing:normal !important;font-size:${sizePt}pt !important;`;
-        const labelStyle = `${reset}font-weight:${f.style.labelBold ? 700 : 400} !important;color:${f.style.labelColor} !important;`;
-        const valueStyle = `${reset}font-weight:${f.style.valueBold ? 700 : 400} !important;color:${f.style.valueColor} !important;`;
+        // `reset` ne fige PAS font-variant : il est défini par span (le libellé
+        // reste normal, la valeur peut passer en petites capitales).
+        const reset = `font-family:${SANS} !important;text-transform:none !important;letter-spacing:normal !important;font-size:${sizePt}pt !important;`;
+        const labelStyle = `${reset}font-variant:normal !important;font-weight:${f.style.labelBold ? 700 : 400} !important;color:${f.style.labelColor} !important;`;
+        const valueStyle = `${reset}font-variant:${f.style.smallCaps ? 'small-caps' : 'normal'} !important;font-weight:${f.style.valueBold ? 700 : 400} !important;color:${f.style.valueColor} !important;`;
         return `
         <li style="padding:8px 0;${reset}">
           <span style="${labelStyle}">${esc(f.label)} :</span> <span style="${valueStyle}">${f.html ?? esc(f.value!)}</span>

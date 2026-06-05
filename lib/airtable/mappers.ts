@@ -36,6 +36,9 @@ export const FIELD_STATUT = 'fldxXNdE0uNaomeby';
 export const FIELD_MISSION_AI = 'fldgkpweXw9BypQfX';
 // Certification (rich text Markdown depuis 2026) — écrit par field ID.
 export const FIELD_CERTIFICATION = 'fldnb9rfM4C3m9Pcu';
+// Tags export WP (multi-select) — catégories WordPress à cocher à l'export.
+// Lu par field ID (multi-select renommable). Distinct de « Tags site web ».
+export const FIELD_TAGS_EXPORT_WP = 'fld2y9rIk9DVEf9eo';
 
 /**
  * Valeurs auxiliaires injectées dans le mapper.
@@ -59,6 +62,8 @@ export interface AuxValues {
   materiauxValues?: string[];
   /** Valeurs brutes du multi-select "Statut" (field fldxXNdE0uNaomeby). */
   statutValues?: string[];
+  /** Valeurs du multi-select "Tags export WP" (catégories WordPress). */
+  tagsExportWp?: string[];
   /** Map<recordId → { nom, url }> des entités CRM (table « Sync CRM »). */
   crmNames?: Map<string, CrmEntity>;
 }
@@ -330,6 +335,7 @@ export function recordToProjet(record: any, aux?: AuxValues): Projet {
     materiaux: aux?.materiauxValues ?? [],
     motsCles,
     tagsSiteWeb,
+    tagsExportWp: aux?.tagsExportWp ?? [],
 
     budgetRaw,
     urlWordpress: f['URL'] ?? undefined,

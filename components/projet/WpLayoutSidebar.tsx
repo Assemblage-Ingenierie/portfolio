@@ -108,19 +108,18 @@ function Palette({
 }
 
 export default function WpLayoutSidebar({
-  config, onChange, template, slug,
+  config, onChange, template, slug, tagsExportWp,
 }: {
-  config: WpConfig; onChange: (next: WpConfig) => void; template: WpTemplate; slug: string;
+  config: WpConfig; onChange: (next: WpConfig) => void; template: WpTemplate; slug: string; tagsExportWp: string[];
 }) {
   const [active, setActive] = useState<SectionId | null>('fields');
 
   const resolved = resolveWpConfig(config);
-  const { typo, fields, categories, photos } = resolved;
+  const { typo, fields, photos } = resolved;
   const aspectOptions = WP_ASPECT_RATIOS.map((r) => ({ value: r, label: r }));
 
   const setTypo = (patch: Partial<typeof typo>) => onChange({ ...config, typo: { ...config.typo, ...patch } });
   const setPhotos = (patch: Partial<typeof photos>) => onChange({ ...config, photos: { ...config.photos, ...patch } });
-  const setCategories = (patch: Partial<typeof categories>) => onChange({ ...config, categories: { ...config.categories, ...patch } });
   const setFieldsGlobal = (patch: { labelBold?: boolean; valueBold?: boolean; labelColor?: string; valueColor?: string }) =>
     onChange({ ...config, fields: { ...(config.fields ?? {}), ...patch } });
 
@@ -229,6 +228,10 @@ export default function WpLayoutSidebar({
                           onChange={(e) => setOverride(key, { sizePt: Number(e.target.value) })}
                           style={{ accentColor: color.rouge as string, width: 120 }} />
                       </div>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: font.sans, fontSize: '8pt', color: color.noir70, cursor: 'pointer' }}>
+                        <input type="checkbox" checked={eff.smallCaps} onChange={(e) => setOverride(key, { smallCaps: e.target.checked })} />
+                        Valeur en petites capitales
+                      </label>
                     </div>
                   )}
                 </div>
@@ -239,19 +242,17 @@ export default function WpLayoutSidebar({
 
         {active === 'categories' && (
           <>
-            <Toggle label="Afficher les catégories" checked={categories.show} onChange={(v) => setCategories({ show: v })} />
-            <p style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70, margin: '0 0 12px', lineHeight: 1.4 }}>
-              Source : champ « Tags site web ». Rendu en tête de contenu (au-dessus du pitch) avec un point médian.
+            <p style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70, margin: '0 0 12px', lineHeight: 1.5 }}>
+              À l&apos;export, ces catégories (champ Airtable « Tags export WP ») sont <strong>cochées dans le panneau « Catégories » du post WordPress</strong> (créées si absentes). Le thème WP les affiche au-dessus du titre. Modifiez-les dans Airtable.
             </p>
-            {categories.show && (
-              <>
-                <Slider label="Taille" value={categories.sizePx} min={8} max={18} suffix="px" onChange={(v) => setCategories({ sizePx: v })} />
-                <Toggle label="Majuscules" checked={categories.uppercase} onChange={(v) => setCategories({ uppercase: v })} />
-                <div style={{ ...rowStyle, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ ...labelStyle, fontWeight: 600 }}>Couleur</span>
-                  <Palette value={categories.color} onChange={(hex) => setCategories({ color: hex })} />
-                </div>
-              </>
+            {tagsExportWp.length > 0 ? (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {tagsExportWp.map((t) => (
+                  <span key={t} style={{ fontFamily: font.sans, fontSize: '8pt', fontWeight: 600, color: color.violet, background: ui.separateur, border: `1px solid ${color.gris}`, borderRadius: radius.pill, padding: '3px 8px' }}>{t}</span>
+                ))}
+              </div>
+            ) : (
+              <p style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70, fontStyle: 'italic' }}>Aucune catégorie (« Tags export WP » vide).</p>
             )}
           </>
         )}
