@@ -7,7 +7,7 @@ import type { Projet } from '@/types/projet';
 import { authedFetch } from '@/lib/supabase/authHeaders';
 import { DEFAULT_WP_CONFIG, wpTemplateFor, type WpConfig } from '@/lib/wordpress/wpConfig';
 import { color, feedback, ui } from '@/lib/ui/tokens';
-import WpLayoutSidebar from './WpLayoutSidebar';
+import WpLayoutSidebar, { type KnownPhoto } from './WpLayoutSidebar';
 import WordpressPreview from './WordpressPreview';
 
 /**
@@ -22,6 +22,18 @@ import WordpressPreview from './WordpressPreview';
 export default function WordpressView({ projet }: { projet: Projet }) {
   const router = useRouter();
   const wpTemplate = wpTemplateFor(projet.vignettePoles);
+
+  // Liste des photos disponibles (cover Airtable + photosProjet), exposée à
+  // la sidebar pour les contrôles individuels (activation + cadrage + cover).
+  const knownPhotos: KnownPhoto[] = [];
+  if (projet.photoCouverture) {
+    knownPhotos.push({ url: projet.photoCouverture.url, filename: projet.photoCouverture.filename, isCover: true });
+  }
+  for (const p of projet.photosProjet ?? []) {
+    if (!knownPhotos.some((q) => q.filename === p.filename)) {
+      knownPhotos.push({ url: p.url, filename: p.filename });
+    }
+  }
   const [wpConfig, setWpConfig] = useState<WpConfig>(projet.wpConfig ?? DEFAULT_WP_CONFIG);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [publishing, setPublishing] = useState(false);
@@ -158,7 +170,7 @@ export default function WordpressView({ projet }: { projet: Projet }) {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'stretch', background: ui.fondPage, minHeight: 'calc(100vh - 48px)' }}>
-        <WpLayoutSidebar config={wpConfig} onChange={setWpConfig} template={wpTemplate} slug={projet.slug} tagsExportWp={projet.tagsExportWp} />
+        <WpLayoutSidebar config={wpConfig} onChange={setWpConfig} template={wpTemplate} slug={projet.slug} tagsExportWp={projet.tagsExportWp} knownPhotos={knownPhotos} />
         <main style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
           <WordpressPreview projet={projet} wpConfig={wpConfig} />
         </main>

@@ -151,11 +151,29 @@ export interface WpConfig {
     /** Couverture en pleine largeur au-dessus des champs (au lieu de côte à côte). Défaut false. */
     coverFullWidth?: boolean;
     /** Colonnes de la galerie. 0 = auto (1/2/3 selon le nombre). Défaut 0. */
-    galleryColumns?: 0 | 1 | 2 | 3;
+    galleryColumns?: 0 | 1 | 2 | 3 | 4;
     /** Ratio des photos de galerie (CSS aspect-ratio). Défaut '4/3'. */
     galleryAspectRatio?: string;
     /** Espacement entre photos de galerie (px). Défaut 12. */
     galleryGapPx?: number;
+    /** Filename de la photo utilisée comme couverture. Si absent → photo
+     *  désignée par Airtable (`projet.photoCouverture`). Permet à l'utilisateur
+     *  de choisir n'importe quelle photo du projet comme couverture. */
+    coverFilename?: string;
+    /** Offset horizontal (0-100, %) appliqué en object-position sur la couverture. */
+    coverOffsetX?: number;
+    /** Offset vertical (0-100, %) appliqué en object-position sur la couverture. */
+    coverOffsetY?: number;
+    /** Réglages par photo de galerie (clé = filename). Permet d'activer /
+     *  désactiver une photo et de régler son cadrage (object-position). */
+    perPhoto?: Record<string, {
+      enabled?: boolean;
+      offsetX?: number;
+      offsetY?: number;
+    }>;
+    /** Position du bloc « Prestation Assemblage » (template Dev uniquement).
+     *  Défaut 'after-description'. */
+    prestationPosition?: 'before-description' | 'after-description' | 'after-photos';
   };
 }
 
@@ -191,9 +209,14 @@ export const DEFAULT_WP_CONFIG = {
   photos: {
     coverAspectRatio: '4/3',
     coverFullWidth: false,
-    galleryColumns: 0 as 0 | 1 | 2 | 3,
+    galleryColumns: 0 as 0 | 1 | 2 | 3 | 4,
     galleryAspectRatio: '4/3',
     galleryGapPx: 12,
+    coverFilename: undefined as string | undefined,
+    coverOffsetX: 50,
+    coverOffsetY: 50,
+    perPhoto: {} as Record<string, { enabled?: boolean; offsetX?: number; offsetY?: number }>,
+    prestationPosition: 'after-description' as 'before-description' | 'after-description' | 'after-photos',
   },
 };
 
@@ -221,6 +244,16 @@ export function resolveWpConfig(cfg?: WpConfig) {
 }
 
 export type ResolvedWpConfig = ReturnType<typeof resolveWpConfig>;
+
+/** Réglages effectifs d'une photo de galerie (défauts si absent). */
+export function effectivePhotoSettings(resolved: ResolvedWpConfig, filename: string) {
+  const ov = resolved.photos.perPhoto[filename] ?? {};
+  return {
+    enabled: ov.enabled ?? true,
+    offsetX: ov.offsetX ?? 50,
+    offsetY: ov.offsetY ?? 50,
+  };
+}
 
 /** Style effectif d'un champ donné (override > défaut global).
  *  `sizePt` reste `undefined` si non surchargé → le rendu retombe sur

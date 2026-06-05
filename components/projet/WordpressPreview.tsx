@@ -29,8 +29,10 @@ export default function WordpressPreview({
     () =>
       buildWpContent(
         projet,
-        projet.photoCouverture?.url,
-        (projet.photosProjet ?? []).map((p) => p.url),
+        projet.photoCouverture
+          ? { url: projet.photoCouverture.url, filename: projet.photoCouverture.filename }
+          : undefined,
+        (projet.photosProjet ?? []).map((p) => ({ url: p.url, filename: p.filename })),
         wpConfig,
       ),
     [projet, wpConfig],

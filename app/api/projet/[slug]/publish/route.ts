@@ -40,8 +40,10 @@ export async function POST(
   }
 
   try {
-    // 1. Upload cover photo
+    // 1. Upload cover photo (on préserve son filename Airtable pour que le
+    //    builder retrouve les réglages utilisateur post-upload).
     let coverId: number | undefined;
+    let cover: { url: string; filename: string } | undefined;
     let coverUrl: string | undefined;
     if (projet.photoCouverture) {
       if (!isAllowedImageUrl(projet.photoCouverture.url)) {
@@ -50,21 +52,26 @@ export async function POST(
       const uploaded = await uploadMedia(projet.photoCouverture.url, `${slug}-cover.jpg`);
       coverId = uploaded.id;
       coverUrl = uploaded.url;
+      cover = { url: uploaded.url, filename: projet.photoCouverture.filename };
     }
 
-    // 2. Upload project photos
+    // 2. Upload project photos (filename Airtable préservé).
     const photoUrls: string[] = [];
+    const gallery: { url: string; filename: string }[] = [];
     for (let i = 0; i < (projet.photosProjet ?? []).length; i++) {
       const photo = projet.photosProjet![i];
       if (!isAllowedImageUrl(photo.url)) continue;
       const uploaded = await uploadMedia(photo.url, `${slug}-photo-${i + 1}.jpg`);
       photoUrls.push(uploaded.url);
+      gallery.push({ url: uploaded.url, filename: photo.filename });
     }
 
-    // 3. Build styled WordPress HTML matching the defined layout
+    // 3. Build styled WordPress HTML matching the defined layout.
+    //    V2 garde la signature historique (URLs simples) ; V1 prend les objets
+    //    photos pour pouvoir appliquer les réglages par filename.
     const content = variant === 'v2'
       ? buildWpContentV2(projet, coverUrl, photoUrls)
-      : buildWpContent(projet, coverUrl, photoUrls, projet.wpConfig);
+      : buildWpContent(projet, cover, gallery, projet.wpConfig);
 
     // 4. TOUJOURS créer un nouveau draft.
     //    On ne réutilise jamais l'ID d'un post existant (extractWpPostId est
