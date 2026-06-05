@@ -13,44 +13,67 @@
 
 /** Couleurs de marque référencées par les défauts (le builder est autonome). */
 const ROUGE = '#E30513';
+const VIOLET = '#30323E';
+const GRIS = '#DFE4E8';
+const NOIR70 = '#4D4D4D';
 const NOIR = '#000000';
 
-/** Clés stables des champs du bandeau (liste à droite de la couverture). */
-export type WpFieldKey =
-  | 'lieu'
-  | 'moa'
-  | 'architecte'
-  | 'missionAi'
-  | 'mandataire'
-  | 'betAssocies'
-  | 'entreprise'
-  | 'bailleur'
-  | 'programme'
-  | 'surface'
-  | 'budget'
-  | 'etat';
+/** Palette de couleurs Assemblage proposée dans les sélecteurs de l'UI WP.
+ *  (Le builder WP est autonome → valeurs hex en dur, miroir de styles/tokens.css.) */
+export const ASSEMBLAGE_PALETTE: { name: string; hex: string }[] = [
+  { name: 'Noir', hex: NOIR },
+  { name: 'Violet', hex: VIOLET },
+  { name: 'Rouge', hex: ROUGE },
+  { name: 'Gris foncé', hex: NOIR70 },
+  { name: 'Gris', hex: GRIS },
+  { name: 'Gris moyen', hex: '#8a9099' },
+];
 
-/** Libellés affichés (et utilisés dans l'UI de réglage). */
+/** Template d'export WP, dérivé de la Vignette pôle (DEV → Dev, sinon Str-Env). */
+export type WpTemplate = 'Str-Env' | 'Dev';
+
+export function wpTemplateFor(vignettePoles?: string[]): WpTemplate {
+  return (vignettePoles ?? []).some((p) => String(p).toUpperCase() === 'DEV') ? 'Dev' : 'Str-Env';
+}
+
+/** Clés stables des champs du bandeau (alignées sur le bandeau PDF des fiches). */
+export type WpFieldKey =
+  | 'moa'
+  | 'bailleur'
+  | 'architecte'
+  | 'betAssocies'
+  | 'budgetSurface'
+  | 'entreprise'
+  | 'missionAi'
+  | 'programme'
+  | 'materiaux';
+
+/** Libellés affichés (mêmes sigles que le bandeau PDF). */
 export const WP_FIELD_LABELS: Record<WpFieldKey, string> = {
-  lieu: 'Lieu',
-  moa: "Maître d'ouvrage",
-  architecte: 'Architecte',
-  missionAi: 'Mission AI',
-  mandataire: 'Mandataire',
-  betAssocies: 'BET associés',
-  entreprise: 'Entreprise',
+  moa: 'MOA',
   bailleur: 'Bailleur',
+  architecte: 'Architecte',
+  betAssocies: 'BET associés',
+  budgetSurface: 'Budget/Surface',
+  entreprise: 'Entreprise',
+  missionAi: 'Mission AI',
   programme: 'Programme',
-  surface: 'Surface',
-  budget: 'Budget',
-  etat: 'État',
+  materiaux: 'Matériaux',
 };
 
-/** Ordre canonique de rendu des champs du bandeau. */
-export const WP_FIELD_ORDER: WpFieldKey[] = [
-  'lieu', 'moa', 'architecte', 'missionAi', 'mandataire',
-  'betAssocies', 'entreprise', 'bailleur', 'programme', 'surface', 'budget', 'etat',
+/** Ordre des champs du bandeau WP Str-Env (miroir de `metaGridHtml` Str-Env). */
+export const WP_FIELDS_STR_ENV: WpFieldKey[] = [
+  'moa', 'architecte', 'betAssocies', 'budgetSurface', 'entreprise', 'missionAi', 'programme', 'materiaux',
 ];
+
+/** Ordre des champs du bandeau WP Dev (miroir de `metaGridHtml` isDev). */
+export const WP_FIELDS_DEV: WpFieldKey[] = [
+  'moa', 'bailleur', 'architecte', 'budgetSurface', 'programme', 'materiaux', 'missionAi', 'betAssocies',
+];
+
+export function wpFieldOrder(template: WpTemplate): WpFieldKey[] {
+  return template === 'Dev' ? WP_FIELDS_DEV : WP_FIELDS_STR_ENV;
+}
 
 /** Surcharge de style par champ (toutes les clés optionnelles → fallback global). */
 export interface WpFieldStyle {
@@ -59,6 +82,8 @@ export interface WpFieldStyle {
   valueBold?: boolean;
   labelColor?: string;
   valueColor?: string;
+  /** Taille de police du champ (pt). Si absent → défaut global `typo.fieldsSizePt`. */
+  sizePt?: number;
 }
 
 export interface WpConfig {
@@ -169,11 +194,10 @@ export function resolveWpConfig(cfg?: WpConfig) {
 
 export type ResolvedWpConfig = ReturnType<typeof resolveWpConfig>;
 
-/** Style effectif d'un champ donné (override > défaut global). */
-export function effectiveFieldStyle(
-  resolved: ResolvedWpConfig,
-  key: WpFieldKey,
-): Required<WpFieldStyle> {
+/** Style effectif d'un champ donné (override > défaut global).
+ *  `sizePt` reste `undefined` si non surchargé → le rendu retombe sur
+ *  `typo.fieldsSizePt`. */
+export function effectiveFieldStyle(resolved: ResolvedWpConfig, key: WpFieldKey) {
   const ov = resolved.fields.overrides[key] ?? {};
   return {
     hidden: ov.hidden ?? false,
@@ -181,5 +205,6 @@ export function effectiveFieldStyle(
     valueBold: ov.valueBold ?? resolved.fields.valueBold,
     labelColor: ov.labelColor ?? resolved.fields.labelColor,
     valueColor: ov.valueColor ?? resolved.fields.valueColor,
+    sizePt: ov.sizePt,
   };
 }

@@ -3,8 +3,9 @@ import { renderMarkdown } from '@/lib/utils/markdown';
 import {
   resolveWpConfig,
   effectiveFieldStyle,
+  wpTemplateFor,
+  wpFieldOrder,
   WP_FIELD_LABELS,
-  WP_FIELD_ORDER,
   type WpConfig,
   type WpFieldKey,
   type ResolvedWpConfig,
@@ -51,7 +52,7 @@ function crmCellHtml(links: CrmLink[] | undefined, plain: string | undefined): s
     .map((l) => {
       const href = safeHref(l.url);
       return href
-        ? `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:underline;">${esc(l.name)}</a>`
+        ? `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:none;">${esc(l.name)}</a>`
         : esc(l.name);
     })
     .join(', ');
@@ -234,53 +235,58 @@ function buildWpEditorial(
   photoUrls: string[],
   wpConfig?: WpConfig,
 ): string {
-  const { typo, fields, categories, photos } = resolveWpConfig(wpConfig);
+  const resolved = resolveWpConfig(wpConfig);
+  const { typo, categories, photos } = resolved;
   const pitch = esc(projet.pitch ?? '');
   const description = projet.description ?? '';
   const chiffresCles = projet.chiffresCles ?? [];
   const allPhotos = [coverUrl, ...photoUrls].filter((u): u is string => !!u);
 
+  // Template d'export dérivé de la Vignette pôle (DEV → Dev, sinon Str-Env).
+  const wpTemplate = wpTemplateFor(projet.vignettePoles);
+
   // Helper : rend un champ CRM en HTML cliquable (fallback string jointe).
   const crm = (key: CrmField, plain?: string): string =>
     crmCellHtml(projet.crmLinks?.[key], plain);
 
-  // Champs clés affichés à droite de la photo de couverture, dans l'ordre souhaité.
-  // Mission AI mise en valeur en rouge. Filtre les champs vides automatiquement.
-  const etat = projet.statut && projet.anneeLivraison
-    ? `${projet.statut} en ${projet.anneeLivraison}`
-    : projet.statut || (projet.anneeLivraison ? String(projet.anneeLivraison) : undefined);
-
-  // Programme : principal en valeur, secondaire en complément entre parenthèses
-  // (variante WP — pas de structure "sub" comme dans le PDF, on reste sur
-  // une liste à puces, donc on combine sur une ligne).
+  // Programme : principal en valeur, secondaire en complément entre parenthèses.
   const programme = projet.programmePrincipal && projet.programmeSecondaire
     ? `${projet.programmePrincipal} (${projet.programmeSecondaire})`
     : projet.programmePrincipal ?? projet.programmeSecondaire;
 
+  // Budget/Surface : cellule fusionnée à deux lignes (miroir du bandeau PDF) —
+  // budget en ligne 1, surface en ligne 2, "NC" pour la valeur manquante.
+  const hasBudget = !!projet.budgetHT;
+  const hasSurface = !!projet.surface;
+  const budgetSurfaceHtml = (hasBudget || hasSurface)
+    ? `${esc(hasBudget ? projet.budgetHT! : 'NC')}<br>${esc(hasSurface ? `${projet.surface!.toLocaleString('fr-FR')} m²` : 'NC')}`
+    : undefined;
+
+  const materiaux = projet.materiaux && projet.materiaux.length > 0
+    ? projet.materiaux.join(', ')
+    : undefined;
+
   // Valeur de chaque champ par clé. `value` = texte brut (échappé au rendu) ;
-  // `html` = HTML déjà sûr (liens CRM, rendu tel quel).
+  // `html` = HTML déjà sûr (liens CRM / sauts de ligne, rendu tel quel).
   const fieldData: Partial<Record<WpFieldKey, { value?: string; html?: string }>> = {
-    lieu:        { value: projet.lieu },
-    moa:         { value: projet.moa,         html: crm('moa', projet.moa) },
-    architecte:  { value: projet.architecte,  html: crm('architecte', projet.architecte) },
-    missionAi:   { value: projet.missionAi },
-    mandataire:  { value: projet.mandataire,  html: crm('mandataire', projet.mandataire) },
-    betAssocies: { value: projet.betAssocies, html: crm('betAssocies', projet.betAssocies) },
-    entreprise:  { value: projet.entreprise,  html: crm('entreprise', projet.entreprise) },
-    bailleur:    { value: projet.bailleur,    html: crm('bailleur', projet.bailleur) },
-    programme:   { value: programme },
-    surface:     { value: projet.surface ? `${projet.surface.toLocaleString('fr-FR')} m²` : undefined },
-    budget:      { value: projet.budgetHT },
-    etat:        { value: etat },
+    moa:           { value: projet.moa,         html: crm('moa', projet.moa) },
+    bailleur:      { value: projet.bailleur,    html: crm('bailleur', projet.bailleur) },
+    architecte:    { value: projet.architecte,  html: crm('architecte', projet.architecte) },
+    betAssocies:   { value: projet.betAssocies, html: crm('betAssocies', projet.betAssocies) },
+    budgetSurface: { html: budgetSurfaceHtml },
+    entreprise:    { value: projet.entreprise,  html: crm('entreprise', projet.entreprise) },
+    missionAi:     { value: projet.missionAi },
+    programme:     { value: programme },
+    materiaux:     { value: materiaux },
   };
 
   // Champs effectivement rendus : valeur/html non vide, non masqués, dans
-  // l'ordre canonique. Chaque champ porte son style effectif (override > global).
-  const champsCles = WP_FIELD_ORDER
+  // l'ordre du template (Str-Env ou Dev). Chaque champ porte son style effectif.
+  const champsCles = wpFieldOrder(wpTemplate)
     .map((key) => {
       const d = fieldData[key];
       if (!d || (!d.value && !d.html)) return null;
-      const st = effectiveFieldStyle({ typo, fields, categories, photos }, key);
+      const st = effectiveFieldStyle(resolved, key);
       if (st.hidden) return null;
       return { key, label: WP_FIELD_LABELS[key], value: d.value, html: d.html, style: st };
     })
@@ -322,12 +328,13 @@ function buildWpEditorial(
     <ul style="list-style:none;margin:0;padding:0;font-family:${SANS} !important;font-size:${typo.fieldsSizePt}pt !important;line-height:1.5 !important;color:#000;font-variant:normal !important;text-transform:none !important;letter-spacing:normal !important;">
       ${champsCles.map(f => {
         // Resets !important pour neutraliser le thème WP, + style par champ
-        // (libellé vs valeur indépendants : poids + couleur).
-        const reset = `font-family:${SANS} !important;font-variant:normal !important;text-transform:none !important;letter-spacing:normal !important;`;
+        // (libellé vs valeur indépendants : poids, couleur, taille).
+        const sizePt = f.style.sizePt ?? typo.fieldsSizePt;
+        const reset = `font-family:${SANS} !important;font-variant:normal !important;text-transform:none !important;letter-spacing:normal !important;font-size:${sizePt}pt !important;`;
         const labelStyle = `${reset}font-weight:${f.style.labelBold ? 700 : 400} !important;color:${f.style.labelColor} !important;`;
         const valueStyle = `${reset}font-weight:${f.style.valueBold ? 700 : 400} !important;color:${f.style.valueColor} !important;`;
         return `
-        <li style="padding:8px 0;font-size:${typo.fieldsSizePt}pt !important;${reset}">
+        <li style="padding:8px 0;${reset}">
           <span style="${labelStyle}">${esc(f.label)} :</span> <span style="${valueStyle}">${f.html ?? esc(f.value!)}</span>
         </li>`;
       }).join('')}
@@ -339,7 +346,7 @@ function buildWpEditorial(
     ${renderMarkdown(description)}
   </div>
 
-  ${projet.template === 'Dev' && (projet.prestationAssemblage ?? '').trim() ? `
+  ${wpTemplate === 'Dev' && (projet.prestationAssemblage ?? '').trim() ? `
   <!-- Bloc Prestation Assemblage (template Dev uniquement) -->
   <section class="ai-md" style="margin:0 0 48px;font-family:${SANS};font-size:${typo.descriptionSizePx}px;line-height:${typo.descriptionLineHeight};color:#1a1a1a;">
     <h2 style="font-family:${SERIF};font-size:${typo.sectionTitleSizePx}px;font-weight:500;line-height:1.2;color:${VIOLET};margin:0 0 16px;letter-spacing:-0.01em;">Prestation Assemblage</h2>

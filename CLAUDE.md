@@ -206,16 +206,17 @@ Indépendants du système de templates PDF. `lib/wordpress/builders.ts` (Editori
 #### Aperçu & stylisation WordPress (`WpConfig`)
 
 `buildWpContent(projet, coverUrl, photoUrls, wpConfig?)` accepte une config optionnelle **`WpConfig`** (`lib/wordpress/wpConfig.ts`) qui pilote :
+- **deux templates WP** dérivés de la **Vignette pôle** (`fld1PZuYO8mz0sULA`) via `wpTemplateFor(projet.vignettePoles)` : `DEV` ⇒ **Dev**, sinon **Str-Env**. Le bandeau et l'ordre des champs **miroir du bandeau PDF** (`metaGridHtml`) : `WP_FIELDS_STR_ENV` (MOA · Architecte · BET associés · Budget/Surface · Entreprise · Mission AI · Programme · Matériaux) et `WP_FIELDS_DEV` (MOA · Bailleur · Architecte · Budget/Surface · Programme · Matériaux · Mission AI · BET associés). Le template Dev rend en plus le bloc « Prestation Assemblage ». `Budget/Surface` est une cellule fusionnée 2 lignes (budget / surface, « NC » si manquant) ;
 - **typographie globale** (tailles description / champs clés / pitch / titre section, interlignage) ;
-- **typographie par champ du bandeau** (`fields`) : libellé et valeur stylés **indépendamment** (gras + couleur), via des défauts globaux (`labelBold:false`, `valueBold:true`, couleurs) + surcharges par clé `WpFieldKey` (`overrides`). Défaut : libellé « Mission AI » en rouge, valeur en noir. Helper `effectiveFieldStyle(resolved, key)`. Le rendu sépare libellé/valeur en deux `<span>` (avec resets `!important` anti-thème) ;
-- **catégories** (`categories`) : la ligne « Tags site web » (`projet.tagsSiteWeb`, déjà mappée) rendue en **tête de contenu** avec un point médian `·` (sur le vrai WP elle apparaît sous le titre du thème, le contenu venant après `post.title`) ;
+- **typographie par champ du bandeau** (`fields`) : libellé et valeur stylés **indépendamment** (gras, **couleur**, **taille `sizePt`**), via défauts globaux (`labelBold:false`, `valueBold:true`) + surcharges par clé `WpFieldKey` (`overrides`). Défaut : libellé « Mission AI » en rouge, valeur en noir. Couleurs = **palette Assemblage** (`ASSEMBLAGE_PALETTE`). Helper `effectiveFieldStyle(resolved, key)`. Rendu en deux `<span>` (resets `!important` anti-thème) ;
+- **catégories** (`categories`) : la ligne « Tags site web » (`projet.tagsSiteWeb`, format `A|B|C`) rendue en **tête de contenu, au-dessus du pitch**, point médian `·` (sur le vrai WP elle apparaît sous le titre du thème, le contenu venant après `post.title`) ;
 - **disposition photos** (ratio couverture, pleine largeur, colonnes/ratio/gap galerie).
 
 `DEFAULT_WP_CONFIG` est le **rendu de référence** (libellés non gras, valeurs en gras, « Mission AI » libellé rouge).
 
 - **Persistance** : `WpConfig` vit sous la clé `wp` du `ProjectConfig` unifié (même champ Airtable « Config template manuel » que `bandeau`/`manuel`), exposé en `Projet.wpConfig`. Écrit via la route `/fields` (`wpConfig` ∈ `FICHE_ONLY_FIELDS`). `publish/route.ts` passe `projet.wpConfig` au builder.
-- **Page de preview dédiée** : `/projet/[slug]/wordpress` (`components/projet/WordpressView` + `WpLayoutSidebar` + `WordpressPreview`). L'aperçu exécute `buildWpContent` **côté client** avec les URLs Airtable et l'injecte en `srcDoc` (pas d'export PDF, pas d'upload WP pour l'aperçu). Bouton « Aperçu WordPress » dans `ProjetToolbar`.
-- **Liens CRM** : `crmCellHtml()` rend MOA / Architecte / Mandataire / Entreprise / BET associés / Bailleur en `<a target="_blank">` quand l'`URL site` existe (cf. `Projet.crmLinks`), fallback texte sinon. `safeHref()` n'autorise que http(s).
+- **Page de preview dédiée** : `/projet/[slug]/wordpress` (`components/projet/WordpressView` + `WpLayoutSidebar` + `WordpressPreview`). L'aperçu exécute `buildWpContent` **côté client** avec les URLs Airtable et l'injecte en `srcDoc` (pas d'export PDF, pas d'upload WP pour l'aperçu). Bouton « Aperçu WordPress » dans `ProjetToolbar` ; « Éditer les champs » (rich-text Description projet → `/projet/[slug]/edit`) est dans la **sidebar WP**.
+- **Liens CRM** : `crmCellHtml()` rend MOA / Architecte / BET associés / Entreprise / Bailleur en `<a target="_blank">` **sans soulignement** quand l'`URL site` existe (cf. `Projet.crmLinks`), fallback texte sinon. `safeHref()` n'autorise que http(s).
 
 ### WordPress
 
