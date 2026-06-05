@@ -3,7 +3,6 @@ import { renderMarkdown } from '@/lib/utils/markdown';
 import {
   resolveWpConfig,
   effectiveFieldStyle,
-  effectivePhotoSettings,
   wpTemplateFor,
   wpFieldOrder,
   WP_FIELD_LABELS,
@@ -13,7 +12,7 @@ import {
 } from './wpConfig';
 
 /** Photo passée au builder : URL effective (Airtable ou WP uploadée) + filename
- *  pour retrouver les réglages utilisateur (`wpConfig.photos.perPhoto[filename]`). */
+ *  pour servir d'index 0+ dans `wpConfig.photos.gallery[].photoIndex`. */
 export interface WpPhoto {
   url: string;
   filename: string;
@@ -168,8 +167,37 @@ function buildWpMagazine(projet: Projet, coverUrl: string | undefined, photoUrls
 </div>`;
 }
 
-// Helpers d'export pour rendre la galerie depuis un array d'URLs simples
-// (rétro-compat — usage legacy/tests). Utiliser `renderGallery` côté builder.
+/** Slot de galerie résolu (photo + offsets + taille), prêt à être rendu. */
+interface ResolvedSlot {
+  photo: WpPhoto;
+  sizePercent: number;
+  offsetX: number;
+  offsetY: number;
+  lightboxIdx: number;
+}
+
+/** Rend la galerie HTML à partir de slots déjà résolus. */
+function renderGallerySlots(
+  slots: ResolvedSlot[],
+  alt: string,
+  cfgPhotos: ResolvedWpConfig['photos'],
+): string {
+  if (slots.length === 0) return '';
+  const cols = cfgPhotos.galleryColumns && cfgPhotos.galleryColumns > 0
+    ? Math.min(cfgPhotos.galleryColumns, slots.length)
+    : (slots.length === 1 ? 1 : slots.length === 2 ? 2 : 3);
+  return `
+    <div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:${cfgPhotos.galleryGapPx}px;margin:40px 0;">
+      ${slots.map((s) => `
+        <figure data-ai-idx="${s.lightboxIdx}" style="margin:0;display:flex;justify-content:center;cursor:pointer;">
+          <div style="width:${s.sizePercent}%;aspect-ratio:${cfgPhotos.galleryAspectRatio};overflow:hidden;background:${GRIS};">
+            <img src="${esc(s.photo.url)}" alt="${esc(alt)}" loading="lazy" style="width:100%;height:100%;object-fit:cover;object-position:${s.offsetX}% ${s.offsetY}%;display:block;pointer-events:none;" />
+          </div>
+        </figure>`).join('')}
+    </div>`;
+}
+
+/** Helper rétro-compat pour les anciens usages (tests, build externe). */
 export function imageGallery(
   urls: string[],
   alt: string,
@@ -177,44 +205,12 @@ export function imageGallery(
   photos?: ResolvedWpConfig['photos'],
 ): string {
   if (urls.length === 0) return '';
-  return renderGallery(
-    urls.map((u, i) => ({ url: u, filename: `photo-${i + 1}` })),
-    alt,
-    startIdx,
-    photos ?? resolveWpConfig().photos,
-    {}, // pas de map perPhoto en mode rétro-compat
-  );
-}
-
-/**
- * Rend la galerie HTML. Chaque photo porte son filename → applique les réglages
- * utilisateur (object-position via offsets) issus de `resolved.photos.perPhoto`.
- * `perPhoto` est passé directement plutôt que via `resolved` pour permettre au
- * builder de filtrer/réordonner les photos en amont sans re-construire `resolved`.
- */
-function renderGallery(
-  photos: WpPhoto[],
-  alt: string,
-  startIdx: number,
-  cfgPhotos: ResolvedWpConfig['photos'],
-  perPhoto: ResolvedWpConfig['photos']['perPhoto'],
-): string {
-  if (photos.length === 0) return '';
-  const cols = cfgPhotos.galleryColumns && cfgPhotos.galleryColumns > 0
-    ? Math.min(cfgPhotos.galleryColumns, photos.length)
-    : (photos.length === 1 ? 1 : photos.length === 2 ? 2 : 3);
-  return `
-    <div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:${cfgPhotos.galleryGapPx}px;margin:40px 0;">
-      ${photos.map((p, i) => {
-        const ov = perPhoto[p.filename] ?? {};
-        const x = ov.offsetX ?? 50;
-        const y = ov.offsetY ?? 50;
-        return `
-        <figure data-ai-idx="${startIdx + i}" style="margin:0;aspect-ratio:${cfgPhotos.galleryAspectRatio};overflow:hidden;background:${GRIS};cursor:pointer;">
-          <img src="${esc(p.url)}" alt="${esc(alt)} — photo ${startIdx + i}" loading="lazy" style="width:100%;height:100%;object-fit:cover;object-position:${x}% ${y}%;display:block;pointer-events:none;" />
-        </figure>`;
-      }).join('')}
-    </div>`;
+  const slots: ResolvedSlot[] = urls.map((u, i) => ({
+    photo: { url: u, filename: `photo-${i + 1}` },
+    sizePercent: 100, offsetX: 50, offsetY: 50,
+    lightboxIdx: startIdx + i,
+  }));
+  return renderGallerySlots(slots, alt, photos ?? resolveWpConfig().photos);
 }
 
 export function lightboxHtml(allPhotos: string[], alt: string): string {
@@ -277,8 +273,9 @@ function buildWpEditorial(
   const chiffresCles = projet.chiffresCles ?? [];
 
   // Pool de toutes les photos disponibles (cover Airtable + photos projet),
-  // indexées par filename. C'est dans ce pool qu'on pioche la couverture
-  // effective (selon `wpConfig.photos.coverFilename`) et qu'on filtre la galerie.
+  // indexé par position : 0 = cover, 1+ = photos projet. C'est l'indexation
+  // utilisée par `wpConfig.photos.gallery[].photoIndex` (miroir du
+  // `allPhotos(projet)` de la fiche PDF / section Photos additionnelles).
   const pool: WpPhoto[] = [];
   if (defaultCover) pool.push(defaultCover);
   for (const p of galleryInput) {
@@ -295,13 +292,36 @@ function buildWpEditorial(
   const coverOffsetX = photos.coverOffsetX ?? 50;
   const coverOffsetY = photos.coverOffsetY ?? 50;
 
-  // Galerie : toutes les photos du pool SAUF la couverture, filtrées par
-  // `perPhoto[filename].enabled` (par défaut true).
-  const galleryPhotos: WpPhoto[] = pool
-    .filter((p) => !cover || p.filename !== cover.filename)
-    .filter((p) => effectivePhotoSettings(resolved, p.filename).enabled);
+  // Slots de galerie : si l'utilisateur a configuré `gallery`, on respecte
+  // l'ordre et les réglages ; sinon, on rend toutes les photos du pool sauf
+  // la couverture (comportement historique).
+  let slots: ResolvedSlot[] = [];
+  if (photos.galleryEnabled !== false) {
+    if (photos.gallery && photos.gallery.length > 0) {
+      slots = photos.gallery
+        .filter((s) => s.enabled !== false)
+        .map((s) => ({
+          photo: pool[s.photoIndex],
+          sizePercent: s.sizePercent ?? 100,
+          offsetX: s.offsetX ?? 50,
+          offsetY: s.offsetY ?? 50,
+          lightboxIdx: s.photoIndex,
+        }))
+        .filter((s): s is ResolvedSlot => !!s.photo);
+    } else {
+      // Fallback historique : toutes les photos sauf la couverture, à la suite.
+      slots = pool
+        .map((p, i) => ({ p, i }))
+        .filter(({ p }) => !cover || p.filename !== cover.filename)
+        .map(({ p, i }) => ({
+          photo: p, sizePercent: 100, offsetX: 50, offsetY: 50, lightboxIdx: i,
+        }));
+    }
+  }
 
-  const allPhotos = [coverUrl, ...galleryPhotos.map((p) => p.url)].filter((u): u is string => !!u);
+  // Pour le lightbox : on liste TOUTES les URLs du pool (cover + photos),
+  // indexées comme le `photoIndex` des slots.
+  const allPhotos = pool.map((p) => p.url);
 
   // Template d'export dérivé de la Vignette pôle (DEV → Dev, sinon Str-Env).
   const wpTemplate = wpTemplateFor(projet.vignettePoles);
@@ -428,7 +448,7 @@ function buildWpEditorial(
     <h2 style="font-family:${SERIF};font-size:${typo.sectionTitleSizePx}px;font-weight:500;line-height:1.2;color:${VIOLET};margin:0 0 16px;letter-spacing:-0.01em;">Prestation Assemblage</h2>
     ${renderMarkdown(projet.prestationAssemblage!)}
   </section>` : '';
-    const galleryBlock = renderGallery(galleryPhotos, projet.nom, 1, photos, photos.perPhoto);
+    const galleryBlock = renderGallerySlots(slots, projet.nom, photos);
 
     const position = photos.prestationPosition ?? 'after-description';
     if (!hasPresta) return descBlock + galleryBlock;
