@@ -497,11 +497,20 @@ export function metaGridHtml(
   // deux lignes (budget en ligne 1, surface en ligne 2). Gain de largeur
   // pour les autres cellules. Le saut de ligne entre les deux valeurs est
   // forcé dans `breaksOf` (cf. plus bas), donc l'utilisateur ne peut pas
-  // l'inliner. Si l'une des deux valeurs manque, la cellule reste affichée
-  // avec la seule disponible.
-  const budgetSurfaceValues: string[] = [];
-  if (projet.budgetHT) budgetSurfaceValues.push(projet.budgetHT);
-  if (projet.surface)  budgetSurfaceValues.push(`${projet.surface.toLocaleString('fr-FR')} m²`);
+  // l'inliner. Budget (fldc9yGvzPAdhG6JR) toujours affiché avant Surface
+  // (fld9HmFcoH2XYpm6y).
+  // Comportement conditionnel :
+  //  - les deux vides   → cellule absente du bandeau (array vide)
+  //  - les deux remplis → les deux valeurs (budget, surface)
+  //  - une seule remplie → la valeur connue + "NC" pour l'autre, Budget en 1er
+  const hasBudget = !!projet.budgetHT;
+  const hasSurface = !!projet.surface;
+  const budgetSurfaceValues: string[] = (hasBudget || hasSurface)
+    ? [
+        hasBudget ? projet.budgetHT! : 'NC',
+        hasSurface ? `${projet.surface!.toLocaleString('fr-FR')} m²` : 'NC',
+      ]
+    : [];
 
   // Matériaux — multi-select Airtable, exposé après Programme dans les deux
   // templates. Sauts de ligne par valeur configurables via `breaks.Matériaux`.
