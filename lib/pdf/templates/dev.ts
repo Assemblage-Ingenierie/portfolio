@@ -502,8 +502,8 @@ export function renderDev(projet: Projet, configIn?: ManualConfig): TemplateBund
   const body = `<article class="page dev-page">
     <div class="t-bandeau-wrap"${bandeauWrapGap ? ` style="${bandeauWrapGap}"` : ''}>
       ${headerHtml(projet, { isDev: true })}
-      ${titleBlockHtml(projet, '26pt')}
-      ${metaGridHtml(projet, { isDev: true })}
+      ${titleBlockHtml(projet, '26pt', { showMissionAi: true })}
+      ${metaGridHtml(projet, { isDev: true, hideMissionAi: true })}
     </div>
     ${photosHtml}
     ${textHtml}

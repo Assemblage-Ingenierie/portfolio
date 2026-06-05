@@ -110,6 +110,7 @@ type StyleSectionKey = Exclude<keyof BandeauConfig, 'lines' | 'titleMetaGap' | '
 const SECTIONS: { key: StyleSectionKey; label: string; help: string }[] = [
   { key: 'titre',       label: 'Titre de la fiche',           help: 'Le nom du projet (titre principal h1).' },
   { key: 'status',      label: 'Statut (en haut à droite)',   help: '"● Livré · 2025"' },
+  { key: 'missionAi',   label: 'Mission AI (face au lieu)',   help: 'La ligne Mission AI affichée en face du lieu, au-dessus du titre. Templates Str-Env et Dev uniquement.' },
   { key: 'labels',      label: 'Libellés du bandeau',         help: '"Architecte", "Budget", "Surface"…' },
   { key: 'values',      label: 'Valeurs du bandeau',          help: '"Encore Heureux", "8,2 M€ HT", "4 242 m²"…' },
   { key: 'metaSub',     label: 'Sous-titre du Programme',     help: 'La ligne discrète sous "Programme" — affiche le Programme secondaire quand un Programme principal est aussi rempli.' },
@@ -119,7 +120,7 @@ const SECTIONS: { key: StyleSectionKey; label: string; help: string }[] = [
 
 /** Sections typographiques HORS du sous-menu « Bandeau » (titre, statut,
  *  description, prestation). Affichées au premier niveau, admin uniquement. */
-const TOP_SECTION_KEYS: StyleSectionKey[] = ['titre', 'status', 'description', 'prestationAssemblage'];
+const TOP_SECTION_KEYS: StyleSectionKey[] = ['titre', 'status', 'missionAi', 'description', 'prestationAssemblage'];
 /** Sections typographiques regroupées DANS le sous-menu « Bandeau » (admin). */
 const BANDEAU_SECTION_KEYS: StyleSectionKey[] = ['labels', 'values', 'metaSub'];
 
@@ -188,6 +189,7 @@ function StyleRow({ style, onChange }: { style: BandeauStyle; onChange: (s: Band
           <button type="button" onClick={() => set('bold', !style.bold)} style={style.bold ? TOGGLE_ON : TOGGLE} title="Gras"><b>B</b></button>
           <button type="button" onClick={() => set('italic', !style.italic)} style={style.italic ? TOGGLE_ON : TOGGLE} title="Italique"><i>I</i></button>
           <button type="button" onClick={() => set('underline', !style.underline)} style={style.underline ? TOGGLE_ON : TOGGLE} title="Souligné"><u>U</u></button>
+          <button type="button" onClick={() => set('smallCaps', !style.smallCaps)} style={style.smallCaps ? TOGGLE_ON : TOGGLE} title="Petites capitales (small-caps)"><span style={{ fontVariant: 'small-caps' }}>Ab</span></button>
         </div>
         <div style={{ flex: '1 1 100%', display: 'grid', gridTemplateColumns: '36px 1fr', gap: '4px', alignItems: 'center', fontSize: '8pt', color: 'var(--ai-noir70)' }}>
           <span>Texte</span>
@@ -350,7 +352,7 @@ export default function BandeauConfigPanel({ value, onChange, projet, onResetAll
     const isEmpty =
       !style.fontFamily &&
       style.fontSize === undefined &&
-      !style.bold && !style.italic && !style.underline &&
+      !style.bold && !style.italic && !style.underline && !style.smallCaps &&
       !style.color && !style.background &&
       style.lineHeight === undefined &&
       style.letterSpacing === undefined &&
@@ -550,7 +552,7 @@ function BandeauPhotoGapRow({ value, onChange }: { value: number | undefined; on
 
 /** Libellés des cellules dont l'affichage est togglable par l'utilisateur,
  *  pour réduire la largeur du bandeau. */
-const TOGGLEABLE_CELLS: MetaLabel[] = ['BET associés', 'Programme', 'Matériaux'];
+const TOGGLEABLE_CELLS: MetaLabel[] = ['BET associés', 'Entreprise', 'Budget/Surface', 'Matériaux'];
 
 function FieldVisibilityRow({ hidden, onChange }: { hidden: MetaLabel[]; onChange: (next: MetaLabel[]) => void }) {
   const hiddenSet = new Set(hidden);
