@@ -1,6 +1,7 @@
 import type { BandeauConfig } from './bandeauConfig';
 import type { ManualConfig } from './manualConfig';
 import type { CropData } from './photoCrop';
+import type { WpConfig } from '@/lib/wordpress/wpConfig';
 
 /**
  * Configuration unifiée d'une fiche projet, stockée en JSON dans le champ
@@ -61,6 +62,9 @@ export interface ProjectConfig {
   };
   /** Statut de production interne (workflow). Par défaut : 'Pas faite'. */
   ficheStatus?: FicheStatus;
+  /** Stylisation de l'export WordPress (builder Editorial / WP1).
+   *  Indépendante des configs PDF (`bandeau`, `manuel`). */
+  wp?: WpConfig;
 }
 
 export const PROJECT_CONFIG_FIELD = 'Config template manuel';

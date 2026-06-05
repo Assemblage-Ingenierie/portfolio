@@ -22,6 +22,7 @@ const FICHE_ONLY_FIELDS: ReadonlySet<keyof ProjetEditableFields> = new Set([
   'savedManualConfig',
   'bandeauConfig',
   'photoCrops',
+  'wpConfig',
   'template',
   'referentAi',
   // 'mandataire', 'entreprise' : retirés de ProjetEditableFields depuis

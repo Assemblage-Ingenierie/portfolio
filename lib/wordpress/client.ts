@@ -57,6 +57,62 @@ interface WpPostPayload {
   excerpt?: string;
   status: 'draft' | 'publish';
   featured_media?: number;
+  /** IDs de catégories WordPress à cocher sur le post (taxonomie). */
+  categories?: number[];
+}
+
+/**
+ * Résout une liste de NOMS de catégories vers leurs IDs WordPress, en créant
+ * les catégories manquantes. Utilisé à l'export pour cocher les catégories du
+ * post (panneau « Catégories ») depuis le champ Airtable « Tags export WP ».
+ *
+ * Tolérant aux erreurs : une catégorie qui échoue est simplement ignorée
+ * (l'export ne doit jamais planter à cause d'une catégorie).
+ */
+export async function ensureCategoryIds(names: string[]): Promise<number[]> {
+  const ids: number[] = [];
+  for (const raw of names) {
+    const name = raw.trim();
+    if (!name) continue;
+    try {
+      // 1. Chercher une catégorie existante (match exact insensible à la casse).
+      const searchRes = await fetch(
+        `${wpApi()}/categories?search=${encodeURIComponent(name)}&per_page=100`,
+        { headers: authHeaders() }
+      );
+      if (searchRes.ok) {
+        const arr = await searchRes.json();
+        if (Array.isArray(arr)) {
+          const match = arr.find(
+            (c) => typeof c?.name === 'string' && c.name.toLowerCase() === name.toLowerCase()
+          );
+          if (match && typeof match.id === 'number') {
+            ids.push(match.id);
+            continue;
+          }
+        }
+      }
+      // 2. Créer la catégorie si elle n'existe pas.
+      const createRes = await fetch(`${wpApi()}/categories`, {
+        method: 'POST',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      const data = await createRes.json().catch(() => null);
+      if (createRes.ok && data && typeof data.id === 'number') {
+        ids.push(data.id);
+      } else {
+        // WP renvoie 400 `term_exists` avec l'ID existant si une course a créé
+        // la catégorie entre-temps — on le récupère.
+        const existing = data?.data?.term_id ?? data?.data?.resource_id;
+        if (typeof existing === 'number') ids.push(existing);
+        else console.warn('[WP] catégorie non résolue:', name, JSON.stringify(data)?.slice(0, 200));
+      }
+    } catch (e) {
+      console.warn('[WP] ensureCategoryIds erreur pour', name, e);
+    }
+  }
+  return ids;
 }
 
 export async function createOrUpdatePost(

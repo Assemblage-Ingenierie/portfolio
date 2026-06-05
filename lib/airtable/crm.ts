@@ -5,6 +5,17 @@ import Airtable from 'airtable';
 // préservés, mais pas les IDs). Utiliser un ID inexistant peut renvoyer
 // un 403 NOT_AUTHORIZED plutôt qu'une erreur 404 explicite.
 const FIELD_NOM = 'Nom';
+// Site web de l'entité CRM. Lu par NOM et non par field ID : dans la table
+// synchronisée `Sync CRM`, Airtable réattribue les field IDs (seuls les noms
+// sont préservés). Le field id source `fldzJMJZ4fTx3JgOu` n'est donc PAS
+// utilisable ici. Le nom de colonne « URL site » est lui stable.
+const FIELD_URL = 'URL site';
+
+/** Entité CRM résolue : nom + (éventuelle) URL de site web. */
+export interface CrmEntity {
+  nom: string;
+  url?: string;
+}
 
 /**
  * Les linked records ne traversent jamais les bases dans Airtable :
@@ -34,8 +45,8 @@ function crmBase() {
  * Silencieuse en cas d'erreur (PAT non configuré, base inaccessible, etc.)
  * pour ne pas casser le chargement des fiches.
  */
-export async function fetchCrmNames(recordIds: string[]): Promise<Map<string, string>> {
-  const map = new Map<string, string>();
+export async function fetchCrmNames(recordIds: string[]): Promise<Map<string, CrmEntity>> {
+  const map = new Map<string, CrmEntity>();
   if (recordIds.length === 0) return map;
 
   const table = crmBase();
@@ -55,15 +66,17 @@ export async function fetchCrmNames(recordIds: string[]): Promise<Map<string, st
   try {
     const records = await table.select({
       filterByFormula: formula,
-      fields: [FIELD_NOM],
+      fields: [FIELD_NOM, FIELD_URL],
     }).all();
 
     console.log(`[crm] received ${records.length} records back`);
     records.forEach((r) => {
       const nom = r.fields[FIELD_NOM];
+      const urlRaw = r.fields[FIELD_URL];
       console.log(`[crm] record ${r.id} → ${typeof nom === 'string' ? nom : `(${JSON.stringify(nom)})`}`);
       if (typeof nom === 'string' && nom.trim()) {
-        map.set(r.id, nom.trim());
+        const url = typeof urlRaw === 'string' && urlRaw.trim() ? urlRaw.trim() : undefined;
+        map.set(r.id, { nom: nom.trim(), url });
       }
     });
   } catch (err) {
