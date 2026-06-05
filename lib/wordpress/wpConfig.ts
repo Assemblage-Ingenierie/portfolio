@@ -164,11 +164,23 @@ export interface WpConfig {
     coverOffsetX?: number;
     /** Offset vertical (0-100, %) appliqué en object-position sur la couverture. */
     coverOffsetY?: number;
-    /** Réglages par photo de galerie (clé = filename). Permet d'activer /
-     *  désactiver une photo et de régler son cadrage (object-position). */
-    perPhoto?: Record<string, {
+    /** Galerie activée ? Défaut true. Master toggle (« Activée / Désactivée »
+     *  comme dans la section Photos additionnelles des fiches). */
+    galleryEnabled?: boolean;
+    /** Slots ordonnés de la galerie. Chaque slot pointe vers une photo du pool
+     *  `[cover, ...photosProjet]` via son index (0 = cover Airtable, 1+ = photos
+     *  projet). Permet d'**ordonner** et de **choisir** les photos affichées,
+     *  comme la section « Photos additionnelles » des fiches PDF. */
+    gallery?: Array<{
+      /** Index dans `[cover, ...photosProjet]`. */
+      photoIndex: number;
+      /** Slot activé. Défaut true. */
       enabled?: boolean;
+      /** Largeur de la photo dans sa cellule (%, 100 = pleine cellule). */
+      sizePercent?: number;
+      /** Cadrage horizontal (object-position, %). Défaut 50. */
       offsetX?: number;
+      /** Cadrage vertical (object-position, %). Défaut 50. */
       offsetY?: number;
     }>;
     /** Position du bloc « Prestation Assemblage » (template Dev uniquement).
@@ -215,7 +227,8 @@ export const DEFAULT_WP_CONFIG = {
     coverFilename: undefined as string | undefined,
     coverOffsetX: 50,
     coverOffsetY: 50,
-    perPhoto: {} as Record<string, { enabled?: boolean; offsetX?: number; offsetY?: number }>,
+    galleryEnabled: true,
+    gallery: undefined as undefined | NonNullable<WpConfig['photos']>['gallery'],
     prestationPosition: 'after-description' as 'before-description' | 'after-description' | 'after-photos',
   },
 };
@@ -245,14 +258,12 @@ export function resolveWpConfig(cfg?: WpConfig) {
 
 export type ResolvedWpConfig = ReturnType<typeof resolveWpConfig>;
 
-/** Réglages effectifs d'une photo de galerie (défauts si absent). */
-export function effectivePhotoSettings(resolved: ResolvedWpConfig, filename: string) {
-  const ov = resolved.photos.perPhoto[filename] ?? {};
-  return {
-    enabled: ov.enabled ?? true,
-    offsetX: ov.offsetX ?? 50,
-    offsetY: ov.offsetY ?? 50,
-  };
+/** Limite haute du nombre de slots de la galerie WP (cf. fiche PDF). */
+export const WP_MAX_GALLERY_SLOTS = 12;
+
+/** Slot par défaut pour une galerie nouvellement initialisée. */
+export function defaultGallerySlot(photoIndex: number): NonNullable<NonNullable<WpConfig['photos']>['gallery']>[number] {
+  return { photoIndex, sizePercent: 100, offsetX: 50, offsetY: 50, enabled: true };
 }
 
 /** Style effectif d'un champ donné (override > défaut global).

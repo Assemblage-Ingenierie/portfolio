@@ -6,10 +6,11 @@ import {
   WP_ASPECT_RATIOS,
   WP_FIELD_LABELS,
   ASSEMBLAGE_PALETTE,
+  WP_MAX_GALLERY_SLOTS,
   wpFieldOrder,
   resolveWpConfig,
   effectiveFieldStyle,
-  effectivePhotoSettings,
+  defaultGallerySlot,
   type WpConfig,
   type WpTemplate,
   type WpFieldKey,
@@ -165,11 +166,67 @@ export default function WpLayoutSidebar({
   const setTypo = (patch: Partial<typeof typo>) => onChange({ ...config, typo: { ...config.typo, ...patch } });
   const setPhotos = (patch: Partial<typeof photos>) => onChange({ ...config, photos: { ...config.photos, ...patch } });
   const setSpacing = (patch: Partial<typeof spacing>) => onChange({ ...config, spacing: { ...config.spacing, ...patch } });
-  // Mise à jour d'un réglage par-photo (clé = filename).
-  const setPerPhoto = (filename: string, patch: { enabled?: boolean; offsetX?: number; offsetY?: number }) => {
-    const current = config.photos?.perPhoto ?? {};
-    const merged = { ...current, [filename]: { ...(current[filename] ?? {}), ...patch } };
-    onChange({ ...config, photos: { ...config.photos, perPhoto: merged } });
+  // ── Galerie : slots ordonnés, modèle « Photos additionnelles » ──────────
+  type GallerySlot = NonNullable<NonNullable<WpConfig['photos']>['gallery']>[number];
+  const galleryEnabled = photos.galleryEnabled !== false;
+  // Slots effectifs : ceux configurés OU fallback "toutes sauf la couverture".
+  const coverIndexInPool = (() => {
+    const targetFilename = photos.coverFilename
+      ?? knownPhotos.find((p) => p.isCover)?.filename;
+    if (!targetFilename) return 0;
+    const idx = knownPhotos.findIndex((p) => p.filename === targetFilename);
+    return idx >= 0 ? idx : 0;
+  })();
+  const configuredSlots: GallerySlot[] = config.photos?.gallery ?? [];
+  const setSlots = (next: GallerySlot[]) =>
+    onChange({ ...config, photos: { ...config.photos, gallery: next } });
+  const setSlotAt = (i: number, patch: Partial<GallerySlot>) => {
+    const next = [...configuredSlots];
+    if (!next[i]) return;
+    next[i] = { ...next[i], ...patch };
+    setSlots(next);
+  };
+  const initSlotsFromPool = (n: number): GallerySlot[] => {
+    const out: GallerySlot[] = [];
+    // On choisit en priorité les photos qui ne sont pas la couverture, dans l'ordre.
+    const candidates: number[] = [];
+    for (let i = 0; i < knownPhotos.length; i++) {
+      if (i !== coverIndexInPool) candidates.push(i);
+    }
+    for (let i = 0; i < n; i++) {
+      const pickIdx = candidates[i] ?? candidates[candidates.length - 1] ?? 0;
+      out.push(defaultGallerySlot(pickIdx));
+    }
+    return out;
+  };
+  const toggleGalleryEnabled = () => {
+    if (galleryEnabled) {
+      onChange({ ...config, photos: { ...config.photos, galleryEnabled: false } });
+    } else {
+      // Réactivation : on garde les slots existants, ou on en crée par défaut.
+      const slots = configuredSlots.length > 0 ? configuredSlots : initSlotsFromPool(Math.max(1, Math.min(3, knownPhotos.length - 1)));
+      onChange({ ...config, photos: { ...config.photos, galleryEnabled: true, gallery: slots } });
+    }
+  };
+  const setSlotCount = (n: number) => {
+    const target = Math.max(1, Math.min(WP_MAX_GALLERY_SLOTS, n));
+    const next = [...configuredSlots];
+    if (next.length < target) {
+      // Ajout : on pioche le prochain index disponible non encore utilisé,
+      // sinon on retombe sur le dernier.
+      const used = new Set(next.map((s) => s.photoIndex));
+      const candidates: number[] = [];
+      for (let i = 0; i < knownPhotos.length; i++) {
+        if (i !== coverIndexInPool && !used.has(i)) candidates.push(i);
+      }
+      while (next.length < target) {
+        const pick = candidates.shift() ?? (next[next.length - 1]?.photoIndex ?? 0);
+        next.push(defaultGallerySlot(pick));
+      }
+    } else {
+      next.length = target;
+    }
+    setSlots(next);
   };
   const setFieldsGlobal = (patch: { labelBold?: boolean; valueBold?: boolean; labelColor?: string; valueColor?: string }) =>
     onChange({ ...config, fields: { ...(config.fields ?? {}), ...patch } });
@@ -358,45 +415,83 @@ export default function WpLayoutSidebar({
             <Select label="Ratio photos galerie" value={photos.galleryAspectRatio} options={aspectOptions} onChange={(v) => setPhotos({ galleryAspectRatio: v })} />
             <Slider label="Espacement galerie" value={photos.galleryGapPx} min={0} max={40} suffix="px" onChange={(v) => setPhotos({ galleryGapPx: v })} />
 
-            {/* ── Réglages par photo ───────────────────────────────────── */}
+            {/* ── Slots de galerie (modèle « Photos additionnelles ») ─────────────── */}
             <hr style={{ border: 'none', borderTop: `1px solid ${ui.separateur}`, margin: '12px 0' }} />
-            <div style={{ fontFamily: font.sans, fontSize: '9pt', fontWeight: 700, color: color.violet, margin: '0 0 8px' }}>Photos individuelles</div>
-            <p style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70, margin: '0 0 12px', lineHeight: 1.4 }}>
-              Active / désactive chaque photo et règle son cadrage (% horizontal / vertical, pas de 5 %, saisie manuelle possible). La photo choisie comme couverture est retirée de la galerie.
-            </p>
-            {knownPhotos.length === 0 && (
+            <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
+              <button
+                onClick={toggleGalleryEnabled}
+                style={{
+                  padding: '4px 10px',
+                  fontFamily: font.sans, fontSize: '8pt', fontWeight: 600,
+                  color: galleryEnabled ? 'white' : color.violet,
+                  background: galleryEnabled ? (color.violet as string) : 'white',
+                  border: `1px solid ${color.gris}`, borderRadius: radius.action, cursor: 'pointer',
+                }}
+              >
+                {galleryEnabled ? 'Activée' : 'Désactivée'}
+              </button>
+              {galleryEnabled && configuredSlots.length > 0 && (
+                <div style={{ display: 'flex', gap: 4, alignItems: 'center', marginLeft: 12, fontFamily: font.sans, fontSize: '9pt', color: color.noir70 }}>
+                  <span>Nombre :</span>
+                  <button
+                    onClick={() => setSlotCount(configuredSlots.length - 1)}
+                    disabled={configuredSlots.length <= 1}
+                    style={{ padding: '2px 8px', fontFamily: font.sans, fontWeight: 600, background: 'white', color: color.violet, border: `1px solid ${color.gris}`, borderRadius: radius.action, cursor: configuredSlots.length <= 1 ? 'not-allowed' : 'pointer', opacity: configuredSlots.length <= 1 ? 0.4 : 1 }}
+                  >−</button>
+                  <span style={{ minWidth: 16, textAlign: 'center', fontWeight: 700, color: color.rouge }}>{configuredSlots.length}</span>
+                  <button
+                    onClick={() => setSlotCount(configuredSlots.length + 1)}
+                    disabled={configuredSlots.length >= WP_MAX_GALLERY_SLOTS}
+                    style={{ padding: '2px 8px', fontFamily: font.sans, fontWeight: 600, background: 'white', color: color.violet, border: `1px solid ${color.gris}`, borderRadius: radius.action, cursor: configuredSlots.length >= WP_MAX_GALLERY_SLOTS ? 'not-allowed' : 'pointer', opacity: configuredSlots.length >= WP_MAX_GALLERY_SLOTS ? 0.4 : 1 }}
+                  >+</button>
+                </div>
+              )}
+            </div>
+
+            {galleryEnabled && knownPhotos.length === 0 && (
               <p style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70, fontStyle: 'italic' }}>Aucune photo détectée sur cette fiche.</p>
             )}
-            {knownPhotos.map((p) => {
-              const eff = effectivePhotoSettings(resolved, p.filename);
-              const isCoverEffective = (photos.coverFilename ?? knownPhotos.find((q) => q.isCover)?.filename) === p.filename;
+
+            {galleryEnabled && configuredSlots.length === 0 && knownPhotos.length > 0 && (
+              <p style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70, lineHeight: 1.4 }}>
+                Aucun slot configuré → la galerie affiche toutes les photos du projet sauf la couverture. Clique sur « Activée » puis utilise <strong>+</strong> pour ajouter un slot et choisir ses photos.
+              </p>
+            )}
+
+            {galleryEnabled && configuredSlots.map((slot, i) => {
+              const enabled = slot.enabled !== false;
+              const photoOptions = knownPhotos.map((p, idx) => ({
+                value: String(idx),
+                label: `Photo ${idx + 1}${p.filename ? ' — ' + (p.filename.length > 20 ? p.filename.slice(0, 18) + '…' : p.filename) : ''}${idx === coverIndexInPool ? ' (couverture)' : ''}`,
+              }));
               return (
-                <div key={p.filename} style={{ border: `1px solid ${color.gris}`, borderRadius: radius.action, padding: 8, marginBottom: 8, opacity: eff.enabled ? 1 : 0.55 }}>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginBottom: 6 }}>
-                    <div style={{ width: 56, height: 42, flexShrink: 0, borderRadius: 4, overflow: 'hidden', background: color.gris as string, position: 'relative' }}>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={p.url} alt={p.filename}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: `${eff.offsetX}% ${eff.offsetY}%`, display: 'block' }} />
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontFamily: font.sans, fontSize: '8pt', fontWeight: 600, color: color.violet, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={p.filename}>
-                        {p.filename}
-                      </div>
-                      <div style={{ display: 'flex', gap: 10, marginTop: 4, flexWrap: 'wrap' }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontFamily: font.sans, fontSize: '8pt', color: color.noir70, cursor: 'pointer' }}>
-                          <input type="checkbox" checked={eff.enabled} onChange={(e) => setPerPhoto(p.filename, { enabled: e.target.checked })} />
-                          Activée
-                        </label>
-                        {isCoverEffective && (
-                          <span style={{ fontFamily: font.sans, fontSize: '7.5pt', fontWeight: 700, color: color.rouge, letterSpacing: '0.05em' }}>• COUVERTURE</span>
-                        )}
-                      </div>
-                    </div>
+                <div key={i} style={{ border: `1px solid ${color.gris}`, borderRadius: radius.action, padding: 8, marginBottom: 8, opacity: enabled ? 1 : 0.55 }}>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 6 }}>
+                    <button
+                      type="button"
+                      onClick={() => setSlotAt(i, { enabled: !enabled })}
+                      title={enabled ? 'Désactiver ce slot' : 'Réactiver ce slot'}
+                      style={{
+                        width: 18, height: 18, padding: 0, border: `1px solid ${color.gris}`, borderRadius: 2,
+                        background: enabled ? (color.violet as string) : 'white', color: 'white', cursor: 'pointer',
+                        fontSize: 11, lineHeight: '14px', fontWeight: 700, flexShrink: 0,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}
+                    >{enabled ? '✓' : ''}</button>
+                    <span style={{ fontFamily: font.sans, fontSize: '9pt', fontWeight: 600, color: color.violet, minWidth: 56 }}>Photo {i + 1}</span>
+                    <select
+                      value={String(slot.photoIndex)}
+                      onChange={(e) => setSlotAt(i, { photoIndex: Number(e.target.value) })}
+                      style={{ flex: 1, minWidth: 0, fontFamily: font.sans, fontSize: '9pt', padding: '4px 6px', border: `1px solid ${color.gris}`, borderRadius: radius.action, background: 'white', color: color.noir }}
+                    >
+                      {photoOptions.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                    </select>
                   </div>
-                  {eff.enabled && !isCoverEffective && (
+                  {enabled && (
                     <>
-                      <StepSlider label="Horizontal" value={eff.offsetX} min={0} max={100} suffix="%" onChange={(v) => setPerPhoto(p.filename, { offsetX: v })} />
-                      <StepSlider label="Vertical" value={eff.offsetY} min={0} max={100} suffix="%" onChange={(v) => setPerPhoto(p.filename, { offsetY: v })} />
+                      <StepSlider label={`Taille ${i + 1}`}      value={slot.sizePercent ?? 100} min={0} max={100} suffix="%" onChange={(v) => setSlotAt(i, { sizePercent: v })} />
+                      <StepSlider label={`Horizontal ${i + 1}`}  value={slot.offsetX ?? 50}      min={0} max={100} suffix="%" onChange={(v) => setSlotAt(i, { offsetX: v })} />
+                      <StepSlider label={`Vertical ${i + 1}`}    value={slot.offsetY ?? 50}      min={0} max={100} suffix="%" onChange={(v) => setSlotAt(i, { offsetY: v })} />
                     </>
                   )}
                 </div>
