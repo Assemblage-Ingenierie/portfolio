@@ -408,8 +408,8 @@ export function renderManuel(projet: Projet, configIn?: ManualConfig): TemplateB
   const body = `<article class="page man-page">
     <div class="t-bandeau-wrap"${bandeauWrapGap ? ` style="${bandeauWrapGap}"` : ''}>
       ${headerHtml(projet)}
-      ${titleBlockHtml(projet, '26pt')}
-      ${metaGridHtml(projet)}
+      ${titleBlockHtml(projet, '26pt', { showMissionAi: true })}
+      ${metaGridHtml(projet, { hideMissionAi: true })}
     </div>
     ${photosHtml}
     ${textHtml}

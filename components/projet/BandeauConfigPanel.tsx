@@ -550,7 +550,7 @@ function BandeauPhotoGapRow({ value, onChange }: { value: number | undefined; on
 
 /** Libellés des cellules dont l'affichage est togglable par l'utilisateur,
  *  pour réduire la largeur du bandeau. */
-const TOGGLEABLE_CELLS: MetaLabel[] = ['BET associés', 'Programme', 'Matériaux'];
+const TOGGLEABLE_CELLS: MetaLabel[] = ['BET associés', 'Entreprise', 'Budget/Surface', 'Matériaux'];
 
 function FieldVisibilityRow({ hidden, onChange }: { hidden: MetaLabel[]; onChange: (next: MetaLabel[]) => void }) {
   const hiddenSet = new Set(hidden);

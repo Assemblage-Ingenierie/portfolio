@@ -172,6 +172,18 @@ html, body { background: white; }
   color: var(--ai-noir70); letter-spacing: 0.05em;
   margin-bottom: 2mm;
 }
+/* Rangée Lieu (gauche) + Mission AI (droite) — Str-Env / Dev uniquement.
+   Mission AI sort du bandeau et s'inscrit en face du Lieu, au-dessus du titre. */
+.t-surtitre-row {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin-bottom: 2mm;
+}
+.t-surtitre-row .t-surtitre { margin-bottom: 0; }
+.t-surtitre-mission {
+  font-family: var(--sans); font-size: 9pt; font-weight: 600;
+  color: var(--ai-rouge); letter-spacing: 0.05em;
+  margin-left: auto; white-space: nowrap;
+}
 .t-h1 {
   font-family: var(--serif); font-weight: 500;
   color: var(--ai-noir); letter-spacing: -0.015em;
@@ -384,51 +396,84 @@ export function footerHtml(_projet: Projet): string {
   return '';
 }
 
-export function titleBlockHtml(projet: Projet, h1Size = '32pt'): string {
+/** Split un CSV CRM ("Studio A, Studio B") en array. NB : si un nom CRM
+ *  contient une virgule (rare), il sera coupé — tradeoff accepté. Pour
+ *  un split sûr, exposer un *Values array depuis le mapper. */
+function splitCsv(v: string | undefined): string[] {
+  if (!v) return [];
+  return v.split(/\s*,\s*/).map(s => s.trim()).filter(Boolean);
+}
+
+/** Collapse "AMO ENV" / "AMO DEV" → "AMO" dans une liste de Mission AI.
+ *  Si l'une de ces deux valeurs (ou les deux) est présente, on les retire
+ *  et on insère un seul "AMO" à leur place (en préservant l'ordre relatif).
+ *  Les autres valeurs (ex. "MOE", "OPC") passent inchangées. */
+function collapseAmoMissionAi(values: string[]): string[] {
+  const out: string[] = [];
+  let amoInserted = false;
+  for (const v of values) {
+    if (v === 'AMO ENV' || v === 'AMO DEV') {
+      if (!amoInserted) { out.push('AMO'); amoInserted = true; }
+      continue;
+    }
+    out.push(v);
+  }
+  return out;
+}
+
+/** Valeurs Mission AI résolues (collapse AMO appliqué), prêtes à l'affichage.
+ *  Source : `missionAiValues` si présent, sinon split CSV de `missionAi`. */
+function missionAiResolved(projet: Projet): string[] {
+  const raw = projet.missionAiValues && projet.missionAiValues.length > 0
+    ? projet.missionAiValues
+    : splitCsv(projet.missionAi);
+  return collapseAmoMissionAi(raw);
+}
+
+export function titleBlockHtml(
+  projet: Projet,
+  h1Size = '32pt',
+  options?: { showMissionAi?: boolean },
+): string {
   // Surcharge typographique du titre (BandeauConfig.titre). Si l'utilisateur
   // définit fontSize, on l'applique en remplacement du défaut du template.
   const titreOverride = styleToCss(projet.bandeauConfig?.titre);
   const baseStyle = `font-size:${h1Size}; line-height:1.05`;
   const h1Style = titreOverride ? `${baseStyle}; ${titreOverride}` : baseStyle;
+
+  // Ligne Mission AI (Str-Env / Dev uniquement) : inscrite en face du Lieu,
+  // justifiée à droite, au-dessus du titre. Open Sans, taille du Lieu, rouge
+  // du statut. Sort la cellule du bandeau (cf. metaGridHtml { hideMissionAi }).
+  const missionAiVals = options?.showMissionAi ? missionAiResolved(projet) : [];
+  let surtitre: string;
+  if (options?.showMissionAi && missionAiVals.length > 0) {
+    surtitre = `<div class="t-surtitre-row">
+      <span class="t-surtitre">${projet.lieu ? esc(projet.lieu) : ''}</span>
+      <span class="t-surtitre-mission">Mission AI : ${esc(missionAiVals.join(', '))}</span>
+    </div>`;
+  } else {
+    surtitre = projet.lieu ? `<div class="t-surtitre">${esc(projet.lieu)}</div>` : '';
+  }
+
   return `<div class="t-title-block">
-    ${projet.lieu ? `<div class="t-surtitre">${esc(projet.lieu)}</div>` : ''}
+    ${surtitre}
     <h1 class="t-h1" style="${h1Style}">${esc(projet.nom)}</h1>
     ${projet.pitch ? `<p class="t-pitch">${esc(projet.pitch)}</p>` : ''}
   </div>`;
 }
 
-export function metaGridHtml(projet: Projet, options?: { isDev?: boolean }): string {
+export function metaGridHtml(
+  projet: Projet,
+  options?: { isDev?: boolean; hideMissionAi?: boolean },
+): string {
   // Chaque cellule porte un array de valeurs (1 ou plus). Cela permet de
   // contrôler le séparateur (virgule inline OU saut de ligne <br>) par
   // valeur via `bandeauConfig.cells.breaks[label]`. Pour les cellules
   // mono-valeur (Budget, Surface, Programme via value/sub), l'array
   // contient un seul élément et aucun break ne s'applique.
+  // NB : `splitCsv` et `collapseAmoMissionAi` sont désormais des helpers de
+  // module (partagés avec titleBlockHtml).
   const items: { label: string; values: string[]; sub?: string }[] = [];
-
-  /** Split un CSV CRM ("Studio A, Studio B") en array. NB : si un nom CRM
-   *  contient une virgule (rare), il sera coupé — tradeoff accepté. Pour
-   *  un split sûr, exposer un *Values array depuis le mapper. */
-  const splitCsv = (v: string | undefined): string[] => {
-    if (!v) return [];
-    return v.split(/\s*,\s*/).map(s => s.trim()).filter(Boolean);
-  };
-
-  /** Collapse "AMO ENV" / "AMO DEV" → "AMO" dans une liste de Mission AI.
-   *  Si l'une de ces deux valeurs (ou les deux) est présente, on les retire
-   *  et on insère un seul "AMO" à leur place (en préservant l'ordre relatif).
-   *  Les autres valeurs (ex. "MOE", "OPC") passent inchangées. */
-  const collapseAmoMissionAi = (values: string[]): string[] => {
-    const out: string[] = [];
-    let amoInserted = false;
-    for (const v of values) {
-      if (v === 'AMO ENV' || v === 'AMO DEV') {
-        if (!amoInserted) { out.push('AMO'); amoInserted = true; }
-        continue;
-      }
-      out.push(v);
-    }
-    return out;
-  };
 
   // Programme : principal en valeur principale, secondaire en sous-titre.
   // Helper utilisé par les deux templates.
@@ -472,7 +517,7 @@ export function metaGridHtml(projet: Projet, options?: { isDev?: boolean }): str
     if (budgetSurfaceValues.length)   items.push({ label: 'Budget/Surface',   values: budgetSurfaceValues });
     if (programmeItem)                items.push(programmeItem);
     if (materiauxValues.length)       items.push({ label: 'Matériaux',        values: materiauxValues });
-    if (projet.missionAi)             items.push({ label: 'Mission AI',       values: collapseAmoMissionAi(projet.missionAiValues && projet.missionAiValues.length > 0 ? projet.missionAiValues : splitCsv(projet.missionAi)) });
+    if (projet.missionAi && !options?.hideMissionAi) items.push({ label: 'Mission AI', values: missionAiResolved(projet) });
     if (projet.betAssocies)           items.push({ label: 'BET associés',     values: splitCsv(projet.betAssocies) });
   } else {
     // Bandeau Str-Env — ordre historique + BET associés inséré juste après
@@ -483,7 +528,7 @@ export function metaGridHtml(projet: Projet, options?: { isDev?: boolean }): str
     if (projet.betAssocies)           items.push({ label: 'BET associés',     values: splitCsv(projet.betAssocies) });
     if (budgetSurfaceValues.length)   items.push({ label: 'Budget/Surface',   values: budgetSurfaceValues });
     if (projet.entreprise)            items.push({ label: 'Entreprise',       values: splitCsv(projet.entreprise) });
-    if (projet.missionAi)             items.push({ label: 'Mission AI',       values: collapseAmoMissionAi(projet.missionAiValues && projet.missionAiValues.length > 0 ? projet.missionAiValues : splitCsv(projet.missionAi)) });
+    if (projet.missionAi && !options?.hideMissionAi) items.push({ label: 'Mission AI', values: missionAiResolved(projet) });
     if (programmeItem)                items.push(programmeItem);
     if (materiauxValues.length)       items.push({ label: 'Matériaux',        values: materiauxValues });
   }
