@@ -117,6 +117,16 @@ export interface WpConfig {
     /** Surcharges par champ (priorité sur les défauts globaux ci-dessus). */
     overrides?: Partial<Record<WpFieldKey, WpFieldStyle>>;
   };
+  /** Espacements verticaux (px) du haut de la fiche. */
+  spacing?: {
+    /** Entre le titre (thème WP) et la phrase d'accroche — marge au-dessus
+     *  du bloc d'en-tête. Défaut 0. */
+    titlePitchPx?: number;
+    /** Entre la phrase d'accroche et la photo. Défaut 40. */
+    pitchPhotoPx?: number;
+    /** Entre la photo et la description. Défaut 48. */
+    photoDescPx?: number;
+  };
   /** Catégories (« Tags site web ») rendues en tête de contenu. */
   categories?: {
     /** Affiche la ligne de catégories. Défaut true. */
@@ -160,6 +170,11 @@ export const DEFAULT_WP_CONFIG = {
       missionAi: { labelColor: ROUGE },
     } as Partial<Record<WpFieldKey, WpFieldStyle>>,
   },
+  spacing: {
+    titlePitchPx: 0,
+    pitchPhotoPx: 40,
+    photoDescPx: 48,
+  },
   categories: {
     show: true,
     sizePx: 11,
@@ -192,6 +207,7 @@ export function resolveWpConfig(cfg?: WpConfig) {
         ...(cfg?.fields?.overrides ?? {}),
       } as Partial<Record<WpFieldKey, WpFieldStyle>>,
     },
+    spacing: { ...DEFAULT_WP_CONFIG.spacing, ...(cfg?.spacing ?? {}) },
     categories: { ...DEFAULT_WP_CONFIG.categories, ...(cfg?.categories ?? {}) },
     photos: { ...DEFAULT_WP_CONFIG.photos, ...(cfg?.photos ?? {}) },
   };

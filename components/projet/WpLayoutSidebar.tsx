@@ -23,11 +23,12 @@ import { color, font, radius, ui } from '@/lib/ui/tokens';
  * disposition photos). La liste des champs dépend du `template` (Str-Env/Dev).
  */
 
-type SectionId = 'typo' | 'fields' | 'categories' | 'photos';
+type SectionId = 'typo' | 'fields' | 'spacing' | 'categories' | 'photos';
 
 const SECTIONS: { id: SectionId; label: string }[] = [
   { id: 'typo', label: 'Typographie générale' },
   { id: 'fields', label: 'Champs du bandeau' },
+  { id: 'spacing', label: 'Espacements' },
   { id: 'categories', label: 'Catégories' },
   { id: 'photos', label: 'Photos' },
 ];
@@ -115,11 +116,12 @@ export default function WpLayoutSidebar({
   const [active, setActive] = useState<SectionId | null>('fields');
 
   const resolved = resolveWpConfig(config);
-  const { typo, fields, photos } = resolved;
+  const { typo, fields, photos, spacing } = resolved;
   const aspectOptions = WP_ASPECT_RATIOS.map((r) => ({ value: r, label: r }));
 
   const setTypo = (patch: Partial<typeof typo>) => onChange({ ...config, typo: { ...config.typo, ...patch } });
   const setPhotos = (patch: Partial<typeof photos>) => onChange({ ...config, photos: { ...config.photos, ...patch } });
+  const setSpacing = (patch: Partial<typeof spacing>) => onChange({ ...config, spacing: { ...config.spacing, ...patch } });
   const setFieldsGlobal = (patch: { labelBold?: boolean; valueBold?: boolean; labelColor?: string; valueColor?: string }) =>
     onChange({ ...config, fields: { ...(config.fields ?? {}), ...patch } });
 
@@ -237,6 +239,17 @@ export default function WpLayoutSidebar({
                 </div>
               );
             })}
+          </>
+        )}
+
+        {active === 'spacing' && (
+          <>
+            <Slider label="Titre ↔ accroche" value={spacing.titlePitchPx} min={0} max={120} suffix="px" onChange={(v) => setSpacing({ titlePitchPx: v })} />
+            <Slider label="Accroche ↔ photo" value={spacing.pitchPhotoPx} min={0} max={120} suffix="px" onChange={(v) => setSpacing({ pitchPhotoPx: v })} />
+            <Slider label="Photo ↔ description" value={spacing.photoDescPx} min={0} max={120} suffix="px" onChange={(v) => setSpacing({ photoDescPx: v })} />
+            <p style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70, margin: '4px 0 0', lineHeight: 1.4 }}>
+              « Titre ↔ accroche » = marge au-dessus du contenu (le titre est rendu par le thème WordPress).
+            </p>
           </>
         )}
 
