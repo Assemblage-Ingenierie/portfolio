@@ -79,6 +79,7 @@ export const WP_FIELDS_STR_ENV: WpFieldKey[] = [
  *  dans la cellule Programme), son style reste réglable via le menu partagé. */
 export const WP_FIELDS_DEV: WpFieldKey[] = [
   'moa', 'bailleur', 'architecte', 'programme', 'missionAi', 'budget', 'betAssocies',
+  'materiaux', 'surface', 'entreprise',
 ];
 
 /** Ordre de **rendu** des champs du bandeau, propre à chaque template (Str-Env
