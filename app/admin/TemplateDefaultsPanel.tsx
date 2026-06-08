@@ -19,7 +19,7 @@ const SUMMARY: string[] = [
   'Police Open Sans pour tous les champs',
   'Titre 15 · Statut 10 · Libellés 10 · Valeurs 10',
   'Sous-titre Programme 9 · Description 9 · Prestation Assemblage 9',
-  'Mission AI : 10, gras, small-caps',
+  'Mission AI : 12, gras, small-caps',
   'Cellules du bandeau : adaptées au contenu',
   'Cellule Programme : Programme secondaire visible',
   'Lignes horizontales : masquées',
