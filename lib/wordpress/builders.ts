@@ -443,9 +443,12 @@ function buildWpEditorial(
     ${renderMarkdown(description)}
   </div>`;
     const hasPresta = wpTemplate === 'Dev' && (projet.prestationAssemblage ?? '').trim();
+    const p = resolved.prestation;
+    const pLabelFont = p.labelFont === 'serif' ? SERIF : SANS;
+    const pValueFont = p.valueFont === 'serif' ? SERIF : SANS;
     const prestaBlock = hasPresta ? `
-  <section class="ai-md" style="margin:0 0 48px;font-family:${SANS};font-size:${typo.descriptionSizePx}px;line-height:${typo.descriptionLineHeight};color:#1a1a1a;">
-    <h2 style="font-family:${SERIF};font-size:${typo.sectionTitleSizePx}px;font-weight:500;line-height:1.2;color:${VIOLET};margin:0 0 16px;letter-spacing:-0.01em;">Prestation Assemblage</h2>
+  <section class="ai-md" style="margin:0 0 48px;font-family:${pValueFont};font-size:${p.valueSizePx}px;line-height:${p.valueLineHeight};color:${p.valueColor};font-weight:${p.valueBold ? 700 : 400};">
+    <h2 style="font-family:${pLabelFont};font-size:${p.labelSizePt}pt;font-weight:${p.labelBold ? 700 : 400};line-height:1.2;color:${p.labelColor};margin:0 0 16px;letter-spacing:-0.01em;text-transform:${p.labelUpperCase ? 'uppercase' : 'none'};">Prestation Assemblage</h2>
     ${renderMarkdown(projet.prestationAssemblage!)}
   </section>` : '';
     const galleryBlock = renderGallerySlots(slots, projet.nom, photos);
