@@ -170,14 +170,20 @@ export interface BandeauCellsConfig {
    *    - `[0, 1]` → "A\nB\nC" (un par ligne)
    *  Les indices ≥ nombre de valeurs sont ignorés silencieusement. */
   breaks?: Partial<Record<MetaLabel, number[]>>;
-  /** Sauts de ligne intra-valeur pour cellules single-value longues. Indices
-   *  de TOKEN (mot) APRES lesquels insérer un `<br>`. Les tokens sont obtenus
-   *  en splittant la valeur sur /\s+/. Ex. pour MOA = "Ministère de l'Education
-   *  nationale" → tokens = ['Ministère', 'de', "l'Education", 'nationale'].
-   *    - `[0]` → "Ministère\nde l'Education nationale"
+  /** Sauts de ligne intra-valeur (wrap d'une valeur longue). Indices de TOKEN
+   *  GLOBAL (mot) APRES lesquels insérer un `<br>`. Le compteur de token court
+   *  sur l'ENSEMBLE des valeurs de la cellule (split /\s+/ par valeur) — ce qui
+   *  permet d'utiliser les sauts intra-valeur AUSSI sur les cellules
+   *  multi-valeurs, en plus des sauts inter-options de `breaks`.
+   *  Ex. mono-valeur MOA = "Ministère de l'Education nationale" →
+   *  tokens = ['Ministère'(0), 'de'(1), "l'Education"(2), 'nationale'(3)] :
+   *    - `[0]`    → "Ministère\nde l'Education nationale"
    *    - `[0, 2]` → "Ministère\nde l'Education\nnationale"
-   *  Ignoré silencieusement si la cellule est multi-valeur (utiliser `breaks`
-   *  à la place). */
+   *  Pour une cellule mono-valeur, l'index global == l'index de token (rétro-
+   *  compatible). Les gaps en fin de valeur (= séparateur inter-options) ne
+   *  sont jamais des `wordBreaks` (utiliser `breaks` pour ceux-là).
+   *  L'UI ne propose un point de coupure qu'environ tous les 10 caractères
+   *  (toujours en fin de mot) pour limiter le nombre de toggles. */
   wordBreaks?: Partial<Record<MetaLabel, number[]>>;
 }
 
