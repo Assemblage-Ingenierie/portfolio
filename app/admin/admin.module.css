@@ -10,6 +10,23 @@
   margin: 0 auto 2rem;
 }
 
+.backLink {
+  display: inline-block;
+  margin-bottom: 1rem;
+  padding: .4rem .9rem;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid var(--ai-gris);
+  color: var(--ai-violet);
+  font-family: var(--sans);
+  font-size: .85rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: opacity .15s;
+}
+
+.backLink:hover { opacity: .7; }
+
 .logo {
   display: flex;
   align-items: baseline;

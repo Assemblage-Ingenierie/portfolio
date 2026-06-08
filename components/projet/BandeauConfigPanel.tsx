@@ -33,31 +33,16 @@ function cellValuesFromProjet(projet: Projet | undefined): Map<MetaLabel, string
     if (!v) return [];
     return v.split(/\s*,\s*/).map(s => s.trim()).filter(Boolean);
   };
-  // Miroir de `collapseAmoMissionAi` dans shared.ts : si AMO ENV / AMO DEV
-  // sont présents on les remplace par un seul "AMO". Les indices de breaks
-  // doivent matcher le rendu — d'où la transformation ici aussi.
-  const collapseAmo = (values: string[]): string[] => {
-    const out: string[] = [];
-    let amoInserted = false;
-    for (const v of values) {
-      if (v === 'AMO ENV' || v === 'AMO DEV') {
-        if (!amoInserted) { out.push('AMO'); amoInserted = true; }
-        continue;
-      }
-      out.push(v);
-    }
-    return out;
-  };
-  const rawMissionAi = projet.missionAiValues && projet.missionAiValues.length > 0
-    ? projet.missionAiValues
-    : splitCsv(projet.missionAi);
+  // Mission AI n'est PAS exposé ici : il est rendu dans le bloc titre
+  // (face au lieu, `hideMissionAi: true` dans le bandeau) et sa typo est
+  // gérée par sa propre section de mise en page → ses sauts de ligne ne
+  // s'appliquent pas au rendu du bandeau.
   const candidates: Array<[MetaLabel, string[]]> = [
     ['MOA',           splitCsv(projet.moa)],
     ['Bailleur',      splitCsv(projet.bailleur)],
     ['Architecte',    splitCsv(projet.architecte)],
     ['BET associés',  splitCsv(projet.betAssocies)],
     ['Entreprise',    splitCsv(projet.entreprise)],
-    ['Mission AI',    collapseAmo(rawMissionAi)],
     // Matériaux : multi-select Airtable, exposé dans le bandeau après Programme.
     ['Matériaux',     projet.materiaux ?? []],
   ];

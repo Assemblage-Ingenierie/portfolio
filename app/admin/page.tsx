@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/supabase/useAuth';
 import { getSupabaseClient } from '@/lib/supabase/client';
@@ -37,6 +38,7 @@ export default function AdminPage() {
   return (
     <div className={styles.page}>
       <header className={styles.header}>
+        <Link href="/" className={styles.backLink}>← Portfolio</Link>
         <div className={styles.logo}>
           <span className={styles.logoText}>Assemblage ingénierie</span>
           <span className={styles.logoDot}>·A</span>
