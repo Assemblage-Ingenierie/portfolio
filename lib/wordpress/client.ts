@@ -59,6 +59,10 @@ interface WpPostPayload {
   featured_media?: number;
   /** IDs de catégories WordPress à cocher sur le post (taxonomie). */
   categories?: number[];
+  /** Post meta (ex. champs Yoast `_yoast_wpseo_focuskw` / `_yoast_wpseo_metadesc`).
+   *  ⚠ N'est persisté que si la meta key est enregistrée pour le REST côté WP
+   *  (register_post_meta avec show_in_rest:true) — sinon WP l'ignore. */
+  meta?: Record<string, string>;
 }
 
 /**
