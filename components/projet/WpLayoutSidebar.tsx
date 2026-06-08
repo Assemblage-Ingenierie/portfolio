@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   WP_ASPECT_RATIOS,
@@ -148,7 +149,7 @@ function Palette({
 }) {
   const norm = (h: string) => h.toLowerCase();
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
       {ASSEMBLAGE_PALETTE.map((c) => {
         const selected = norm(c.hex) === norm(value);
         return (
@@ -177,17 +178,17 @@ function FieldSizeRow({
   label: string; value: number; canReset: boolean; onChange: (v: number) => void; onReset: () => void;
 }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 4 }}>
       <span style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70 }}>
         {label} {canReset && (
           <button onClick={onReset} title="Revenir au défaut global"
             style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: color.noir70 }}>↺</button>
         )}
       </span>
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flex: '1 1 60px', minWidth: 0, justifyContent: 'flex-end' }}>
         <input type="range" min={9} max={20} value={value}
           onChange={(e) => onChange(Number(e.target.value))}
-          style={{ accentColor: color.rouge as string, width: 80 }} />
+          style={{ accentColor: color.rouge as string, flex: '1 1 40px', minWidth: 0 }} />
         <input type="number" min={9} max={20} step={1} value={value}
           onChange={(e) => { const n = Number(e.target.value); if (Number.isFinite(n)) onChange(Math.max(9, Math.min(20, n))); }}
           style={{ width: 46, fontFamily: font.sans, fontSize: '8pt', padding: '2px 4px', border: `1px solid ${color.gris}`, borderRadius: 4, textAlign: 'right' }} />
@@ -195,6 +196,11 @@ function FieldSizeRow({
     </div>
   );
 }
+
+const SIDEBAR_WIDTH_KEY = 'portfolio_wp_sidebar_width';
+const SIDEBAR_WIDTH_MIN = 280;
+const SIDEBAR_WIDTH_MAX = 720;
+const SIDEBAR_WIDTH_DEFAULT = 380;
 
 export default function WpLayoutSidebar({
   config, onChange, template, slug, knownPhotos,
@@ -206,6 +212,30 @@ export default function WpLayoutSidebar({
   // toggle est dans la toolbar (visible uniquement pour les profils admin).
   const { viewMode } = useViewMode();
   const isUserView = viewMode === 'user';
+
+  // Largeur redimensionnable de la sidebar (poignée à droite, glisser pour
+  // élargir/rétrécir). Persistée en localStorage.
+  const [width, setWidth] = useState(SIDEBAR_WIDTH_DEFAULT);
+  useEffect(() => {
+    const saved = localStorage.getItem(SIDEBAR_WIDTH_KEY);
+    if (saved) setWidth(Math.max(SIDEBAR_WIDTH_MIN, Math.min(SIDEBAR_WIDTH_MAX, Number(saved))));
+  }, []);
+  function startResize(e: React.MouseEvent) {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = width;
+    const clamp = (n: number) => Math.max(SIDEBAR_WIDTH_MIN, Math.min(SIDEBAR_WIDTH_MAX, n));
+    function onMove(ev: MouseEvent) { setWidth(clamp(startW + ev.clientX - startX)); }
+    function onUp(ev: MouseEvent) {
+      const next = clamp(startW + ev.clientX - startX);
+      setWidth(next);
+      localStorage.setItem(SIDEBAR_WIDTH_KEY, String(next));
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    }
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }
 
   const resolved = resolveWpConfig(config);
   const { typo, fields, photos, spacing, prestation } = resolved;
@@ -304,7 +334,13 @@ export default function WpLayoutSidebar({
   };
 
   return (
-    <aside style={{ width: 300, flexShrink: 0, background: 'white', borderRight: `1px solid ${color.gris}`, display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 48px)' }}>
+    <aside style={{ width, flexShrink: 0, background: 'white', borderRight: `1px solid ${color.gris}`, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, position: 'relative' }}>
+      {/* Poignée de redimensionnement (glisser à gauche/droite). */}
+      <div
+        onMouseDown={startResize}
+        title="Glisser pour redimensionner la sidebar"
+        style={{ position: 'absolute', top: 0, right: -3, bottom: 0, width: 6, cursor: 'col-resize', zIndex: 5 }}
+      />
       <nav style={{ padding: 12, borderBottom: `1px solid ${ui.separateur}` }}>
         <Link href={`/projet/${slug}/edit`}
           style={{ display: 'block', textAlign: 'center', padding: '7px 10px', fontFamily: font.sans, fontSize: '8pt', fontWeight: 600, color: 'white', background: color.violet as string, borderRadius: radius.action, textDecoration: 'none', marginBottom: 8 }}>
@@ -328,7 +364,7 @@ export default function WpLayoutSidebar({
         </div>
       </nav>
 
-      <div style={{ padding: 16, overflowY: 'auto', flex: 1 }}>
+      <div style={{ padding: 16, overflowY: 'auto', flex: 1, minHeight: 0 }}>
         {!isUserView && (
           <Section label="Typographie générale">
             <StepSlider label="Taille description" value={typo.descriptionSizePx} min={11} max={24} step={1} suffix="px" onChange={(v) => setTypo({ descriptionSizePx: v })} />
@@ -339,7 +375,7 @@ export default function WpLayoutSidebar({
           </Section>
         )}
 
-        <Section label="Champs du bandeau" defaultOpen>
+        <Section label="Champs du bandeau">
             <p style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70, margin: '0 0 12px', lineHeight: 1.4 }}>
               Défauts appliqués à tous les champs, puis surcharges par champ ci-dessous (couleurs = palette Assemblage).
             </p>
@@ -356,6 +392,8 @@ export default function WpLayoutSidebar({
 
             <hr style={{ border: 'none', borderTop: `1px solid ${ui.separateur}`, margin: '12px 0' }} />
 
+            {/* Cartes de champs sur 2 colonnes pour raccourcir la liste. */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, alignItems: 'start' }}>
             {WP_FIELD_MENU_KEYS.map((key) => {
               const ov = overrides[key] ?? {};
               const eff = effectiveFieldStyle(resolved, key);
@@ -364,7 +402,7 @@ export default function WpLayoutSidebar({
               const effValueSize = eff.sizePt ?? typo.fieldsSizePt;
               const effLabelSize = eff.labelSizePt ?? eff.sizePt ?? typo.fieldsSizePt;
               return (
-                <div key={key} style={{ border: `1px solid ${color.gris}`, borderRadius: radius.action, padding: '8px 10px', marginBottom: 8 }}>
+                <div key={key} style={{ border: `1px solid ${color.gris}`, borderRadius: radius.action, padding: '8px 10px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                     <span style={{ fontFamily: font.sans, fontSize: '9pt', fontWeight: 700, color: color.violet, opacity: eff.hidden ? 0.4 : 1 }}>{WP_FIELD_LABELS[key]}</span>
                     <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontFamily: font.sans, fontSize: '8pt', color: color.noir70, cursor: 'pointer' }}>
@@ -379,9 +417,9 @@ export default function WpLayoutSidebar({
                         </p>
                       )}
                       {key !== 'programmeSecondaire' && (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 4 }}>
                           <span style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70 }}>Libellé</span>
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                             <label style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: '8pt', color: color.noir70, cursor: 'pointer' }}>
                               <input type="checkbox" checked={eff.labelBold} onChange={(e) => setOverride(key, { labelBold: e.target.checked })} /> gras
                             </label>
@@ -390,9 +428,9 @@ export default function WpLayoutSidebar({
                           </span>
                         </div>
                       )}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 4 }}>
                         <span style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70 }}>Valeur</span>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                           <label style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: '8pt', color: color.noir70, cursor: 'pointer' }}>
                             <input type="checkbox" checked={eff.valueBold} onChange={(e) => setOverride(key, { valueBold: e.target.checked })} /> gras
                           </label>
@@ -429,6 +467,7 @@ export default function WpLayoutSidebar({
                 </div>
               );
             })}
+            </div>
         </Section>
 
         {template === 'Dev' && (

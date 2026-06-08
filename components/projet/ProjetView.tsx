@@ -124,7 +124,6 @@ export default function ProjetView({ projet, isPrint }: Props) {
           photoCrops={photoCrops}
           cropEditMode={cropEditMode}
           onCropEditModeChange={setCropEditMode}
-          onTemplateChange={handleTemplateChange}
           onSave={() => {
             setMeasureTrigger(t => t + 1);
             // Save réussi → la mise en page actuelle devient la nouvelle
@@ -146,6 +145,8 @@ export default function ProjetView({ projet, isPrint }: Props) {
             bandeauConfig={bandeauConfig}
             onBandeauChange={setBandeauConfig}
             isDev={template === 'Dev'}
+            template={template}
+            onTemplateChange={handleTemplateChange}
             cropEditMode={cropEditMode}
             onCropEditModeChange={setCropEditMode}
           />

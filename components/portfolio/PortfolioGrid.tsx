@@ -4,9 +4,9 @@ import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import type { Projet, Statut } from '@/types/projet';
 import { RangeSlider } from './RangeSlider';
-import { FICHE_STATUS_VALUES, DEFAULT_FICHE_STATUS, type FicheStatus } from '@/lib/pdf/projectConfig';
+import { FICHE_STATUS_VALUES, DEFAULT_FICHE_STATUS, FICHE_STATUS_COLOR, type FicheStatus } from '@/lib/pdf/projectConfig';
 import { useAuth } from '@/lib/supabase/useAuth';
-import { color, feedback } from '@/lib/ui/tokens';
+import { color } from '@/lib/ui/tokens';
 
 const STATUT_BG: Record<string, string> = {
   'En étude': color.gris,
@@ -285,12 +285,7 @@ export default function PortfolioGrid({ projets }: Props) {
   });
 
   const totalProjets = projets.length;
-  const statusColor: Record<FicheStatus, string> = {
-    'Pas faite': '#9e9e9e',
-    'En cours': feedback.info,
-    'En attente de validation': feedback.attente,
-    'Prête pour publication': feedback.succes,
-  };
+  const statusColor = FICHE_STATUS_COLOR;
 
   return (
     <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '32px 24px', fontFamily: 'var(--sans)' }}>
