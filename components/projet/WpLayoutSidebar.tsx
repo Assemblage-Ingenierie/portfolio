@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
 import Link from 'next/link';
 import {
   WP_ASPECT_RATIOS,
   WP_FIELD_LABELS,
   ASSEMBLAGE_PALETTE,
+  ASSEMBLAGE_WP_DEFAULTS,
   WP_MAX_GALLERY_SLOTS,
   wpFieldOrder,
   resolveWpConfig,
@@ -16,6 +16,7 @@ import {
   type WpFieldKey,
   type WpFieldStyle,
 } from '@/lib/wordpress/wpConfig';
+import { useViewMode } from '@/lib/auth/useViewMode';
 import { color, font, radius, ui } from '@/lib/ui/tokens';
 
 /** Photo connue du projet (cover + photosProjet), passée à la sidebar pour
@@ -29,16 +30,31 @@ export interface KnownPhoto { url: string; filename: string; isCover?: boolean }
  * disposition photos). La liste des champs dépend du `template` (Str-Env/Dev).
  */
 
-type SectionId = 'typo' | 'fields' | 'presta' | 'spacing' | 'categories' | 'photos';
+/**
+ * Sidebar en menus déroulants (`<details>`). Vue admin = toutes les sections ;
+ * vue user = « Typographie générale », « Espacements » et « Catégories »
+ * masqués (cf. `useViewMode`). « Prestation Assemblage » n'apparaît que pour
+ * le template Dev.
+ */
 
-const SECTIONS: { id: SectionId; label: string; devOnly?: boolean }[] = [
-  { id: 'typo', label: 'Typographie générale' },
-  { id: 'fields', label: 'Champs du bandeau' },
-  { id: 'presta', label: 'Prestation Assemblage', devOnly: true },
-  { id: 'spacing', label: 'Espacements' },
-  { id: 'categories', label: 'Catégories' },
-  { id: 'photos', label: 'Photos' },
-];
+/** Style du `<summary>` des menus déroulants (miroir du panneau bandeau PDF). */
+const summaryStyle: React.CSSProperties = {
+  cursor: 'pointer',
+  fontFamily: font.sans, fontSize: '9pt', fontWeight: 700,
+  letterSpacing: '0.04em',
+  color: color.violet, padding: '8px 0',
+  userSelect: 'none', listStyle: 'none',
+};
+
+/** Wrapper de section en menu déroulant. */
+function Section({ label, defaultOpen, children }: { label: string; defaultOpen?: boolean; children: React.ReactNode }) {
+  return (
+    <details open={defaultOpen} style={{ borderBottom: `1px solid ${ui.separateur}`, marginBottom: 4 }}>
+      <summary style={summaryStyle}>{label}</summary>
+      <div style={{ padding: '6px 0 14px' }}>{children}</div>
+    </details>
+  );
+}
 
 const rowStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 16 };
 const labelStyle: React.CSSProperties = { fontFamily: font.sans, fontSize: '9pt', fontWeight: 600, color: color.violet, display: 'flex', justifyContent: 'space-between' };
@@ -158,7 +174,11 @@ export default function WpLayoutSidebar({
 }: {
   config: WpConfig; onChange: (next: WpConfig) => void; template: WpTemplate; slug: string; tagsExportWp: string[]; knownPhotos: KnownPhoto[];
 }) {
-  const [active, setActive] = useState<SectionId | null>('fields');
+  // Mode de vue (admin = UI complète ; user = Catégories / Espacements /
+  // Typographie générale masqués). Géré dans `lib/auth/useViewMode.ts` ; le
+  // toggle est dans la toolbar (visible uniquement pour les profils admin).
+  const { viewMode } = useViewMode();
+  const isUserView = viewMode === 'user';
 
   const resolved = resolveWpConfig(config);
   const { typo, fields, photos, spacing, prestation } = resolved;
@@ -172,6 +192,10 @@ export default function WpLayoutSidebar({
   // ── Galerie : slots ordonnés, modèle « Photos additionnelles » ──────────
   type GallerySlot = NonNullable<NonNullable<WpConfig['photos']>['gallery']>[number];
   const galleryEnabled = photos.galleryEnabled !== false;
+  // Plafond du nombre de slots = nombre de photos réellement présentes sur la
+  // fiche (champ Airtable). On ne peut pas afficher plus de photos qu'il n'en
+  // existe. Borné aussi par la limite haute absolue `WP_MAX_GALLERY_SLOTS`.
+  const maxSlots = Math.max(1, Math.min(WP_MAX_GALLERY_SLOTS, knownPhotos.length));
   // Slots effectifs : ceux configurés OU fallback "toutes sauf la couverture".
   const coverIndexInPool = (() => {
     const targetFilename = photos.coverFilename
@@ -212,7 +236,7 @@ export default function WpLayoutSidebar({
     }
   };
   const setSlotCount = (n: number) => {
-    const target = Math.max(1, Math.min(WP_MAX_GALLERY_SLOTS, n));
+    const target = Math.max(1, Math.min(maxSlots, n));
     const next = [...configuredSlots];
     if (next.length < target) {
       // Ajout : on pioche le prochain index disponible non encore utilisé,
@@ -243,6 +267,15 @@ export default function WpLayoutSidebar({
     onChange({ ...config, fields: { ...(config.fields ?? {}), overrides: { ...overrides, [key]: next } } });
   };
 
+  // Applique les préréglages « par défaut WordPress » (typo + champs + espacements)
+  // par-dessus la config courante. Les réglages photos / catégories / prestation
+  // de la fiche sont préservés (merge superficiel). La persistance via /fields ne
+  // touche que la clé `wp` du ProjectConfig → les configs PDF restent intactes.
+  const applyDefaults = () => {
+    if (!confirm('Appliquer les paramètres par défaut WordPress (typographie générale, champs du bandeau, espacements) ? Les réglages photos et catégories de cette fiche sont conservés.')) return;
+    onChange({ ...config, ...ASSEMBLAGE_WP_DEFAULTS });
+  };
+
   return (
     <aside style={{ width: 300, flexShrink: 0, background: 'white', borderRight: `1px solid ${color.gris}`, display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 48px)' }}>
       <nav style={{ padding: 12, borderBottom: `1px solid ${ui.separateur}` }}>
@@ -250,34 +283,36 @@ export default function WpLayoutSidebar({
           style={{ display: 'block', textAlign: 'center', padding: '7px 10px', fontFamily: font.sans, fontSize: '8pt', fontWeight: 600, color: 'white', background: color.violet as string, borderRadius: radius.action, textDecoration: 'none', marginBottom: 8 }}>
           ✎ Éditer les champs
         </Link>
-        <button onClick={() => onChange({})}
-          style={{ width: '100%', padding: '6px 10px', fontFamily: font.sans, fontSize: '8pt', fontWeight: 600, color: color.violet, background: 'transparent', border: `1px solid ${color.gris}`, borderRadius: radius.action, cursor: 'pointer', marginBottom: 8 }}>
-          ↺ Réinitialiser le style
-        </button>
-        <div style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70, marginBottom: 8 }}>
+        {!isUserView && (
+          <>
+            <button onClick={applyDefaults}
+              title="Applique la typographie générale, les champs du bandeau et les espacements par défaut. Les photos et catégories de la fiche sont conservées."
+              style={{ width: '100%', padding: '7px 10px', fontFamily: font.sans, fontSize: '8pt', fontWeight: 600, color: 'white', background: color.rouge as string, border: 'none', borderRadius: radius.action, cursor: 'pointer', marginBottom: 8 }}>
+              ★ Appliquer les paramètres par défaut WordPress
+            </button>
+            <button onClick={() => onChange({})}
+              style={{ width: '100%', padding: '6px 10px', fontFamily: font.sans, fontSize: '8pt', fontWeight: 600, color: color.violet, background: 'transparent', border: `1px solid ${color.gris}`, borderRadius: radius.action, cursor: 'pointer', marginBottom: 8 }}>
+              ↺ Réinitialiser le style
+            </button>
+          </>
+        )}
+        <div style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70, marginBottom: 0 }}>
           Template WP : <strong style={{ color: color.violet }}>{template}</strong> <span style={{ opacity: 0.7 }}>(via Vignette pôle)</span>
         </div>
-        {SECTIONS.filter((s) => !s.devOnly || template === 'Dev').map((s) => (
-          <button key={s.id} onClick={() => setActive(active === s.id ? null : s.id)}
-            style={{ width: '100%', textAlign: 'left', padding: '8px 10px', fontFamily: font.sans, fontSize: '9pt', fontWeight: 600, color: active === s.id ? 'white' : color.violet, background: active === s.id ? (color.violet as string) : 'transparent', border: 'none', borderRadius: radius.action, cursor: 'pointer', marginBottom: 2 }}>
-            {s.label}
-          </button>
-        ))}
       </nav>
 
       <div style={{ padding: 16, overflowY: 'auto', flex: 1 }}>
-        {active === 'typo' && (
-          <>
-            <Slider label="Taille description" value={typo.descriptionSizePx} min={11} max={24} suffix="px" onChange={(v) => setTypo({ descriptionSizePx: v })} />
-            <Slider label="Interlignage description" value={typo.descriptionLineHeight} min={1.2} max={2.2} step={0.05} onChange={(v) => setTypo({ descriptionLineHeight: v })} />
-            <Slider label="Taille champs clés (défaut)" value={typo.fieldsSizePt} min={9} max={18} suffix="pt" onChange={(v) => setTypo({ fieldsSizePt: v })} />
-            <Slider label="Taille pitch (chapô)" value={typo.pitchSizePx} min={14} max={30} suffix="px" onChange={(v) => setTypo({ pitchSizePx: v })} />
-            <Slider label="Taille titre de section" value={typo.sectionTitleSizePx} min={16} max={32} suffix="px" onChange={(v) => setTypo({ sectionTitleSizePx: v })} />
-          </>
+        {!isUserView && (
+          <Section label="Typographie générale">
+            <StepSlider label="Taille description" value={typo.descriptionSizePx} min={11} max={24} step={1} suffix="px" onChange={(v) => setTypo({ descriptionSizePx: v })} />
+            <StepSlider label="Interlignage description" value={typo.descriptionLineHeight} min={1.2} max={2.2} step={0.05} onChange={(v) => setTypo({ descriptionLineHeight: v })} />
+            <StepSlider label="Taille champs clés (défaut)" value={typo.fieldsSizePt} min={9} max={18} step={1} suffix="pt" onChange={(v) => setTypo({ fieldsSizePt: v })} />
+            <StepSlider label="Taille pitch (chapô)" value={typo.pitchSizePx} min={14} max={30} step={1} suffix="px" onChange={(v) => setTypo({ pitchSizePx: v })} />
+            <StepSlider label="Taille titre de section" value={typo.sectionTitleSizePx} min={16} max={32} step={1} suffix="px" onChange={(v) => setTypo({ sectionTitleSizePx: v })} />
+          </Section>
         )}
 
-        {active === 'fields' && (
-          <>
+        <Section label="Champs du bandeau" defaultOpen>
             <p style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70, margin: '0 0 12px', lineHeight: 1.4 }}>
               Défauts appliqués à tous les champs, puis surcharges par champ ci-dessous (couleurs = palette Assemblage).
             </p>
@@ -337,14 +372,19 @@ export default function WpLayoutSidebar({
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                         <span style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70 }}>
-                          Taille {effSize}pt {ov.sizePt !== undefined && (
+                          Taille (pt) {ov.sizePt !== undefined && (
                             <button onClick={() => clearOverrideProp(key, 'sizePt')} title="Revenir au défaut global"
                               style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: color.noir70 }}>↺</button>
                           )}
                         </span>
-                        <input type="range" min={9} max={20} value={effSize}
-                          onChange={(e) => setOverride(key, { sizePt: Number(e.target.value) })}
-                          style={{ accentColor: color.rouge as string, width: 120 }} />
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                          <input type="range" min={9} max={20} value={effSize}
+                            onChange={(e) => setOverride(key, { sizePt: Number(e.target.value) })}
+                            style={{ accentColor: color.rouge as string, width: 90 }} />
+                          <input type="number" min={9} max={20} step={1} value={effSize}
+                            onChange={(e) => { const n = Number(e.target.value); if (Number.isFinite(n)) setOverride(key, { sizePt: Math.max(9, Math.min(20, n)) }); }}
+                            style={{ width: 46, fontFamily: font.sans, fontSize: '8pt', padding: '2px 4px', border: `1px solid ${color.gris}`, borderRadius: 4, textAlign: 'right' }} />
+                        </span>
                       </div>
                       <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: font.sans, fontSize: '8pt', color: color.noir70, cursor: 'pointer' }}>
                         <input type="checkbox" checked={eff.smallCaps} onChange={(e) => setOverride(key, { smallCaps: e.target.checked })} />
@@ -359,11 +399,10 @@ export default function WpLayoutSidebar({
                 </div>
               );
             })}
-          </>
-        )}
+        </Section>
 
-        {active === 'presta' && (
-          <>
+        {template === 'Dev' && (
+          <Section label="Prestation Assemblage">
             <p style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70, margin: '0 0 12px', lineHeight: 1.4 }}>
               Typographie du bloc « Prestation Assemblage » (template Dev). Libellé (titre) et texte enrichi stylés indépendamment de la description.
             </p>
@@ -375,7 +414,7 @@ export default function WpLayoutSidebar({
               <span style={{ ...labelStyle, fontWeight: 600 }}>Couleur</span>
               <Palette value={prestation.labelColor} onChange={(hex) => setPresta({ labelColor: hex })} />
             </div>
-            <Slider label="Taille" value={prestation.labelSizePt} min={9} max={32} suffix="pt" onChange={(v) => setPresta({ labelSizePt: v })} />
+            <StepSlider label="Taille" value={prestation.labelSizePt} min={9} max={32} step={1} suffix="pt" onChange={(v) => setPresta({ labelSizePt: v })} />
             <Toggle label="En gras" checked={prestation.labelBold} onChange={(v) => setPresta({ labelBold: v })} />
             <Toggle label="En grandes capitales" checked={prestation.labelUpperCase} onChange={(v) => setPresta({ labelUpperCase: v })} />
 
@@ -388,8 +427,8 @@ export default function WpLayoutSidebar({
               <span style={{ ...labelStyle, fontWeight: 600 }}>Couleur</span>
               <Palette value={prestation.valueColor} onChange={(hex) => setPresta({ valueColor: hex })} />
             </div>
-            <Slider label="Taille" value={prestation.valueSizePx} min={11} max={24} suffix="px" onChange={(v) => setPresta({ valueSizePx: v })} />
-            <Slider label="Interlignage" value={prestation.valueLineHeight} min={1.2} max={2.2} step={0.05} onChange={(v) => setPresta({ valueLineHeight: v })} />
+            <StepSlider label="Taille" value={prestation.valueSizePx} min={11} max={24} step={1} suffix="px" onChange={(v) => setPresta({ valueSizePx: v })} />
+            <StepSlider label="Interlignage" value={prestation.valueLineHeight} min={1.2} max={2.2} step={0.05} onChange={(v) => setPresta({ valueLineHeight: v })} />
             <Toggle label="En gras" checked={prestation.valueBold} onChange={(v) => setPresta({ valueBold: v })} />
 
             <hr style={{ border: 'none', borderTop: `1px solid ${ui.separateur}`, margin: '12px 0' }} />
@@ -406,22 +445,22 @@ export default function WpLayoutSidebar({
               ]}
               onChange={(v) => setPhotos({ prestationPosition: v as 'before-description' | 'after-description' | 'after-photos' })}
             />
-          </>
+          </Section>
         )}
 
-        {active === 'spacing' && (
-          <>
-            <Slider label="Titre ↔ accroche" value={spacing.titlePitchPx} min={0} max={120} suffix="px" onChange={(v) => setSpacing({ titlePitchPx: v })} />
-            <Slider label="Accroche ↔ photo" value={spacing.pitchPhotoPx} min={0} max={120} suffix="px" onChange={(v) => setSpacing({ pitchPhotoPx: v })} />
-            <Slider label="Photo ↔ description" value={spacing.photoDescPx} min={0} max={120} suffix="px" onChange={(v) => setSpacing({ photoDescPx: v })} />
+        {!isUserView && (
+          <Section label="Espacements">
+            <StepSlider label="Titre ↔ accroche" value={spacing.titlePitchPx} min={0} max={120} step={1} suffix="px" onChange={(v) => setSpacing({ titlePitchPx: v })} />
+            <StepSlider label="Accroche ↔ photo" value={spacing.pitchPhotoPx} min={0} max={120} step={1} suffix="px" onChange={(v) => setSpacing({ pitchPhotoPx: v })} />
+            <StepSlider label="Photo ↔ description" value={spacing.photoDescPx} min={0} max={120} step={1} suffix="px" onChange={(v) => setSpacing({ photoDescPx: v })} />
             <p style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70, margin: '4px 0 0', lineHeight: 1.4 }}>
               « Titre ↔ accroche » = marge au-dessus du contenu (le titre est rendu par le thème WordPress).
             </p>
-          </>
+          </Section>
         )}
 
-        {active === 'categories' && (
-          <>
+        {!isUserView && (
+          <Section label="Catégories">
             <p style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70, margin: '0 0 12px', lineHeight: 1.5 }}>
               À l&apos;export, ces catégories (champ Airtable « Tags export WP ») sont <strong>cochées dans le panneau « Catégories » du post WordPress</strong> (créées si absentes). Le thème WP les affiche au-dessus du titre. Modifiez-les dans Airtable.
             </p>
@@ -434,11 +473,10 @@ export default function WpLayoutSidebar({
             ) : (
               <p style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70, fontStyle: 'italic' }}>Aucune catégorie (« Tags export WP » vide).</p>
             )}
-          </>
+          </Section>
         )}
 
-        {active === 'photos' && (
-          <>
+        <Section label="Photos">
             {/* ── Couverture ───────────────────────────────────────────── */}
             <div style={{ fontFamily: font.sans, fontSize: '9pt', fontWeight: 700, color: color.violet, margin: '0 0 8px' }}>Couverture</div>
             <Select
@@ -465,8 +503,10 @@ export default function WpLayoutSidebar({
             <Select label="Ratio photos galerie" value={photos.galleryAspectRatio} options={aspectOptions} onChange={(v) => setPhotos({ galleryAspectRatio: v })} />
             <Slider label="Espacement galerie" value={photos.galleryGapPx} min={0} max={40} suffix="px" onChange={(v) => setPhotos({ galleryGapPx: v })} />
 
-            {/* ── Slots de galerie (modèle « Photos additionnelles ») ─────────────── */}
-            <hr style={{ border: 'none', borderTop: `1px solid ${ui.separateur}`, margin: '12px 0' }} />
+            {/* ── Photos additionnelles (slots ordonnés de la galerie) ───────── */}
+            <details open style={{ marginTop: 12, borderTop: `1px solid ${ui.separateur}`, paddingTop: 4 }}>
+              <summary style={summaryStyle}>Photos additionnelles</summary>
+              <div style={{ paddingTop: 8 }}>
             <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
               <button
                 onClick={toggleGalleryEnabled}
@@ -491,8 +531,9 @@ export default function WpLayoutSidebar({
                   <span style={{ minWidth: 16, textAlign: 'center', fontWeight: 700, color: color.rouge }}>{configuredSlots.length}</span>
                   <button
                     onClick={() => setSlotCount(configuredSlots.length + 1)}
-                    disabled={configuredSlots.length >= WP_MAX_GALLERY_SLOTS}
-                    style={{ padding: '2px 8px', fontFamily: font.sans, fontWeight: 600, background: 'white', color: color.violet, border: `1px solid ${color.gris}`, borderRadius: radius.action, cursor: configuredSlots.length >= WP_MAX_GALLERY_SLOTS ? 'not-allowed' : 'pointer', opacity: configuredSlots.length >= WP_MAX_GALLERY_SLOTS ? 0.4 : 1 }}
+                    disabled={configuredSlots.length >= maxSlots}
+                    title={configuredSlots.length >= maxSlots ? `Maximum atteint : ${maxSlots} photo(s) sur la fiche.` : 'Ajouter une photo'}
+                    style={{ padding: '2px 8px', fontFamily: font.sans, fontWeight: 600, background: 'white', color: color.violet, border: `1px solid ${color.gris}`, borderRadius: radius.action, cursor: configuredSlots.length >= maxSlots ? 'not-allowed' : 'pointer', opacity: configuredSlots.length >= maxSlots ? 0.4 : 1 }}
                   >+</button>
                 </div>
               )}
@@ -547,9 +588,9 @@ export default function WpLayoutSidebar({
                 </div>
               );
             })}
-
-          </>
-        )}
+              </div>
+            </details>
+        </Section>
       </div>
     </aside>
   );

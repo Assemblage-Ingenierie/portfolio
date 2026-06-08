@@ -270,6 +270,45 @@ export const DEFAULT_WP_CONFIG = {
   },
 };
 
+/**
+ * Préréglages « par défaut WordPress » appliqués par le bouton admin
+ * « Appliquer les paramètres par défaut WordPress » de la sidebar WP.
+ *
+ * ⚠ Distinct de `DEFAULT_WP_CONFIG` (le rendu de référence / fallback). Ce
+ * preset n'est qu'un **partial** : il ne pilote QUE la typographie générale,
+ * les champs du bandeau et les espacements (cf. la liste validée le 08/06/26).
+ * Le bouton le fusionne par-dessus la config courante (`{ ...config, ...preset }`),
+ * donc la disposition des photos / catégories / prestation de la fiche est
+ * préservée. La persistance via `/fields` ne touche elle-même que la clé `wp`
+ * du `ProjectConfig` → les configs PDF (`bandeau`, `manuel`) ne sont pas écrasées.
+ */
+export const ASSEMBLAGE_WP_DEFAULTS: WpConfig = {
+  typo: {
+    descriptionSizePx: 16,
+    descriptionLineHeight: 1.5,
+    fieldsSizePt: 12,
+    pitchSizePx: 21,
+    sectionTitleSizePx: 19,
+  },
+  fields: {
+    labelBold: false, // Libellés pas en gras
+    valueBold: true, // Valeurs des libellés en gras
+    labelColor: NOIR, // Tous les champs en noir
+    valueColor: NOIR,
+    overrides: {
+      // Mission AI : libellé rouge non gras, valeur noir gras.
+      missionAi: { labelColor: ROUGE, labelBold: false, valueColor: NOIR, valueBold: true },
+      // Programme secondaire : noir non gras.
+      programmeSecondaire: { valueColor: NOIR, valueBold: false },
+    },
+  },
+  spacing: {
+    titlePitchPx: 0, // Titre ↔ accroche
+    pitchPhotoPx: 40, // Accroche ↔ photo
+    photoDescPx: 50, // Photo ↔ description
+  },
+};
+
 /** Ratios proposés dans l'UI pour les photos. */
 export const WP_ASPECT_RATIOS = ['4/3', '3/2', '16/9', '1/1', '3/4'] as const;
 
