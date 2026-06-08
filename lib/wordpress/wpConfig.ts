@@ -104,8 +104,11 @@ export interface WpFieldStyle {
   valueBold?: boolean;
   labelColor?: string;
   valueColor?: string;
-  /** Taille de police du champ (pt). Si absent → défaut global `typo.fieldsSizePt`. */
+  /** Taille de police de la **valeur** (pt). Si absent → défaut global `typo.fieldsSizePt`. */
   sizePt?: number;
+  /** Taille de police du **libellé** (pt), réglable indépendamment de la valeur.
+   *  Si absent → retombe sur `sizePt`, puis sur le défaut global `typo.fieldsSizePt`. */
+  labelSizePt?: number;
   /** Valeur rendue en petites capitales (font-variant: small-caps). Défaut false. */
   smallCaps?: boolean;
   /** Valeur rendue en grandes capitales (text-transform: uppercase). Défaut false. */
@@ -369,6 +372,7 @@ export function effectiveFieldStyle(resolved: ResolvedWpConfig, key: WpFieldKey)
     labelColor: ov.labelColor ?? resolved.fields.labelColor,
     valueColor: ov.valueColor ?? resolved.fields.valueColor,
     sizePt: ov.sizePt,
+    labelSizePt: ov.labelSizePt,
     smallCaps: ov.smallCaps ?? false,
     upperCase: ov.upperCase ?? false,
   };

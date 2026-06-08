@@ -169,6 +169,33 @@ function Palette({
   );
 }
 
+/** Contrôle de taille de police (pt) d'un sous-élément d'un champ du bandeau
+ *  (libellé ou valeur) : slider + saisie manuelle + reset vers le défaut global. */
+function FieldSizeRow({
+  label, value, canReset, onChange, onReset,
+}: {
+  label: string; value: number; canReset: boolean; onChange: (v: number) => void; onReset: () => void;
+}) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <span style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70 }}>
+        {label} {canReset && (
+          <button onClick={onReset} title="Revenir au défaut global"
+            style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: color.noir70 }}>↺</button>
+        )}
+      </span>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+        <input type="range" min={9} max={20} value={value}
+          onChange={(e) => onChange(Number(e.target.value))}
+          style={{ accentColor: color.rouge as string, width: 80 }} />
+        <input type="number" min={9} max={20} step={1} value={value}
+          onChange={(e) => { const n = Number(e.target.value); if (Number.isFinite(n)) onChange(Math.max(9, Math.min(20, n))); }}
+          style={{ width: 46, fontFamily: font.sans, fontSize: '8pt', padding: '2px 4px', border: `1px solid ${color.gris}`, borderRadius: 4, textAlign: 'right' }} />
+      </span>
+    </div>
+  );
+}
+
 export default function WpLayoutSidebar({
   config, onChange, template, slug, knownPhotos,
 }: {
@@ -332,7 +359,10 @@ export default function WpLayoutSidebar({
             {WP_FIELD_MENU_KEYS.map((key) => {
               const ov = overrides[key] ?? {};
               const eff = effectiveFieldStyle(resolved, key);
-              const effSize = eff.sizePt ?? typo.fieldsSizePt;
+              // Tailles libellé / valeur indépendantes (le libellé retombe sur la
+              // taille valeur si non réglé, puis sur le défaut global).
+              const effValueSize = eff.sizePt ?? typo.fieldsSizePt;
+              const effLabelSize = eff.labelSizePt ?? eff.sizePt ?? typo.fieldsSizePt;
               return (
                 <div key={key} style={{ border: `1px solid ${color.gris}`, borderRadius: radius.action, padding: '8px 10px', marginBottom: 8 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
@@ -370,22 +400,22 @@ export default function WpLayoutSidebar({
                             onChange={(hex) => setOverride(key, { valueColor: hex })} onReset={() => clearOverrideProp(key, 'valueColor')} />
                         </span>
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70 }}>
-                          Taille (pt) {ov.sizePt !== undefined && (
-                            <button onClick={() => clearOverrideProp(key, 'sizePt')} title="Revenir au défaut global"
-                              style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: color.noir70 }}>↺</button>
-                          )}
-                        </span>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                          <input type="range" min={9} max={20} value={effSize}
-                            onChange={(e) => setOverride(key, { sizePt: Number(e.target.value) })}
-                            style={{ accentColor: color.rouge as string, width: 90 }} />
-                          <input type="number" min={9} max={20} step={1} value={effSize}
-                            onChange={(e) => { const n = Number(e.target.value); if (Number.isFinite(n)) setOverride(key, { sizePt: Math.max(9, Math.min(20, n)) }); }}
-                            style={{ width: 46, fontFamily: font.sans, fontSize: '8pt', padding: '2px 4px', border: `1px solid ${color.gris}`, borderRadius: 4, textAlign: 'right' }} />
-                        </span>
-                      </div>
+                      {key !== 'programmeSecondaire' && (
+                        <FieldSizeRow
+                          label="Taille libellé (pt)"
+                          value={effLabelSize}
+                          canReset={ov.labelSizePt !== undefined}
+                          onChange={(v) => setOverride(key, { labelSizePt: v })}
+                          onReset={() => clearOverrideProp(key, 'labelSizePt')}
+                        />
+                      )}
+                      <FieldSizeRow
+                        label="Taille valeur (pt)"
+                        value={effValueSize}
+                        canReset={ov.sizePt !== undefined}
+                        onChange={(v) => setOverride(key, { sizePt: v })}
+                        onReset={() => clearOverrideProp(key, 'sizePt')}
+                      />
                       <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: font.sans, fontSize: '8pt', color: color.noir70, cursor: 'pointer' }}>
                         <input type="checkbox" checked={eff.smallCaps} onChange={(e) => setOverride(key, { smallCaps: e.target.checked })} />
                         Valeur en petites capitales

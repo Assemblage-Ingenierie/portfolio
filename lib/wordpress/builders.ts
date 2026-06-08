@@ -419,13 +419,17 @@ function buildWpEditorial(
       ${champsCles.map(f => {
         // Resets !important pour neutraliser le thème WP, + style par champ
         // (libellé vs valeur indépendants : poids, couleur, taille).
-        const sizePt = f.style.sizePt ?? typo.fieldsSizePt;
+        // Tailles libellé / valeur indépendantes : la valeur retombe sur le
+        // défaut global ; le libellé retombe sur sa propre taille, sinon sur la
+        // taille valeur, sinon sur le défaut global.
+        const valueSize = f.style.sizePt ?? typo.fieldsSizePt;
+        const labelSize = f.style.labelSizePt ?? f.style.sizePt ?? typo.fieldsSizePt;
         // `reset` ne fige NI text-transform NI font-variant : définis par span
         // (le libellé reste normal ; la valeur peut être en petites/grandes
-        // capitales).
-        const reset = `font-family:${SANS} !important;letter-spacing:normal !important;font-size:${sizePt}pt !important;`;
-        const labelStyle = `${reset}text-transform:none !important;font-variant:normal !important;font-weight:${f.style.labelBold ? 700 : 400} !important;color:${f.style.labelColor} !important;`;
-        const valueStyle = `${reset}text-transform:${f.style.upperCase ? 'uppercase' : 'none'} !important;font-variant:${f.style.smallCaps ? 'small-caps' : 'normal'} !important;font-weight:${f.style.valueBold ? 700 : 400} !important;color:${f.style.valueColor} !important;`;
+        // capitales). La taille est posée par span (libellé vs valeur).
+        const reset = `font-family:${SANS} !important;letter-spacing:normal !important;`;
+        const labelStyle = `${reset}font-size:${labelSize}pt !important;text-transform:none !important;font-variant:normal !important;font-weight:${f.style.labelBold ? 700 : 400} !important;color:${f.style.labelColor} !important;`;
+        const valueStyle = `${reset}font-size:${valueSize}pt !important;text-transform:${f.style.upperCase ? 'uppercase' : 'none'} !important;font-variant:${f.style.smallCaps ? 'small-caps' : 'normal'} !important;font-weight:${f.style.valueBold ? 700 : 400} !important;color:${f.style.valueColor} !important;`;
         return `
         <li style="padding:8px 0;${reset}">
           <span style="${labelStyle}">${esc(f.label)} :</span> <span style="${valueStyle}">${f.html ?? esc(f.value!)}</span>
