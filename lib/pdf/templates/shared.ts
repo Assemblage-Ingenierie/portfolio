@@ -123,10 +123,7 @@ html, body { background: white; }
 .t-header-vignette--inactive {
   filter: grayscale(100%) brightness(1.90);
 }
-/* Libellé Réhabilitation / Neuf à droite de la vignette correspondante.
-   align-self: flex-end → le libellé (cas mono : "Rehab" OU "Neuf" seul)
-   s'aligne sur la LIGNE BASSE du bandeau (même niveau que les mots-clés de
-   la colonne droite) plutôt que d'être centré verticalement sur la vignette. */
+/* Libellé Réhabilitation / Neuf à droite de la vignette correspondante */
 .t-header-rn-label {
   font-family: var(--sans);
   font-size: 10pt;
@@ -134,12 +131,10 @@ html, body { background: white; }
   color: var(--ai-noir);
   letter-spacing: 0.02em;
   margin-left: 1mm;
-  align-self: flex-end;
 }
 /* Variante 2 lignes quand "Neuf" ET "Rehab" sont cochés : Neuf au-dessus
    de Réhabilitation, taille réduite et interligne serré pour rester dans
-   la hauteur des vignettes (~10mm). On RECENTRE verticalement (override de
-   l'align-self flex-end mono-ligne) car le bloc 2 lignes occupe la hauteur. */
+   la hauteur des vignettes (~10mm). */
 .t-header-rn-label--stacked {
   font-size: 8.5pt;
   line-height: 1.1;
@@ -147,7 +142,6 @@ html, body { background: white; }
   flex-direction: column;
   justify-content: center;
   gap: 2.2mm;
-  align-self: center;
 }
 .t-header-meta {
   font-size: 9pt; font-weight: 400;
