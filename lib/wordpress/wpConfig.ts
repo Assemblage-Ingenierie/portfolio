@@ -304,7 +304,7 @@ export const ASSEMBLAGE_WP_DEFAULTS: WpConfig = {
   typo: {
     descriptionSizePx: 16,
     descriptionLineHeight: 1.5,
-    fieldsSizePt: 12,
+    fieldsSizePt: 13, // Taille identique pour tous les champs du bandeau (défaut global)
     pitchSizePx: 21,
     sectionTitleSizePx: 19,
   },
@@ -314,8 +314,9 @@ export const ASSEMBLAGE_WP_DEFAULTS: WpConfig = {
     labelColor: NOIR, // Tous les champs en noir
     valueColor: NOIR,
     overrides: {
-      // Mission AI : libellé rouge non gras, valeur noir gras + petites capitales.
-      missionAi: { labelColor: ROUGE, labelBold: false, valueColor: NOIR, valueBold: true, smallCaps: true },
+      // Mission AI : libellé rouge non gras, valeur noir gras + petites capitales,
+      // valeur en 16 pt (le libellé reste à 13 pt via le défaut global).
+      missionAi: { labelColor: ROUGE, labelBold: false, valueColor: NOIR, valueBold: true, smallCaps: true, sizePt: 16 },
       // Programme secondaire : noir non gras.
       programmeSecondaire: { valueColor: NOIR, valueBold: false },
     },
