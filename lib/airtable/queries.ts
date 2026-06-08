@@ -1,7 +1,7 @@
 import type { Projet } from '@/types/projet';
 import { cacheTag, cacheLife } from 'next/cache';
 import { base, TABLE } from './client';
-import { recordToProjet, type AuxValues, FIELD_PROGRAMME_PRINCIPAL, FIELD_PROGRAMME_SECONDAIRE, FIELD_POLE, FIELD_VIGNETTE_POLE, FIELD_PRESTATION_ASSEMBLAGE, FIELD_REHAB_NEUF, FIELD_MATERIAUX, FIELD_STATUT, FIELD_TAGS_EXPORT_WP } from './mappers';
+import { recordToProjet, type AuxValues, FIELD_PROGRAMME_PRINCIPAL, FIELD_PROGRAMME_SECONDAIRE, FIELD_POLE, FIELD_VIGNETTE_POLE, FIELD_PRESTATION_ASSEMBLAGE, FIELD_REHAB_NEUF, FIELD_MATERIAUX, FIELD_STATUT, FIELD_TAGS_EXPORT_WP, FIELD_META_DESCRIPTION } from './mappers';
 import { fetchCrmNames } from './crm';
 
 /** Tag de la liste complète (`getProjets`) — invalidé seulement quand un
@@ -72,6 +72,7 @@ interface AuxByFieldId {
   materiaux?: string[];
   statut?: string[];
   tagsExportWp?: string[];
+  metaDescription?: string;
 }
 
 // Multi-select avec cellFormat: 'string' → CSV. Renvoie l'array complet
@@ -98,7 +99,7 @@ async function fetchAuxByFieldId(
     const records = await base(TABLE)
       .select({
         ...STRING_FORMAT,
-        fields: [FIELD_PROGRAMME_PRINCIPAL, FIELD_PROGRAMME_SECONDAIRE, FIELD_POLE, FIELD_VIGNETTE_POLE, FIELD_PRESTATION_ASSEMBLAGE, FIELD_REHAB_NEUF, FIELD_MATERIAUX, FIELD_STATUT, FIELD_TAGS_EXPORT_WP],
+        fields: [FIELD_PROGRAMME_PRINCIPAL, FIELD_PROGRAMME_SECONDAIRE, FIELD_POLE, FIELD_VIGNETTE_POLE, FIELD_PRESTATION_ASSEMBLAGE, FIELD_REHAB_NEUF, FIELD_MATERIAUX, FIELD_STATUT, FIELD_TAGS_EXPORT_WP, FIELD_META_DESCRIPTION],
         returnFieldsByFieldId: true,
         ...(filterFormula ? { filterByFormula: filterFormula } : {}),
       })
@@ -135,6 +136,11 @@ async function fetchAuxByFieldId(
         materiaux: allValues(r.fields[FIELD_MATERIAUX]) ?? [],
         statut: allValues(r.fields[FIELD_STATUT]) ?? [],
         tagsExportWp: allValues(r.fields[FIELD_TAGS_EXPORT_WP]) ?? [],
+        metaDescription: (() => {
+          // cellFormat 'string' → aiText renvoie le texte généré directement.
+          const raw = r.fields[FIELD_META_DESCRIPTION];
+          return typeof raw === 'string' && raw.trim() ? raw.trim() : undefined;
+        })(),
       });
     });
   } catch (err) {
@@ -206,6 +212,7 @@ export async function getProjets(): Promise<Projet[]> {
         materiauxValues: prog?.materiaux,
         statutValues: prog?.statut,
         tagsExportWp: prog?.tagsExportWp,
+        metaDescription: prog?.metaDescription,
         crmNames,
       };
       return recordToProjet(r, aux);
@@ -271,6 +278,7 @@ export async function getProjet(slug: string): Promise<Projet | null> {
       materiauxValues: p?.materiaux,
       statutValues: p?.statut,
       tagsExportWp: p?.tagsExportWp,
+      metaDescription: p?.metaDescription,
       crmNames,
     };
     return recordToProjet(r, aux);

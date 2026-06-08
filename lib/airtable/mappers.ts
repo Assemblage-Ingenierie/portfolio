@@ -39,6 +39,10 @@ export const FIELD_CERTIFICATION = 'fldnb9rfM4C3m9Pcu';
 // Tags export WP (multi-select) — catégories WordPress à cocher à l'export.
 // Lu par field ID (multi-select renommable). Distinct de « Tags site web ».
 export const FIELD_TAGS_EXPORT_WP = 'fld2y9rIk9DVEf9eo';
+// Méta description SEO (aiText, généré par l'IA Airtable à partir de
+// « Description projet ») — envoyé à Yoast (_yoast_wpseo_metadesc) à l'export.
+// Lu par field ID via fetchAuxByFieldId (STRING_FORMAT → texte généré).
+export const FIELD_META_DESCRIPTION = 'fldQmXMJpDY7TrbfL';
 
 /**
  * Valeurs auxiliaires injectées dans le mapper.
@@ -64,6 +68,8 @@ export interface AuxValues {
   statutValues?: string[];
   /** Valeurs du multi-select "Tags export WP" (catégories WordPress). */
   tagsExportWp?: string[];
+  /** Méta description SEO générée par l'IA Airtable (aiText). */
+  metaDescription?: string;
   /** Map<recordId → { nom, url }> des entités CRM (table « Sync CRM »). */
   crmNames?: Map<string, CrmEntity>;
 }
@@ -336,6 +342,9 @@ export function recordToProjet(record: any, aux?: AuxValues): Projet {
     motsCles,
     tagsSiteWeb,
     tagsExportWp: aux?.tagsExportWp ?? [],
+    // aux (par field ID, STRING_FORMAT) en priorité ; fallback lecture par nom
+    // (aiText → objet {state,value}) via formulaValue pour robustesse.
+    metaDescription: aux?.metaDescription ?? formulaValue(f['Méta description SEO']),
 
     budgetRaw,
     urlWordpress: f['URL'] ?? undefined,

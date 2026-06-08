@@ -106,6 +106,11 @@ export interface Projet {
    *  comme catégories WordPress (taxonomie) à l'export. */
   tagsExportWp: string[];
 
+  /** Méta description SEO (aiText Airtable « Méta description SEO »,
+   *  fldQmXMJpDY7TrbfL) générée depuis « Description projet ». Envoyée à Yoast
+   *  (`_yoast_wpseo_metadesc`) à l'export WP. */
+  metaDescription?: string;
+
   budgetRaw?: number;
 
   urlWordpress?: string;

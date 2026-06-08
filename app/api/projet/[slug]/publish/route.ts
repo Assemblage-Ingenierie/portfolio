@@ -101,6 +101,14 @@ export async function POST(
     }
     console.log('[WP-PUBLISH] categories', { tags: projet.tagsExportWp, ids: categoryIds });
 
+    // Méta SEO Yoast : focus keyphrase = nom du projet ; méta description =
+    // champ aiText Airtable « Méta description SEO ». N'est persisté côté WP
+    // que si les meta keys `_yoast_wpseo_*` sont enregistrées pour le REST
+    // (register_post_meta show_in_rest) — sinon WP les ignore silencieusement.
+    const seoMeta: Record<string, string> = { _yoast_wpseo_focuskw: projet.nom };
+    if (projet.metaDescription) seoMeta._yoast_wpseo_metadesc = projet.metaDescription;
+    console.log('[WP-PUBLISH] yoast meta', { focuskw: projet.nom, hasMetadesc: !!projet.metaDescription });
+
     const previousUrl = projet.urlWordpress;
     const { id, url, status, type, author } = await createOrUpdatePost({
       title: projet.nom,
@@ -110,6 +118,7 @@ export async function POST(
       status: 'draft',
       featured_media: coverId,
       categories,
+      meta: seoMeta,
     });
     console.log('[WP-PUBLISH]', { id, status, type, author, url, previousUrl });
 
@@ -129,6 +138,9 @@ export async function POST(
       // Diagnostic catégories : noms demandés (Airtable) + nb d'IDs WP assignés.
       categoryNames: projet.tagsExportWp,
       categoryCount: categoryIds.length,
+      // Diagnostic SEO Yoast (visible côté UI).
+      focusKeyphrase: projet.nom,
+      hasMetaDescription: !!projet.metaDescription,
     });
   } catch (err) {
     console.error('Publish error:', err);
