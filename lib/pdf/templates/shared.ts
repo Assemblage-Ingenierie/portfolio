@@ -123,7 +123,10 @@ html, body { background: white; }
 .t-header-vignette--inactive {
   filter: grayscale(100%) brightness(1.90);
 }
-/* Libellé Réhabilitation / Neuf à droite de la vignette correspondante */
+/* Libellé Réhabilitation / Neuf à droite de la vignette correspondante.
+   align-self: flex-end → le libellé (cas mono : "Rehab" OU "Neuf" seul)
+   s'aligne sur la LIGNE BASSE du bandeau (même niveau que les mots-clés de
+   la colonne droite) plutôt que d'être centré verticalement sur la vignette. */
 .t-header-rn-label {
   font-family: var(--sans);
   font-size: 10pt;
@@ -131,10 +134,12 @@ html, body { background: white; }
   color: var(--ai-noir);
   letter-spacing: 0.02em;
   margin-left: 1mm;
+  align-self: flex-end;
 }
 /* Variante 2 lignes quand "Neuf" ET "Rehab" sont cochés : Neuf au-dessus
    de Réhabilitation, taille réduite et interligne serré pour rester dans
-   la hauteur des vignettes (~10mm). */
+   la hauteur des vignettes (~10mm). On RECENTRE verticalement (override de
+   l'align-self flex-end mono-ligne) car le bloc 2 lignes occupe la hauteur. */
 .t-header-rn-label--stacked {
   font-size: 8.5pt;
   line-height: 1.1;
@@ -142,6 +147,7 @@ html, body { background: white; }
   flex-direction: column;
   justify-content: center;
   gap: 2.2mm;
+  align-self: center;
 }
 .t-header-meta {
   font-size: 9pt; font-weight: 400;
@@ -615,33 +621,50 @@ export function metaGridHtml(
     if (label === 'Budget/Surface') set.add(0);
     return set;
   };
-  /** Sauts intra-valeur (cellules single-value longues). Indices de token
-   *  APRES lesquels insérer un `<br>`. Tokens = split sur /\s+/. */
+  /** Sauts intra-valeur. Indices de TOKEN GLOBAL (mot) APRES lesquels insérer
+   *  un `<br>`. Le compteur de token court sur l'ENSEMBLE des valeurs de la
+   *  cellule (split /\s+/ par valeur), ce qui permet les sauts intra-valeur
+   *  même sur les cellules multi-valeurs (en plus des sauts inter-options
+   *  gérés par `breaks`). Pour une cellule mono-valeur, l'index global == index
+   *  de token → rétro-compatible avec les configs existantes. */
   const wordBreaksOf = (label: string): Set<number> => {
     const arr = cellsCfg?.wordBreaks?.[label as keyof NonNullable<typeof cellsCfg.wordBreaks>];
     return new Set(Array.isArray(arr) ? arr : []);
   };
   const renderValues = (label: string, values: string[]): string => {
     if (values.length === 0) return '';
-    if (values.length === 1) {
-      // Single-value : applique wordBreaks si configuré et si la valeur a
-      // au moins 2 tokens. Sinon rendu plat (comportement historique).
-      const wb = wordBreaksOf(label);
-      if (wb.size === 0) return esc(values[0]);
-      const tokens = values[0].split(/\s+/).filter(Boolean);
-      if (tokens.length < 2) return esc(values[0]);
-      return tokens.map((t, idx) => {
-        const isLast = idx === tokens.length - 1;
-        if (isLast) return esc(t);
-        return esc(t) + (wb.has(idx) ? '<br>' : ' ');
+    const breaks = breaksOf(label);       // sauts inter-options (après valeur vi)
+    const wb = wordBreaksOf(label);        // sauts intra-valeur (après token global)
+    // Chemin rapide : aucun saut configuré → rendu plat historique
+    // (mono : la valeur telle quelle ; multi : "a, b, c").
+    if (breaks.size === 0 && wb.size === 0) return values.map(esc).join(', ');
+    // Pas de saut intra-valeur → rendu au niveau valeur (préserve la chaîne
+    // d'origine, ex. l'espace fine insécable des nombres "4 242 m²" ou le
+    // saut forcé Budget/Surface). On n'applique que les sauts inter-options.
+    if (wb.size === 0) {
+      return values.map((v, idx) => {
+        const isLast = idx === values.length - 1;
+        if (isLast) return esc(v);
+        return esc(v) + (breaks.has(idx) ? '<br>' : ', ');
       }).join('');
     }
-    const breaks = breaksOf(label);
-    return values.map((v, idx) => {
-      const isLast = idx === values.length - 1;
-      if (isLast) return esc(v);
-      return esc(v) + (breaks.has(idx) ? '<br>' : ', ');
-    }).join('');
+    let html = '';
+    let g = 0; // index de token global, continu à travers toutes les valeurs
+    values.forEach((val, vi) => {
+      const toks = val.split(/\s+/).filter(Boolean);
+      if (toks.length === 0) toks.push('');
+      toks.forEach((t, ti) => {
+        html += esc(t);
+        const lastTok = ti === toks.length - 1;
+        // Gap intra-valeur : <br> si configuré, sinon espace. Le gap après le
+        // dernier token d'une valeur est un gap INTER-valeur (géré plus bas).
+        if (!lastTok) html += wb.has(g) ? '<br>' : ' ';
+        g++;
+      });
+      const lastVal = vi === values.length - 1;
+      if (!lastVal) html += breaks.has(vi) ? '<br>' : ', ';
+    });
+    return html;
   };
 
   return `<div class="t-meta-grid" style="${gridStyle}">

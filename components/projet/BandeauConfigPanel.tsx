@@ -23,11 +23,10 @@ interface Props {
   onResetAll?: () => void;
 }
 
-/** Reconstruit la liste de valeurs par cellule à partir du Projet, en
- *  miroir de la logique de `metaGridHtml` dans shared.ts. Renvoie une
- *  Map<label, values[]> ne contenant QUE les cellules avec ≥ 2 valeurs
- *  (les autres ne nécessitent pas de configuration de breaks). */
-function multiValueCellsFromProjet(projet: Projet | undefined): Map<MetaLabel, string[]> {
+/** Valeurs par cellule du bandeau (miroir de la logique de `metaGridHtml`
+ *  dans shared.ts), pour toutes les cellules candidates aux sauts de ligne.
+ *  Renvoie Map<label, values[]> (≥ 1 valeur). */
+function cellValuesFromProjet(projet: Projet | undefined): Map<MetaLabel, string[]> {
   const result = new Map<MetaLabel, string[]>();
   if (!projet) return result;
   const splitCsv = (v: string | undefined): string[] => {
@@ -60,47 +59,87 @@ function multiValueCellsFromProjet(projet: Projet | undefined): Map<MetaLabel, s
     ['Entreprise',    splitCsv(projet.entreprise)],
     ['Mission AI',    collapseAmo(rawMissionAi)],
     // Matériaux : multi-select Airtable, exposé dans le bandeau après Programme.
-    // L'utilisateur peut ajuster les sauts de ligne entre matériaux comme pour
-    // les autres multi-valeurs.
     ['Matériaux',     projet.materiaux ?? []],
   ];
   for (const [label, values] of candidates) {
-    if (values.length >= 2) result.set(label, values);
+    if (values.length >= 1) result.set(label, values);
   }
   return result;
 }
 
-/** Cellules single-value dont la valeur est suffisamment longue pour mériter
- *  une option de saut de ligne intra-valeur (mot par mot). Seuil : > 10
- *  caractères ET au moins 2 tokens après split sur whitespace. Renvoie une
- *  Map<label, tokens[]> alignée sur le tokenize qui sera fait au rendu
- *  (`renderValues` dans shared.ts utilise le même `split(/\s+/)`). */
-function singleLongCellsFromProjet(projet: Projet | undefined): Map<MetaLabel, string[]> {
+/** Cellules multi-valeurs (≥ 2 valeurs) — éligibles aux sauts inter-options. */
+function multiValueCellsFromProjet(projet: Projet | undefined): Map<MetaLabel, string[]> {
   const result = new Map<MetaLabel, string[]>();
-  if (!projet) return result;
-  // Liste des cellules single-value candidates dans le bandeau (cf.
-  // metaGridHtml). On exclut Programme : sa cellule a un sub-titre dédié
-  // (programmeSecondaire) qui complique le rendu — pas de besoin métier
-  // remonté pour wrapper le programme principal.
-  const candidates: Array<[MetaLabel, string | undefined]> = [
-    // Pour les CRM multi-valeurs séparées par virgules, on vérifie aussi
-    // ici le cas single (1 valeur). Si la valeur est multi-valeur, elle
-    // est gérée par multiValueCellsFromProjet ci-dessus.
-    ['MOA',           projet.moa],
-    ['Bailleur',      projet.bailleur],
-    ['Architecte',    projet.architecte],
-    ['BET associés',  projet.betAssocies],
-    ['Entreprise',    projet.entreprise],
-  ];
-  for (const [label, raw] of candidates) {
-    const v = (raw ?? '').trim();
-    if (!v) continue;
-    // Exclure les multi-valeurs (déjà traitées par breaks classiques).
-    if (v.includes(',')) continue;
-    if (v.length <= 10) continue;
-    const tokens = v.split(/\s+/).filter(Boolean);
-    if (tokens.length < 2) continue;
-    result.set(label, tokens);
+  for (const [label, vals] of cellValuesFromProjet(projet)) {
+    if (vals.length >= 2) result.set(label, vals);
+  }
+  return result;
+}
+
+type WordBreakSep = 'none' | 'value' | 'word';
+export interface WordBreakModel {
+  /** Tokens (mots) de toute la cellule, dans l'ordre, valeurs concaténées. */
+  tokens: string[];
+  /** Séparateur APRES le token i : 'none' (fin de cellule), 'value' (séparateur
+   *  inter-options, géré par `breaks`), 'word' (gap intra-valeur, géré par
+   *  `wordBreaks`). Index aligné sur le compteur de token global de `renderValues`. */
+  seps: WordBreakSep[];
+  /** Indices de token (sep 'word') où l'UI propose un toggle de saut de ligne —
+   *  espacés d'environ `WORD_BREAK_MIN_CHARS` caractères (toujours en fin de mot). */
+  offerable: Set<number>;
+}
+
+/** Seuil de proposition d'un point de coupure intra-valeur (en caractères). */
+const WORD_BREAK_MIN_CHARS = 10;
+
+/** Construit le modèle de sauts intra-valeur d'une cellule à partir de ses
+ *  valeurs (mêmes valeurs que le rendu). Le compteur de token est global —
+ *  cf. `renderValues` dans shared.ts — pour fonctionner sur mono- ET
+ *  multi-valeurs. Les points de coupure sont proposés ~tous les 10 caractères. */
+function buildWordBreakModel(values: string[]): WordBreakModel {
+  const tokens: string[] = [];
+  const seps: WordBreakSep[] = [];
+  const offerable = new Set<number>();
+  let g = 0;
+  values.forEach((val, vi) => {
+    const toks = val.split(/\s+/).filter(Boolean);
+    if (toks.length === 0) return;
+    const startG = g;
+    let acc = 0;
+    let lastWordGapG = -1;
+    toks.forEach((t, ti) => {
+      tokens.push(t);
+      const lastTok = ti === toks.length - 1;
+      seps.push(lastTok ? (vi === values.length - 1 ? 'none' : 'value') : 'word');
+      acc += t.length + 1;
+      if (!lastTok) {
+        lastWordGapG = g;
+        if (acc >= WORD_BREAK_MIN_CHARS) { offerable.add(g); acc = 0; }
+      }
+      g++;
+    });
+    // Garantit au moins un point proposé si la valeur est longue mais qu'aucun
+    // gap n'a atteint le seuil (ex. "Encore Heureux" = 1 seul gap à 7 car.).
+    const hasOffer = [...offerable].some((idx) => idx >= startG && idx < g);
+    if (!hasOffer && lastWordGapG >= 0 && val.length > WORD_BREAK_MIN_CHARS) {
+      offerable.add(lastWordGapG);
+    }
+  });
+  return { tokens, seps, offerable };
+}
+
+/** Cellules éligibles aux sauts de ligne intra-valeur : ≥ 2 tokens, texte
+ *  total > 10 caractères, au moins un gap intra-valeur. Couvre les cellules
+ *  mono-valeur longues ET les cellules multi-valeurs (en plus des sauts
+ *  inter-options de la section précédente). */
+function wordBreakCellsFromProjet(projet: Projet | undefined): Map<MetaLabel, WordBreakModel> {
+  const result = new Map<MetaLabel, WordBreakModel>();
+  for (const [label, vals] of cellValuesFromProjet(projet)) {
+    const model = buildWordBreakModel(vals);
+    if (model.tokens.length < 2) continue;
+    if (model.tokens.join(' ').length <= 10) continue;
+    if (!model.seps.includes('word')) continue;
+    result.set(label, model);
   }
   return result;
 }
@@ -340,7 +379,7 @@ export { StyleRow };
 
 export default function BandeauConfigPanel({ value, onChange, projet, onResetAll }: Props) {
   const multiValueCells = multiValueCellsFromProjet(projet);
-  const singleLongCells = singleLongCellsFromProjet(projet);
+  const wordBreakCells = wordBreakCellsFromProjet(projet);
   // Mode de vue (admin = full UI, user = restreint à Cellules du bandeau +
   // Cellule Programme). Géré dans `lib/auth/useViewMode.ts` ; le toggle est
   // dans la toolbar (visible uniquement pour les profils Supabase admin).
@@ -465,7 +504,7 @@ export default function BandeauConfigPanel({ value, onChange, projet, onResetAll
           <CellsLayoutRow
             value={value.cells}
             multiValueCells={multiValueCells}
-            singleLongCells={singleLongCells}
+            wordBreakCells={wordBreakCells}
             onChange={cellsOnChange}
           />
           <ProgrammeOptionsRow value={value.programme} onChange={programmeOnChange} />
@@ -625,12 +664,12 @@ function TitleMetaGapRow({ value, onChange }: { value: number | undefined; onCha
 function CellsLayoutRow({
   value,
   multiValueCells,
-  singleLongCells,
+  wordBreakCells,
   onChange,
 }: {
   value: BandeauCellsConfig | undefined;
   multiValueCells: Map<MetaLabel, string[]>;
-  singleLongCells: Map<MetaLabel, string[]>;
+  wordBreakCells: Map<MetaLabel, WordBreakModel>;
   onChange: (v: BandeauCellsConfig | undefined) => void;
 }) {
   const layout: CellsLayout = value?.layout ?? 'content';
@@ -857,7 +896,7 @@ function CellsLayoutRow({
         </details>
       )}
 
-      {singleLongCells.size > 0 && (
+      {wordBreakCells.size > 0 && (
         <details
           open={Object.keys(wordBreaks).length > 0}
           style={{ marginTop: '8px' }}
@@ -875,18 +914,23 @@ function CellsLayoutRow({
             ▸ Sauts de ligne intra-valeur{Object.keys(wordBreaks).length > 0 ? ` • ${Object.keys(wordBreaks).length}` : ''}
           </summary>
           <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', margin: '6px 0 10px' }}>
-            Pour les cellules avec une valeur longue (&gt; 10 caractères), clique sur l&apos;espace entre deux mots pour basculer entre espace inline et saut de ligne. Utile pour wrapper « Ministère de l&apos;Éducation nationale ».
+            Pour wrapper une valeur longue, un point de coupure (toujours en fin de mot) est proposé environ tous les 10 caractères. Fonctionne aussi sur les champs multi-valeurs — en plus des sauts inter-options ci-dessus. La virgule indique le séparateur entre deux options (réglable via « Sauts de ligne »).
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {[...singleLongCells.entries()].map(([label, tokens]) => {
+            {[...wordBreakCells.entries()].map(([label, model]) => {
               const wbSet = new Set(wordBreaks[label] ?? []);
               return (
                 <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <span style={{ fontSize: '8pt', color: 'var(--ai-noir70)', fontWeight: 600 }}>{label}</span>
                   <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px' }}>
-                    {tokens.map((t, idx) => {
-                      const isLast = idx === tokens.length - 1;
+                    {model.tokens.map((t, idx) => {
+                      const sep = model.seps[idx];
+                      // Toggle proposé uniquement sur un gap intra-valeur 'word'
+                      // qui est offert (espacement ~10 car.) OU déjà coché (pour
+                      // pouvoir l'annuler même hors grille de proposition).
+                      const showToggle = sep === 'word' && (model.offerable.has(idx) || wbSet.has(idx));
                       const isBreak = wbSet.has(idx);
+                      const nextTok = model.tokens[idx + 1];
                       return (
                         <span key={`${label}-${idx}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                           <span
@@ -900,13 +944,13 @@ function CellsLayoutRow({
                               color: 'var(--ai-noir)',
                             }}
                           >
-                            {t}
+                            {t}{sep === 'value' ? ',' : ''}
                           </span>
-                          {!isLast && (
+                          {showToggle && (
                             <button
                               type="button"
                               onClick={() => toggleWordBreak(label, idx)}
-                              title={isBreak ? `Saut de ligne après "${t}". Cliquer pour rendre inline.` : `"${t}" et "${tokens[idx + 1]}" sont sur la même ligne. Cliquer pour ajouter un saut de ligne.`}
+                              title={isBreak ? `Saut de ligne après "${t}". Cliquer pour rendre inline.` : `"${t}" et "${nextTok}" sont sur la même ligne. Cliquer pour ajouter un saut de ligne.`}
                               style={{
                                 cursor: 'pointer',
                                 background: isBreak ? 'var(--ai-rouge)' : 'white',
