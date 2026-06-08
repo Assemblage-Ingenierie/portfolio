@@ -148,7 +148,7 @@ function Palette({
 }) {
   const norm = (h: string) => h.toLowerCase();
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
       {ASSEMBLAGE_PALETTE.map((c) => {
         const selected = norm(c.hex) === norm(value);
         return (
@@ -177,17 +177,17 @@ function FieldSizeRow({
   label: string; value: number; canReset: boolean; onChange: (v: number) => void; onReset: () => void;
 }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 4 }}>
       <span style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70 }}>
         {label} {canReset && (
           <button onClick={onReset} title="Revenir au défaut global"
             style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: color.noir70 }}>↺</button>
         )}
       </span>
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flex: '1 1 60px', minWidth: 0, justifyContent: 'flex-end' }}>
         <input type="range" min={9} max={20} value={value}
           onChange={(e) => onChange(Number(e.target.value))}
-          style={{ accentColor: color.rouge as string, width: 80 }} />
+          style={{ accentColor: color.rouge as string, flex: '1 1 40px', minWidth: 0 }} />
         <input type="number" min={9} max={20} step={1} value={value}
           onChange={(e) => { const n = Number(e.target.value); if (Number.isFinite(n)) onChange(Math.max(9, Math.min(20, n))); }}
           style={{ width: 46, fontFamily: font.sans, fontSize: '8pt', padding: '2px 4px', border: `1px solid ${color.gris}`, borderRadius: 4, textAlign: 'right' }} />
@@ -304,7 +304,7 @@ export default function WpLayoutSidebar({
   };
 
   return (
-    <aside style={{ width: 300, flexShrink: 0, background: 'white', borderRight: `1px solid ${color.gris}`, display: 'flex', flexDirection: 'column', minHeight: 'calc(100vh - 48px)' }}>
+    <aside style={{ width: 380, flexShrink: 0, background: 'white', borderRight: `1px solid ${color.gris}`, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
       <nav style={{ padding: 12, borderBottom: `1px solid ${ui.separateur}` }}>
         <Link href={`/projet/${slug}/edit`}
           style={{ display: 'block', textAlign: 'center', padding: '7px 10px', fontFamily: font.sans, fontSize: '8pt', fontWeight: 600, color: 'white', background: color.violet as string, borderRadius: radius.action, textDecoration: 'none', marginBottom: 8 }}>
@@ -328,7 +328,7 @@ export default function WpLayoutSidebar({
         </div>
       </nav>
 
-      <div style={{ padding: 16, overflowY: 'auto', flex: 1 }}>
+      <div style={{ padding: 16, overflowY: 'auto', flex: 1, minHeight: 0 }}>
         {!isUserView && (
           <Section label="Typographie générale">
             <StepSlider label="Taille description" value={typo.descriptionSizePx} min={11} max={24} step={1} suffix="px" onChange={(v) => setTypo({ descriptionSizePx: v })} />
@@ -356,6 +356,8 @@ export default function WpLayoutSidebar({
 
             <hr style={{ border: 'none', borderTop: `1px solid ${ui.separateur}`, margin: '12px 0' }} />
 
+            {/* Cartes de champs sur 2 colonnes pour raccourcir la liste. */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, alignItems: 'start' }}>
             {WP_FIELD_MENU_KEYS.map((key) => {
               const ov = overrides[key] ?? {};
               const eff = effectiveFieldStyle(resolved, key);
@@ -364,7 +366,7 @@ export default function WpLayoutSidebar({
               const effValueSize = eff.sizePt ?? typo.fieldsSizePt;
               const effLabelSize = eff.labelSizePt ?? eff.sizePt ?? typo.fieldsSizePt;
               return (
-                <div key={key} style={{ border: `1px solid ${color.gris}`, borderRadius: radius.action, padding: '8px 10px', marginBottom: 8 }}>
+                <div key={key} style={{ border: `1px solid ${color.gris}`, borderRadius: radius.action, padding: '8px 10px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                     <span style={{ fontFamily: font.sans, fontSize: '9pt', fontWeight: 700, color: color.violet, opacity: eff.hidden ? 0.4 : 1 }}>{WP_FIELD_LABELS[key]}</span>
                     <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontFamily: font.sans, fontSize: '8pt', color: color.noir70, cursor: 'pointer' }}>
@@ -379,9 +381,9 @@ export default function WpLayoutSidebar({
                         </p>
                       )}
                       {key !== 'programmeSecondaire' && (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 4 }}>
                           <span style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70 }}>Libellé</span>
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                             <label style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: '8pt', color: color.noir70, cursor: 'pointer' }}>
                               <input type="checkbox" checked={eff.labelBold} onChange={(e) => setOverride(key, { labelBold: e.target.checked })} /> gras
                             </label>
@@ -390,9 +392,9 @@ export default function WpLayoutSidebar({
                           </span>
                         </div>
                       )}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 4 }}>
                         <span style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70 }}>Valeur</span>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                           <label style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: '8pt', color: color.noir70, cursor: 'pointer' }}>
                             <input type="checkbox" checked={eff.valueBold} onChange={(e) => setOverride(key, { valueBold: e.target.checked })} /> gras
                           </label>
@@ -429,6 +431,7 @@ export default function WpLayoutSidebar({
                 </div>
               );
             })}
+            </div>
         </Section>
 
         {template === 'Dev' && (

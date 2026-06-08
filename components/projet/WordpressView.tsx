@@ -243,9 +243,9 @@ export default function WordpressView({ projet }: { projet: Projet }) {
         {promoteResult?.error && <span style={{ color: feedback.erreurClair, fontWeight: 600 }}>✗ {promoteResult.error}</span>}
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'stretch', background: ui.fondPage, minHeight: 'calc(100vh - 48px)' }}>
+      <div style={{ display: 'flex', alignItems: 'stretch', background: ui.fondPage, height: 'calc(100vh - 48px)', overflow: 'hidden' }}>
         <WpLayoutSidebar config={wpConfig} onChange={setWpConfig} template={wpTemplate} slug={projet.slug} knownPhotos={knownPhotos} />
-        <main style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
+        <main style={{ flex: 1, display: 'flex', justifyContent: 'center', overflowY: 'auto', minWidth: 0 }}>
           <WordpressPreview projet={projet} wpConfig={wpConfig} />
         </main>
       </div>
