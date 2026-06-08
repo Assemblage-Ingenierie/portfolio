@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   WP_ASPECT_RATIOS,
@@ -196,6 +197,11 @@ function FieldSizeRow({
   );
 }
 
+const SIDEBAR_WIDTH_KEY = 'portfolio_wp_sidebar_width';
+const SIDEBAR_WIDTH_MIN = 280;
+const SIDEBAR_WIDTH_MAX = 720;
+const SIDEBAR_WIDTH_DEFAULT = 380;
+
 export default function WpLayoutSidebar({
   config, onChange, template, slug, knownPhotos,
 }: {
@@ -206,6 +212,30 @@ export default function WpLayoutSidebar({
   // toggle est dans la toolbar (visible uniquement pour les profils admin).
   const { viewMode } = useViewMode();
   const isUserView = viewMode === 'user';
+
+  // Largeur redimensionnable de la sidebar (poignée à droite, glisser pour
+  // élargir/rétrécir). Persistée en localStorage.
+  const [width, setWidth] = useState(SIDEBAR_WIDTH_DEFAULT);
+  useEffect(() => {
+    const saved = localStorage.getItem(SIDEBAR_WIDTH_KEY);
+    if (saved) setWidth(Math.max(SIDEBAR_WIDTH_MIN, Math.min(SIDEBAR_WIDTH_MAX, Number(saved))));
+  }, []);
+  function startResize(e: React.MouseEvent) {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = width;
+    const clamp = (n: number) => Math.max(SIDEBAR_WIDTH_MIN, Math.min(SIDEBAR_WIDTH_MAX, n));
+    function onMove(ev: MouseEvent) { setWidth(clamp(startW + ev.clientX - startX)); }
+    function onUp(ev: MouseEvent) {
+      const next = clamp(startW + ev.clientX - startX);
+      setWidth(next);
+      localStorage.setItem(SIDEBAR_WIDTH_KEY, String(next));
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    }
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }
 
   const resolved = resolveWpConfig(config);
   const { typo, fields, photos, spacing, prestation } = resolved;
@@ -304,7 +334,13 @@ export default function WpLayoutSidebar({
   };
 
   return (
-    <aside style={{ width: 380, flexShrink: 0, background: 'white', borderRight: `1px solid ${color.gris}`, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+    <aside style={{ width, flexShrink: 0, background: 'white', borderRight: `1px solid ${color.gris}`, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, position: 'relative' }}>
+      {/* Poignée de redimensionnement (glisser à gauche/droite). */}
+      <div
+        onMouseDown={startResize}
+        title="Glisser pour redimensionner la sidebar"
+        style={{ position: 'absolute', top: 0, right: -3, bottom: 0, width: 6, cursor: 'col-resize', zIndex: 5 }}
+      />
       <nav style={{ padding: 12, borderBottom: `1px solid ${ui.separateur}` }}>
         <Link href={`/projet/${slug}/edit`}
           style={{ display: 'block', textAlign: 'center', padding: '7px 10px', fontFamily: font.sans, fontSize: '8pt', fontWeight: 600, color: 'white', background: color.violet as string, borderRadius: radius.action, textDecoration: 'none', marginBottom: 8 }}>
