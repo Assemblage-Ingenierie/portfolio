@@ -2,6 +2,7 @@ import type { BandeauConfig } from './bandeauConfig';
 import type { ManualConfig } from './manualConfig';
 import type { CropData } from './photoCrop';
 import type { WpConfig } from '@/lib/wordpress/wpConfig';
+import { feedback } from '@/lib/ui/tokens';
 
 /**
  * Configuration unifiée d'une fiche projet, stockée en JSON dans le champ
@@ -37,6 +38,16 @@ export const FICHE_STATUS_VALUES: FicheStatus[] = [
 ];
 
 export const DEFAULT_FICHE_STATUS: FicheStatus = 'Pas faite';
+
+/** Couleur associée à chaque statut de fiche — partagée entre la home
+ *  (`PortfolioGrid`) et l'éditeur (`ProjetToolbar`) pour que la pastille de
+ *  statut soit cohérente partout. */
+export const FICHE_STATUS_COLOR: Record<FicheStatus, string> = {
+  'Pas faite': '#9e9e9e',
+  'En cours': feedback.info,
+  'En attente de validation': feedback.attente,
+  'Prête pour publication': feedback.succes,
+};
 
 export const FICHE_STATUS_MESSAGES: Record<FicheStatus, string> = {
   'Pas faite':

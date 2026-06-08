@@ -2,7 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import type { Projet } from '@/types/projet';
+import type { Projet, TemplateChoice } from '@/types/projet';
+import { TEMPLATE_OPTIONS } from '@/types/projet';
+import { useViewMode } from '@/lib/auth/useViewMode';
 import type {
   ManualConfig, PhotoConfig, PhotoFormat,
   CertificationsConfig, PrestationAssemblageConfig,
@@ -545,6 +547,10 @@ interface Props {
   bandeauConfig: BandeauConfig;
   onBandeauChange: (next: BandeauConfig) => void;
   isDev?: boolean;
+  /** Template courant + handler de changement — exposé dans la nav (admin).
+   *  Le sélecteur Template a été déplacé de la toolbar vers la sidebar. */
+  template?: TemplateChoice;
+  onTemplateChange?: (next: TemplateChoice) => void;
   /** Recadrage photos : état + toggle, contrôlés par ProjetView. */
   cropEditMode?: boolean;
   onCropEditModeChange?: (next: boolean) => void;
@@ -554,7 +560,9 @@ const PANEL_WIDTH_KEY = 'portfolio_layout_panel_width';
 const PANEL_WIDTH_MIN = 180;
 const PANEL_WIDTH_MAX = 600;
 
-export default function LayoutSidebar({ projet, config, onChange, bandeauConfig, onBandeauChange, isDev, cropEditMode, onCropEditModeChange }: Props) {
+export default function LayoutSidebar({ projet, config, onChange, bandeauConfig, onBandeauChange, isDev, template, onTemplateChange, cropEditMode, onCropEditModeChange }: Props) {
+  const { viewMode } = useViewMode();
+  const isAdminView = viewMode === 'admin';
   const [active, setActive] = useState<SectionId | null>(null);
   const [panelWidth, setPanelWidth] = useState(280);
 
@@ -648,6 +656,32 @@ export default function LayoutSidebar({ projet, config, onChange, bandeauConfig,
             wordBreak: 'break-word',
           }}>
             {projet.affaire}
+          </div>
+        )}
+        {/* Sélecteur Template (déplacé depuis la toolbar) — admin uniquement,
+            à la suite du titre et avant « Éditer les champs ». Masqué en vue user. */}
+        {isAdminView && template && onTemplateChange && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '8px 14px', borderBottom: `1px solid ${color.gris}`,
+          }}>
+            <span style={{
+              fontFamily: 'var(--sans)', fontSize: '7.5pt', fontWeight: 700,
+              letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ai-noir70)',
+            }}>Template</span>
+            <select
+              value={template}
+              onChange={(e) => onTemplateChange(e.target.value as TemplateChoice)}
+              style={{
+                flex: 1, minWidth: 0, padding: '4px 6px', fontSize: '8.5pt',
+                fontFamily: 'var(--sans)', fontWeight: 700, color: 'var(--ai-violet)',
+                border: `1px solid ${color.gris}`, borderRadius: 2, background: 'white',
+              }}
+            >
+              {TEMPLATE_OPTIONS.map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
           </div>
         )}
         {/* Boutons d'édition (déplacés depuis la toolbar) */}

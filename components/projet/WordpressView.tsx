@@ -40,6 +40,8 @@ export default function WordpressView({ projet }: { projet: Projet }) {
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [publishing, setPublishing] = useState(false);
   const [result, setResult] = useState<{ url?: string; error?: string; id?: number; categoryNames?: string[]; categoryCount?: number; hasMetaDescription?: boolean } | null>(null);
+  const [promoting, setPromoting] = useState(false);
+  const [promoteResult, setPromoteResult] = useState<{ prodUrl?: string; prodId?: number; draftUrl?: string; error?: string } | null>(null);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
 
   const initialSnapshotRef = useRef<string>(
@@ -87,6 +89,25 @@ export default function WordpressView({ projet }: { projet: Projet }) {
       setResult({ error: e instanceof Error ? e.message : 'Erreur' });
     } finally {
       setPublishing(false);
+    }
+  }
+
+  async function handleUpdateProd() {
+    if (!confirm('Cette action remplace immédiatement la version publiée sur assemblage.net par le contenu du dernier brouillon. Continuer ?')) return;
+    setPromoting(true);
+    setPromoteResult(null);
+    try {
+      const res = await authedFetch(`/api/projet/${projet.slug}/update-prod`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Erreur inconnue');
+      setPromoteResult({ prodUrl: data.prodUrl, prodId: data.prodId, draftUrl: data.draftUrl });
+    } catch (e) {
+      setPromoteResult({ error: e instanceof Error ? e.message : 'Erreur' });
+    } finally {
+      setPromoting(false);
     }
   }
 
@@ -164,8 +185,21 @@ export default function WordpressView({ projet }: { projet: Projet }) {
           disabled={publishing}
           style={{ ...btn, background: 'var(--ai-rouge)', color: 'white' }}
         >
-          {publishing ? 'Publication…' : 'Export WP 1'}
+          {publishing ? 'Publication…' : 'Export WP'}
         </button>
+
+        {/* « Mettre à jour la production » : vue admin uniquement (pousse le
+            dernier brouillon vers le post publié). */}
+        {viewMode === 'admin' && (
+          <button
+            onClick={handleUpdateProd}
+            disabled={promoting}
+            title="Pousse le contenu du dernier brouillon vers le post WordPress publié existant (recherche par slug)"
+            style={{ ...btn, background: 'white', color: 'var(--ai-violet)' }}
+          >
+            {promoting ? 'Mise à jour…' : 'Mettre à jour la production'}
+          </button>
+        )}
 
         {projet.urlWordpress && (
           <a href={projet.urlWordpress} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--ai-gris)', textDecoration: 'none', fontWeight: 600 }}>
@@ -187,6 +221,13 @@ export default function WordpressView({ projet }: { projet: Projet }) {
           </span>
         )}
         {result?.error && <span style={{ color: feedback.erreurClair, fontWeight: 600 }}>✗ {result.error}</span>}
+        {promoteResult?.prodUrl && (
+          <span style={{ color: feedback.succesClair, fontWeight: 600 }}>
+            ✓ Production mise à jour #{promoteResult.prodId} —{' '}
+            <a href={promoteResult.prodUrl} target="_blank" rel="noopener noreferrer" style={{ color: feedback.succesClair }}>voir l&apos;article publié</a>
+          </span>
+        )}
+        {promoteResult?.error && <span style={{ color: feedback.erreurClair, fontWeight: 600 }}>✗ {promoteResult.error}</span>}
       </div>
 
       <div style={{ display: 'flex', alignItems: 'stretch', background: ui.fondPage, minHeight: 'calc(100vh - 48px)' }}>
