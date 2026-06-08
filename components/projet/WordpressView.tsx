@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { Projet } from '@/types/projet';
 import { authedFetch } from '@/lib/supabase/authHeaders';
+import { useViewMode } from '@/lib/auth/useViewMode';
 import { DEFAULT_WP_CONFIG, wpTemplateFor, type WpConfig } from '@/lib/wordpress/wpConfig';
 import { color, feedback, ui } from '@/lib/ui/tokens';
 import WpLayoutSidebar, { type KnownPhoto } from './WpLayoutSidebar';
@@ -22,6 +23,7 @@ import WordpressPreview from './WordpressPreview';
 export default function WordpressView({ projet }: { projet: Projet }) {
   const router = useRouter();
   const wpTemplate = wpTemplateFor(projet.vignettePoles);
+  const { viewMode, setViewMode, canSwitch } = useViewMode();
 
   // Liste des photos disponibles (cover Airtable + photosProjet), exposée à
   // la sidebar pour les contrôles individuels (activation + cadrage + cover).
@@ -127,6 +129,21 @@ export default function WordpressView({ projet }: { projet: Projet }) {
         <span style={{ color: 'white', fontWeight: 700 }}>Aperçu WordPress — {projet.nom}</span>
         <div style={{ flex: 1 }} />
 
+        {canSwitch && (
+          <>
+            <label style={{ color: 'white', fontWeight: 600, marginRight: 4 }}>Vue :</label>
+            <select
+              value={viewMode}
+              onChange={(e) => setViewMode(e.target.value as 'admin' | 'user')}
+              title="Bascule entre la vue admin (tous les contrôles) et la vue user (Catégories / Espacements / Typographie générale masqués)"
+              style={{ ...btn, background: 'white', color: 'var(--ai-violet)' }}
+            >
+              <option value="admin">Admin</option>
+              <option value="user">User</option>
+            </select>
+          </>
+        )}
+
         <button
           onClick={handleSave}
           disabled={saveState === 'saving'}
@@ -173,7 +190,7 @@ export default function WordpressView({ projet }: { projet: Projet }) {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'stretch', background: ui.fondPage, minHeight: 'calc(100vh - 48px)' }}>
-        <WpLayoutSidebar config={wpConfig} onChange={setWpConfig} template={wpTemplate} slug={projet.slug} tagsExportWp={projet.tagsExportWp} knownPhotos={knownPhotos} />
+        <WpLayoutSidebar config={wpConfig} onChange={setWpConfig} template={wpTemplate} slug={projet.slug} knownPhotos={knownPhotos} />
         <main style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
           <WordpressPreview projet={projet} wpConfig={wpConfig} />
         </main>

@@ -74,14 +74,29 @@ export const WP_FIELDS_STR_ENV: WpFieldKey[] = [
   'moa', 'architecte', 'betAssocies', 'budget', 'surface', 'entreprise', 'missionAi', 'programme', 'programmeSecondaire', 'materiaux',
 ];
 
-/** Ordre des champs du bandeau WP Dev (miroir de `metaGridHtml` isDev). */
+/** Ordre des champs du bandeau WP Dev (ordre de **rendu**, propre au template).
+ *  `programmeSecondaire` n'y figure pas : il n'a pas de cellule autonome (rendu
+ *  dans la cellule Programme), son style reste réglable via le menu partagé. */
 export const WP_FIELDS_DEV: WpFieldKey[] = [
-  'moa', 'bailleur', 'architecte', 'budget', 'surface', 'programme', 'programmeSecondaire', 'materiaux', 'missionAi', 'betAssocies',
+  'moa', 'bailleur', 'architecte', 'programme', 'missionAi', 'budget', 'betAssocies',
+  'materiaux', 'surface', 'entreprise',
 ];
 
+/** Ordre de **rendu** des champs du bandeau, propre à chaque template (Str-Env
+ *  et Dev divergent volontairement — cf. demande : l'ordre n'est PAS partagé). */
 export function wpFieldOrder(template: WpTemplate): WpFieldKey[] {
   return template === 'Dev' ? WP_FIELDS_DEV : WP_FIELDS_STR_ENV;
 }
+
+/** Liste **partagée** des champs présentés dans l'éditeur « Champs du bandeau »
+ *  de la sidebar WP (identique pour Str-Env et Dev). Indépendante de l'ordre de
+ *  rendu : un champ stylé/masqué ici s'applique au template qui l'affiche. Tous
+ *  les `WpFieldKey` y figurent pour exposer leurs options typo (dont
+ *  `programmeSecondaire`, rendu dans la cellule Programme). */
+export const WP_FIELD_MENU_KEYS: WpFieldKey[] = [
+  'moa', 'bailleur', 'architecte', 'betAssocies', 'budget', 'surface',
+  'entreprise', 'programme', 'programmeSecondaire', 'materiaux', 'missionAi',
+];
 
 /** Surcharge de style par champ (toutes les clés optionnelles → fallback global). */
 export interface WpFieldStyle {
@@ -90,8 +105,11 @@ export interface WpFieldStyle {
   valueBold?: boolean;
   labelColor?: string;
   valueColor?: string;
-  /** Taille de police du champ (pt). Si absent → défaut global `typo.fieldsSizePt`. */
+  /** Taille de police de la **valeur** (pt). Si absent → défaut global `typo.fieldsSizePt`. */
   sizePt?: number;
+  /** Taille de police du **libellé** (pt), réglable indépendamment de la valeur.
+   *  Si absent → retombe sur `sizePt`, puis sur le défaut global `typo.fieldsSizePt`. */
+  labelSizePt?: number;
   /** Valeur rendue en petites capitales (font-variant: small-caps). Défaut false. */
   smallCaps?: boolean;
   /** Valeur rendue en grandes capitales (text-transform: uppercase). Défaut false. */
@@ -270,6 +288,46 @@ export const DEFAULT_WP_CONFIG = {
   },
 };
 
+/**
+ * Préréglages « par défaut WordPress » appliqués par le bouton admin
+ * « Appliquer les paramètres par défaut WordPress » de la sidebar WP.
+ *
+ * ⚠ Distinct de `DEFAULT_WP_CONFIG` (le rendu de référence / fallback). Ce
+ * preset n'est qu'un **partial** : il ne pilote QUE la typographie générale,
+ * les champs du bandeau et les espacements (cf. la liste validée le 08/06/26).
+ * Le bouton le fusionne par-dessus la config courante (`{ ...config, ...preset }`),
+ * donc la disposition des photos / catégories / prestation de la fiche est
+ * préservée. La persistance via `/fields` ne touche elle-même que la clé `wp`
+ * du `ProjectConfig` → les configs PDF (`bandeau`, `manuel`) ne sont pas écrasées.
+ */
+export const ASSEMBLAGE_WP_DEFAULTS: WpConfig = {
+  typo: {
+    descriptionSizePx: 16,
+    descriptionLineHeight: 1.5,
+    fieldsSizePt: 13, // Taille identique pour tous les champs du bandeau (défaut global)
+    pitchSizePx: 21,
+    sectionTitleSizePx: 19,
+  },
+  fields: {
+    labelBold: false, // Libellés pas en gras
+    valueBold: true, // Valeurs des libellés en gras
+    labelColor: NOIR, // Tous les champs en noir
+    valueColor: NOIR,
+    overrides: {
+      // Mission AI : libellé rouge non gras, valeur noir gras + petites capitales,
+      // valeur en 16 pt (le libellé reste à 13 pt via le défaut global).
+      missionAi: { labelColor: ROUGE, labelBold: false, valueColor: NOIR, valueBold: true, smallCaps: true, sizePt: 16 },
+      // Programme secondaire : noir non gras.
+      programmeSecondaire: { valueColor: NOIR, valueBold: false },
+    },
+  },
+  spacing: {
+    titlePitchPx: 0, // Titre ↔ accroche
+    pitchPhotoPx: 40, // Accroche ↔ photo
+    photoDescPx: 50, // Photo ↔ description
+  },
+};
+
 /** Ratios proposés dans l'UI pour les photos. */
 export const WP_ASPECT_RATIOS = ['4/3', '3/2', '16/9', '1/1', '3/4'] as const;
 
@@ -316,6 +374,7 @@ export function effectiveFieldStyle(resolved: ResolvedWpConfig, key: WpFieldKey)
     labelColor: ov.labelColor ?? resolved.fields.labelColor,
     valueColor: ov.valueColor ?? resolved.fields.valueColor,
     sizePt: ov.sizePt,
+    labelSizePt: ov.labelSizePt,
     smallCaps: ov.smallCaps ?? false,
     upperCase: ov.upperCase ?? false,
   };
