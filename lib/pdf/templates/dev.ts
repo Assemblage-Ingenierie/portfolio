@@ -25,7 +25,7 @@ const CSS = `
 .dev-page > .t-meta-grid,
 .dev-page > .dev-photos,
 .dev-page > .dev-text,
-.dev-page > .dev-extra-grid,
+.dev-page > .dev-extra-anchor,
 .dev-page > .dev-presta,
 .dev-page > footer {
   flex: 0 0 auto;
@@ -108,13 +108,25 @@ const CSS = `
   padding-left: 6mm;
 }
 
-/* ── Photos additionnelles : grille N colonnes ─────── */
+/* ── Photos additionnelles : grille N colonnes ───────
+   FLOTTANTES — hors-flux : la grille est ancrée par un placeholder de
+   hauteur 0 (.dev-extra-anchor) placé après le texte. Elle se superpose
+   au contenu sans réserver d'espace vertical → ni le bloc "Prestation
+   Assemblage", ni le footer ne sont décalés par la taille/position des
+   photos additionnelles. Le neutre (offsetVerticalPercent = 50) reste
+   ancré juste sous le texte (comportement historique). */
+.dev-extra-anchor {
+  position: relative;
+  height: 0;
+}
 .dev-extra-grid {
   display: grid;
   gap: 3mm;
-  width: 100%;
-  /* Permet aux photos de remonter au-dessus du texte si offsetVerticalPercent < 50 */
-  position: relative;
+  /* Ancrée au placeholder (top du flux, juste après le texte). */
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
   z-index: 5;
 }
 .dev-extra-grid .photo-frame {
@@ -430,7 +442,7 @@ export function renderDev(projet: Projet, configIn?: ManualConfig): TemplateBund
       const yMm = ((clampPercent(e.offsetVerticalPercent ?? 50) - 50) / 50) * V_RANGE_MM;
       return `<div class="photo-frame" style="--extra-cell-max:${maxMm}mm; --photo-x-offset:${xPct}%; --photo-y-offset:${yMm}mm">${photoImg(ph, projet.nom, projet)}</div>`;
     }).join('');
-    extraHtml = `<div class="dev-extra-grid" style="grid-template-columns:repeat(${extraPhotos.length},1fr);">${cells}</div>`;
+    extraHtml = `<div class="dev-extra-anchor"><div class="dev-extra-grid" style="grid-template-columns:repeat(${extraPhotos.length},1fr);">${cells}</div></div>`;
   }
 
   // ── Mots-clés : position figée sous le statut (cf. headerHtml). ──
