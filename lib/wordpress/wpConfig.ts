@@ -74,14 +74,28 @@ export const WP_FIELDS_STR_ENV: WpFieldKey[] = [
   'moa', 'architecte', 'betAssocies', 'budget', 'surface', 'entreprise', 'missionAi', 'programme', 'programmeSecondaire', 'materiaux',
 ];
 
-/** Ordre des champs du bandeau WP Dev (miroir de `metaGridHtml` isDev). */
+/** Ordre des champs du bandeau WP Dev (ordre de **rendu**, propre au template).
+ *  `programmeSecondaire` n'y figure pas : il n'a pas de cellule autonome (rendu
+ *  dans la cellule Programme), son style reste réglable via le menu partagé. */
 export const WP_FIELDS_DEV: WpFieldKey[] = [
-  'moa', 'bailleur', 'architecte', 'budget', 'surface', 'programme', 'programmeSecondaire', 'materiaux', 'missionAi', 'betAssocies',
+  'moa', 'bailleur', 'architecte', 'programme', 'missionAi', 'budget', 'betAssocies',
 ];
 
+/** Ordre de **rendu** des champs du bandeau, propre à chaque template (Str-Env
+ *  et Dev divergent volontairement — cf. demande : l'ordre n'est PAS partagé). */
 export function wpFieldOrder(template: WpTemplate): WpFieldKey[] {
   return template === 'Dev' ? WP_FIELDS_DEV : WP_FIELDS_STR_ENV;
 }
+
+/** Liste **partagée** des champs présentés dans l'éditeur « Champs du bandeau »
+ *  de la sidebar WP (identique pour Str-Env et Dev). Indépendante de l'ordre de
+ *  rendu : un champ stylé/masqué ici s'applique au template qui l'affiche. Tous
+ *  les `WpFieldKey` y figurent pour exposer leurs options typo (dont
+ *  `programmeSecondaire`, rendu dans la cellule Programme). */
+export const WP_FIELD_MENU_KEYS: WpFieldKey[] = [
+  'moa', 'bailleur', 'architecte', 'betAssocies', 'budget', 'surface',
+  'entreprise', 'programme', 'programmeSecondaire', 'materiaux', 'missionAi',
+];
 
 /** Surcharge de style par champ (toutes les clés optionnelles → fallback global). */
 export interface WpFieldStyle {
@@ -296,8 +310,8 @@ export const ASSEMBLAGE_WP_DEFAULTS: WpConfig = {
     labelColor: NOIR, // Tous les champs en noir
     valueColor: NOIR,
     overrides: {
-      // Mission AI : libellé rouge non gras, valeur noir gras.
-      missionAi: { labelColor: ROUGE, labelBold: false, valueColor: NOIR, valueBold: true },
+      // Mission AI : libellé rouge non gras, valeur noir gras + petites capitales.
+      missionAi: { labelColor: ROUGE, labelBold: false, valueColor: NOIR, valueBold: true, smallCaps: true },
       // Programme secondaire : noir non gras.
       programmeSecondaire: { valueColor: NOIR, valueBold: false },
     },

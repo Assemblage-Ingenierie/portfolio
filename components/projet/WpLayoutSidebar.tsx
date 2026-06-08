@@ -7,7 +7,7 @@ import {
   ASSEMBLAGE_PALETTE,
   ASSEMBLAGE_WP_DEFAULTS,
   WP_MAX_GALLERY_SLOTS,
-  wpFieldOrder,
+  WP_FIELD_MENU_KEYS,
   resolveWpConfig,
   effectiveFieldStyle,
   defaultGallerySlot,
@@ -170,9 +170,9 @@ function Palette({
 }
 
 export default function WpLayoutSidebar({
-  config, onChange, template, slug, tagsExportWp, knownPhotos,
+  config, onChange, template, slug, knownPhotos,
 }: {
-  config: WpConfig; onChange: (next: WpConfig) => void; template: WpTemplate; slug: string; tagsExportWp: string[]; knownPhotos: KnownPhoto[];
+  config: WpConfig; onChange: (next: WpConfig) => void; template: WpTemplate; slug: string; knownPhotos: KnownPhoto[];
 }) {
   // Mode de vue (admin = UI complète ; user = Catégories / Espacements /
   // Typographie générale masqués). Géré dans `lib/auth/useViewMode.ts` ; le
@@ -329,7 +329,7 @@ export default function WpLayoutSidebar({
 
             <hr style={{ border: 'none', borderTop: `1px solid ${ui.separateur}`, margin: '12px 0' }} />
 
-            {wpFieldOrder(template).map((key) => {
+            {WP_FIELD_MENU_KEYS.map((key) => {
               const ov = overrides[key] ?? {};
               const eff = effectiveFieldStyle(resolved, key);
               const effSize = eff.sizePt ?? typo.fieldsSizePt;
@@ -456,23 +456,6 @@ export default function WpLayoutSidebar({
             <p style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70, margin: '4px 0 0', lineHeight: 1.4 }}>
               « Titre ↔ accroche » = marge au-dessus du contenu (le titre est rendu par le thème WordPress).
             </p>
-          </Section>
-        )}
-
-        {!isUserView && (
-          <Section label="Catégories">
-            <p style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70, margin: '0 0 12px', lineHeight: 1.5 }}>
-              À l&apos;export, ces catégories (champ Airtable « Tags export WP ») sont <strong>cochées dans le panneau « Catégories » du post WordPress</strong> (créées si absentes). Le thème WP les affiche au-dessus du titre. Modifiez-les dans Airtable.
-            </p>
-            {tagsExportWp.length > 0 ? (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {tagsExportWp.map((t) => (
-                  <span key={t} style={{ fontFamily: font.sans, fontSize: '8pt', fontWeight: 600, color: color.violet, background: ui.separateur, border: `1px solid ${color.gris}`, borderRadius: radius.pill, padding: '3px 8px' }}>{t}</span>
-                ))}
-              </div>
-            ) : (
-              <p style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70, fontStyle: 'italic' }}>Aucune catégorie (« Tags export WP » vide).</p>
-            )}
           </Section>
         )}
 

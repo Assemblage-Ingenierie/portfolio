@@ -190,7 +190,7 @@ export default function WordpressView({ projet }: { projet: Projet }) {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'stretch', background: ui.fondPage, minHeight: 'calc(100vh - 48px)' }}>
-        <WpLayoutSidebar config={wpConfig} onChange={setWpConfig} template={wpTemplate} slug={projet.slug} tagsExportWp={projet.tagsExportWp} knownPhotos={knownPhotos} />
+        <WpLayoutSidebar config={wpConfig} onChange={setWpConfig} template={wpTemplate} slug={projet.slug} knownPhotos={knownPhotos} />
         <main style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
           <WordpressPreview projet={projet} wpConfig={wpConfig} />
         </main>
