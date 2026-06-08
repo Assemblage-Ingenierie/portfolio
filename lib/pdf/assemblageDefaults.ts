@@ -28,7 +28,7 @@ const FONT_SANS = 'sans' as const;
  * Tailles (pt) — issues du brief utilisateur (révisé 2026) :
  *   Titre 15 · Statut 10 · Libellés 10 · Valeurs 10
  *   Sous-titre Programme (metaSub) 9 · Description 9 · Prestation Assemblage 9
- *   Mission AI : 10, gras, small-caps (Open Sans)
+ *   Mission AI : 12, gras, small-caps (Open Sans)
  *
  * Cellules : distribution adaptée au contenu (`layout: 'content'`).
  *
@@ -45,7 +45,7 @@ const FONT_SANS = 'sans' as const;
 export const ASSEMBLAGE_DEFAULT_BANDEAU: BandeauConfig = {
   titre:                { fontFamily: FONT_SANS, fontSize: 15 },
   status:               { fontFamily: FONT_SANS, fontSize: 10 },
-  missionAi:            { fontFamily: FONT_SANS, fontSize: 10, bold: true, smallCaps: true },
+  missionAi:            { fontFamily: FONT_SANS, fontSize: 12, bold: true, smallCaps: true },
   labels:               { fontFamily: FONT_SANS, fontSize: 10 },
   values:               { fontFamily: FONT_SANS, fontSize: 10 },
   metaSub:              { fontFamily: FONT_SANS, fontSize: 9 },
