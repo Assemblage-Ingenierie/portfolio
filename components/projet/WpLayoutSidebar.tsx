@@ -29,11 +29,12 @@ export interface KnownPhoto { url: string; filename: string; isCover?: boolean }
  * disposition photos). La liste des champs dépend du `template` (Str-Env/Dev).
  */
 
-type SectionId = 'typo' | 'fields' | 'spacing' | 'categories' | 'photos';
+type SectionId = 'typo' | 'fields' | 'presta' | 'spacing' | 'categories' | 'photos';
 
-const SECTIONS: { id: SectionId; label: string }[] = [
+const SECTIONS: { id: SectionId; label: string; devOnly?: boolean }[] = [
   { id: 'typo', label: 'Typographie générale' },
   { id: 'fields', label: 'Champs du bandeau' },
+  { id: 'presta', label: 'Prestation Assemblage', devOnly: true },
   { id: 'spacing', label: 'Espacements' },
   { id: 'categories', label: 'Catégories' },
   { id: 'photos', label: 'Photos' },
@@ -160,12 +161,14 @@ export default function WpLayoutSidebar({
   const [active, setActive] = useState<SectionId | null>('fields');
 
   const resolved = resolveWpConfig(config);
-  const { typo, fields, photos, spacing } = resolved;
+  const { typo, fields, photos, spacing, prestation } = resolved;
   const aspectOptions = WP_ASPECT_RATIOS.map((r) => ({ value: r, label: r }));
+  const fontOptions = [{ value: 'sans', label: 'Open Sans' }, { value: 'serif', label: 'Georgia' }];
 
   const setTypo = (patch: Partial<typeof typo>) => onChange({ ...config, typo: { ...config.typo, ...patch } });
   const setPhotos = (patch: Partial<typeof photos>) => onChange({ ...config, photos: { ...config.photos, ...patch } });
   const setSpacing = (patch: Partial<typeof spacing>) => onChange({ ...config, spacing: { ...config.spacing, ...patch } });
+  const setPresta = (patch: Partial<typeof prestation>) => onChange({ ...config, prestation: { ...config.prestation, ...patch } });
   // ── Galerie : slots ordonnés, modèle « Photos additionnelles » ──────────
   type GallerySlot = NonNullable<NonNullable<WpConfig['photos']>['gallery']>[number];
   const galleryEnabled = photos.galleryEnabled !== false;
@@ -254,7 +257,7 @@ export default function WpLayoutSidebar({
         <div style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70, marginBottom: 8 }}>
           Template WP : <strong style={{ color: color.violet }}>{template}</strong> <span style={{ opacity: 0.7 }}>(via Vignette pôle)</span>
         </div>
-        {SECTIONS.map((s) => (
+        {SECTIONS.filter((s) => !s.devOnly || template === 'Dev').map((s) => (
           <button key={s.id} onClick={() => setActive(active === s.id ? null : s.id)}
             style={{ width: '100%', textAlign: 'left', padding: '8px 10px', fontFamily: font.sans, fontSize: '9pt', fontWeight: 600, color: active === s.id ? 'white' : color.violet, background: active === s.id ? (color.violet as string) : 'transparent', border: 'none', borderRadius: radius.action, cursor: 'pointer', marginBottom: 2 }}>
             {s.label}
@@ -356,6 +359,53 @@ export default function WpLayoutSidebar({
                 </div>
               );
             })}
+          </>
+        )}
+
+        {active === 'presta' && (
+          <>
+            <p style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70, margin: '0 0 12px', lineHeight: 1.4 }}>
+              Typographie du bloc « Prestation Assemblage » (template Dev). Libellé (titre) et texte enrichi stylés indépendamment de la description.
+            </p>
+
+            {/* ── Libellé (titre) ──────────────────────────────────────── */}
+            <div style={{ fontFamily: font.sans, fontSize: '9pt', fontWeight: 700, color: color.violet, margin: '0 0 8px' }}>Libellé</div>
+            <Select label="Police" value={prestation.labelFont} options={fontOptions} onChange={(v) => setPresta({ labelFont: v as 'sans' | 'serif' })} />
+            <div style={{ ...rowStyle, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ ...labelStyle, fontWeight: 600 }}>Couleur</span>
+              <Palette value={prestation.labelColor} onChange={(hex) => setPresta({ labelColor: hex })} />
+            </div>
+            <Slider label="Taille" value={prestation.labelSizePt} min={9} max={32} suffix="pt" onChange={(v) => setPresta({ labelSizePt: v })} />
+            <Toggle label="En gras" checked={prestation.labelBold} onChange={(v) => setPresta({ labelBold: v })} />
+            <Toggle label="En grandes capitales" checked={prestation.labelUpperCase} onChange={(v) => setPresta({ labelUpperCase: v })} />
+
+            <hr style={{ border: 'none', borderTop: `1px solid ${ui.separateur}`, margin: '12px 0' }} />
+
+            {/* ── Valeur (texte enrichi) ───────────────────────────────── */}
+            <div style={{ fontFamily: font.sans, fontSize: '9pt', fontWeight: 700, color: color.violet, margin: '0 0 8px' }}>Texte enrichi</div>
+            <Select label="Police" value={prestation.valueFont} options={fontOptions} onChange={(v) => setPresta({ valueFont: v as 'sans' | 'serif' })} />
+            <div style={{ ...rowStyle, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ ...labelStyle, fontWeight: 600 }}>Couleur</span>
+              <Palette value={prestation.valueColor} onChange={(hex) => setPresta({ valueColor: hex })} />
+            </div>
+            <Slider label="Taille" value={prestation.valueSizePx} min={11} max={24} suffix="px" onChange={(v) => setPresta({ valueSizePx: v })} />
+            <Slider label="Interlignage" value={prestation.valueLineHeight} min={1.2} max={2.2} step={0.05} onChange={(v) => setPresta({ valueLineHeight: v })} />
+            <Toggle label="En gras" checked={prestation.valueBold} onChange={(v) => setPresta({ valueBold: v })} />
+
+            <hr style={{ border: 'none', borderTop: `1px solid ${ui.separateur}`, margin: '12px 0' }} />
+
+            {/* ── Position du bloc ─────────────────────────────────────── */}
+            <div style={{ fontFamily: font.sans, fontSize: '9pt', fontWeight: 700, color: color.violet, margin: '0 0 8px' }}>Position</div>
+            <Select
+              label="Position du bloc"
+              value={photos.prestationPosition ?? 'after-description'}
+              options={[
+                { value: 'before-description', label: 'Avant la description' },
+                { value: 'after-description', label: 'Après la description (défaut)' },
+                { value: 'after-photos', label: 'Après les photos' },
+              ]}
+              onChange={(v) => setPhotos({ prestationPosition: v as 'before-description' | 'after-description' | 'after-photos' })}
+            />
           </>
         )}
 
@@ -498,26 +548,6 @@ export default function WpLayoutSidebar({
               );
             })}
 
-            {/* ── Prestation Assemblage (Dev uniquement) ──────────────── */}
-            {template === 'Dev' && (
-              <>
-                <hr style={{ border: 'none', borderTop: `1px solid ${ui.separateur}`, margin: '12px 0' }} />
-                <div style={{ fontFamily: font.sans, fontSize: '9pt', fontWeight: 700, color: color.violet, margin: '0 0 8px' }}>Prestation Assemblage</div>
-                <p style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70, margin: '0 0 8px', lineHeight: 1.4 }}>
-                  Position du bloc par rapport à la description et à la galerie (template Dev uniquement).
-                </p>
-                <Select
-                  label="Position du bloc"
-                  value={photos.prestationPosition ?? 'after-description'}
-                  options={[
-                    { value: 'before-description', label: 'Avant la description' },
-                    { value: 'after-description', label: 'Après la description (défaut)' },
-                    { value: 'after-photos', label: 'Après les photos' },
-                  ]}
-                  onChange={(v) => setPhotos({ prestationPosition: v as 'before-description' | 'after-description' | 'after-photos' })}
-                />
-              </>
-            )}
           </>
         )}
       </div>

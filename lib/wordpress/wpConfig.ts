@@ -124,6 +124,31 @@ export interface WpConfig {
     /** Surcharges par champ (priorité sur les défauts globaux ci-dessus). */
     overrides?: Partial<Record<WpFieldKey, WpFieldStyle>>;
   };
+  /** Typographie dédiée au bloc « Prestation Assemblage » (template Dev).
+   *  Libellé (titre) et valeur (texte enrichi) stylés indépendamment — sans
+   *  rapport avec la typo de la description. */
+  prestation?: {
+    /** Police du libellé. Défaut 'sans' (Open Sans). */
+    labelFont?: 'sans' | 'serif';
+    /** Couleur du libellé. Défaut rouge. */
+    labelColor?: string;
+    /** Taille du libellé (pt). Défaut 12. */
+    labelSizePt?: number;
+    /** Libellé en gras. Défaut true. */
+    labelBold?: boolean;
+    /** Libellé en grandes capitales. Défaut false. */
+    labelUpperCase?: boolean;
+    /** Police de la valeur (texte enrichi). Défaut 'sans'. */
+    valueFont?: 'sans' | 'serif';
+    /** Couleur de la valeur. Défaut noir. */
+    valueColor?: string;
+    /** Taille de la valeur (px). Défaut 16. */
+    valueSizePx?: number;
+    /** Interlignage de la valeur. Défaut 1.7. */
+    valueLineHeight?: number;
+    /** Valeur en gras. Défaut false. */
+    valueBold?: boolean;
+  };
   /** Espacements verticaux (px) du haut de la fiche. */
   spacing?: {
     /** Entre le titre (thème WP) et la phrase d'accroche — marge au-dessus
@@ -207,6 +232,18 @@ export const DEFAULT_WP_CONFIG = {
       missionAi: { labelColor: ROUGE },
     } as Partial<Record<WpFieldKey, WpFieldStyle>>,
   },
+  prestation: {
+    labelFont: 'sans' as 'sans' | 'serif',
+    labelColor: ROUGE,
+    labelSizePt: 12,
+    labelBold: true,
+    labelUpperCase: false,
+    valueFont: 'sans' as 'sans' | 'serif',
+    valueColor: NOIR,
+    valueSizePx: 16,
+    valueLineHeight: 1.7,
+    valueBold: false,
+  },
   spacing: {
     titlePitchPx: 0,
     pitchPhotoPx: 40,
@@ -250,6 +287,7 @@ export function resolveWpConfig(cfg?: WpConfig) {
         ...(cfg?.fields?.overrides ?? {}),
       } as Partial<Record<WpFieldKey, WpFieldStyle>>,
     },
+    prestation: { ...DEFAULT_WP_CONFIG.prestation, ...(cfg?.prestation ?? {}) },
     spacing: { ...DEFAULT_WP_CONFIG.spacing, ...(cfg?.spacing ?? {}) },
     categories: { ...DEFAULT_WP_CONFIG.categories, ...(cfg?.categories ?? {}) },
     photos: { ...DEFAULT_WP_CONFIG.photos, ...(cfg?.photos ?? {}) },
