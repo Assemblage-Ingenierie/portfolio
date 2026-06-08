@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import type { Projet } from '@/types/projet';
 import { authedFetch } from '@/lib/supabase/authHeaders';
 import { useViewMode } from '@/lib/auth/useViewMode';
+import { DEFAULT_FICHE_STATUS, FICHE_STATUS_COLOR } from '@/lib/pdf/projectConfig';
 import { DEFAULT_WP_CONFIG, wpTemplateFor, type WpConfig } from '@/lib/wordpress/wpConfig';
 import { color, feedback, ui } from '@/lib/ui/tokens';
 import WpLayoutSidebar, { type KnownPhoto } from './WpLayoutSidebar';
@@ -148,6 +149,18 @@ export default function WordpressView({ projet }: { projet: Projet }) {
           Fiche PDF
         </Link>
         <span style={{ color: 'white', fontWeight: 700 }}>Aperçu WordPress — {projet.nom}</span>
+        {/* Statut de la fiche (lecture seule), surligné par sa couleur (cf. home). */}
+        <span
+          title="Statut de la fiche (modifiable depuis la fiche)"
+          style={{
+            display: 'inline-flex', alignItems: 'center',
+            background: FICHE_STATUS_COLOR[projet.ficheStatus ?? DEFAULT_FICHE_STATUS],
+            color: 'white', fontWeight: 700, fontSize: '8pt',
+            padding: '3px 10px', borderRadius: 6,
+          }}
+        >
+          {projet.ficheStatus ?? DEFAULT_FICHE_STATUS}
+        </span>
         <div style={{ flex: 1 }} />
 
         {canSwitch && (

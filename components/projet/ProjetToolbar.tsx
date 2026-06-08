@@ -141,36 +141,32 @@ export default function ProjetToolbar({
     <div style={{ background: 'var(--ai-violet)', padding: '10px 24px', display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', fontFamily: 'var(--sans)', fontSize: '8pt' }}>
       <Link href="/" onClick={handlePortfolioClick} style={{ color: 'var(--ai-gris)', textDecoration: 'none', fontWeight: 600 }}>← Portfolio</Link>
 
-      {/* Statut fiche, juste à droite du retour Portfolio. La pastille reprend
-          la couleur du statut (cf. home / PortfolioGrid). */}
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-        <span
-          aria-hidden
-          style={{ width: 10, height: 10, borderRadius: '50%', background: FICHE_STATUS_COLOR[ficheStatus], flexShrink: 0 }}
-        />
-        <select
-          value={ficheStatus}
-          onChange={(e) => handleStatusChange(e.target.value as FicheStatus)}
-          disabled={statusSaveState === 'saving'}
-          title={!isAdmin ? 'Seul un administrateur peut sélectionner "Prête pour publication"' : 'Statut de la fiche'}
-          style={{
-            ...btn,
-            background: statusSaveState === 'error' ? feedback.erreurClair : 'white',
-            color: 'var(--ai-violet)',
-            border: 'none',
-          }}
-        >
-          {FICHE_STATUS_VALUES.map((s) => (
-            <option
-              key={s}
-              value={s}
-              disabled={s === 'Prête pour publication' && !isAdmin && ficheStatus !== s}
-            >
-              {s}{s === 'Prête pour publication' && !isAdmin ? ' (admin uniquement)' : ''}
-            </option>
-          ))}
-        </select>
-      </span>
+      {/* Statut fiche, juste à droite du retour Portfolio. Le sélecteur est
+          surligné par la couleur du statut (cf. home / PortfolioGrid). */}
+      <select
+        value={ficheStatus}
+        onChange={(e) => handleStatusChange(e.target.value as FicheStatus)}
+        disabled={statusSaveState === 'saving'}
+        title={!isAdmin ? 'Seul un administrateur peut sélectionner "Prête pour publication"' : 'Statut de la fiche'}
+        style={{
+          ...btn,
+          background: statusSaveState === 'error' ? feedback.erreur : FICHE_STATUS_COLOR[ficheStatus],
+          color: 'white',
+          fontWeight: 700,
+          border: 'none',
+        }}
+      >
+        {FICHE_STATUS_VALUES.map((s) => (
+          <option
+            key={s}
+            value={s}
+            disabled={s === 'Prête pour publication' && !isAdmin && ficheStatus !== s}
+            style={{ background: 'white', color: 'var(--ai-noir)' }}
+          >
+            {s}{s === 'Prête pour publication' && !isAdmin ? ' (admin uniquement)' : ''}
+          </option>
+        ))}
+      </select>
 
       <div style={{ flex: 1 }} />
 
