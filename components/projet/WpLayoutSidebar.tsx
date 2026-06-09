@@ -216,6 +216,7 @@ export default function WpLayoutSidebar({
   // Largeur redimensionnable de la sidebar (poignée à droite, glisser pour
   // élargir/rétrécir). Persistée en localStorage.
   const [width, setWidth] = useState(SIDEBAR_WIDTH_DEFAULT);
+  const [showDefaults, setShowDefaults] = useState(false);
   useEffect(() => {
     const saved = localStorage.getItem(SIDEBAR_WIDTH_KEY);
     if (saved) setWidth(Math.max(SIDEBAR_WIDTH_MIN, Math.min(SIDEBAR_WIDTH_MAX, Number(saved))));
@@ -350,13 +351,35 @@ export default function WpLayoutSidebar({
           <>
             <button onClick={applyDefaults}
               title="Applique la typographie générale, les champs du bandeau et les espacements par défaut. Les photos et catégories de la fiche sont conservées."
-              style={{ width: '100%', padding: '7px 10px', fontFamily: font.sans, fontSize: '8pt', fontWeight: 600, color: 'white', background: color.rouge as string, border: 'none', borderRadius: radius.action, cursor: 'pointer', marginBottom: 8 }}>
+              style={{ width: '100%', padding: '7px 10px', fontFamily: font.sans, fontSize: '8pt', fontWeight: 600, color: 'white', background: color.rouge as string, border: 'none', borderRadius: radius.action, cursor: 'pointer', marginBottom: 4 }}>
               ★ Appliquer les paramètres par défaut WordPress
             </button>
-            <button onClick={() => onChange({})}
-              style={{ width: '100%', padding: '6px 10px', fontFamily: font.sans, fontSize: '8pt', fontWeight: 600, color: color.violet, background: 'transparent', border: `1px solid ${color.gris}`, borderRadius: radius.action, cursor: 'pointer', marginBottom: 8 }}>
-              ↺ Réinitialiser le style
-            </button>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+              <button onClick={() => setShowDefaults(v => !v)}
+                style={{ padding: '2px 6px', fontFamily: font.sans, fontSize: '7.5pt', color: color.violet, background: 'transparent', border: 'none', cursor: 'pointer', textDecoration: 'underline', opacity: 0.75 }}>
+                {showDefaults ? '▲ Masquer' : '▼ Voir les paramètres'}
+              </button>
+            </div>
+            {showDefaults && (
+              <div style={{ background: '#f6f7f9', border: `1px solid ${color.gris}`, borderRadius: 6, padding: '8px 10px', marginBottom: 8, fontFamily: font.sans, fontSize: '7.5pt', lineHeight: 1.7, color: color.violet }}>
+                <div style={{ fontWeight: 700, marginBottom: 2 }}>Typographie générale</div>
+                <div>Description : {ASSEMBLAGE_WP_DEFAULTS.typo?.descriptionSizePx}px · interlignage {ASSEMBLAGE_WP_DEFAULTS.typo?.descriptionLineHeight}</div>
+                <div>Champs bandeau (défaut) : {ASSEMBLAGE_WP_DEFAULTS.typo?.fieldsSizePt} pt</div>
+                <div>Pitch : {ASSEMBLAGE_WP_DEFAULTS.typo?.pitchSizePx}px · Titres sections : {ASSEMBLAGE_WP_DEFAULTS.typo?.sectionTitleSizePx}px</div>
+                <div style={{ fontWeight: 700, marginTop: 6, marginBottom: 2 }}>Champs du bandeau</div>
+                <div>Libellés : {ASSEMBLAGE_WP_DEFAULTS.fields?.labelBold ? 'gras' : 'normal'} · noir</div>
+                <div>Valeurs : {ASSEMBLAGE_WP_DEFAULTS.fields?.valueBold ? 'gras' : 'normal'} · noir</div>
+                <div>Mission AI libellé : <span style={{ color: color.rouge }}>rouge</span> · {ASSEMBLAGE_WP_DEFAULTS.fields?.overrides?.missionAi?.labelSizePt} pt</div>
+                <div>Mission AI valeur : noir · {ASSEMBLAGE_WP_DEFAULTS.fields?.overrides?.missionAi?.sizePt} pt · gras · petites cap.</div>
+                <div>Programme secondaire : noir · normal</div>
+                <div style={{ fontWeight: 700, marginTop: 6, marginBottom: 2 }}>Espacements</div>
+                <div>Titre ↔ accroche : {ASSEMBLAGE_WP_DEFAULTS.spacing?.titlePitchPx}px</div>
+                <div>Accroche ↔ photo : {ASSEMBLAGE_WP_DEFAULTS.spacing?.pitchPhotoPx}px</div>
+                <div>Photo ↔ description : {ASSEMBLAGE_WP_DEFAULTS.spacing?.photoDescPx}px</div>
+                <div style={{ fontWeight: 700, marginTop: 6, marginBottom: 2 }}>Police</div>
+                <div>Geomanist (fallback Open Sans)</div>
+              </div>
+            )}
           </>
         )}
         <div style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70, marginBottom: 0 }}>

@@ -314,9 +314,9 @@ export const ASSEMBLAGE_WP_DEFAULTS: WpConfig = {
     labelColor: NOIR, // Tous les champs en noir
     valueColor: NOIR,
     overrides: {
-      // Mission AI : libellé rouge non gras, valeur noir gras + petites capitales,
-      // valeur en 16 pt (le libellé reste à 13 pt via le défaut global).
-      missionAi: { labelColor: ROUGE, labelBold: false, valueColor: NOIR, valueBold: true, smallCaps: true, sizePt: 16 },
+      // Mission AI : libellé rouge non gras 13 pt, valeur noir gras 16 pt + petites capitales.
+      // labelSizePt explicite car sinon le libellé tomberait sur sizePt=16.
+      missionAi: { labelColor: ROUGE, labelBold: false, labelSizePt: 13, valueColor: NOIR, valueBold: true, smallCaps: true, sizePt: 16 },
       // Programme secondaire : noir non gras.
       programmeSecondaire: { valueColor: NOIR, valueBold: false },
     },
