@@ -421,12 +421,10 @@ export default function ProjetEditor({ projet }: Props) {
           <div style={{ marginBottom: '14px' }}>
             <label style={LABEL}>Mots-clés</label>
             <input value={motsCles} onChange={e => setMotsCles(e.target.value)} style={INPUT} placeholder="structure bois, réhabilitation, Paris 18e" />
-            <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', marginTop: '4px' }}>Séparés par des virgules.</p>
           </div>
           <div>
             <label style={LABEL}>Certifications</label>
             <input value={certifications} onChange={e => setCertifications(e.target.value)} style={INPUT} placeholder="BDF bronze, E+C-, BBC" />
-            <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', marginTop: '4px' }}>Séparées par des virgules.</p>
           </div>
         </div>
 
