@@ -304,7 +304,9 @@ Workflow en 3 étapes : sélection des références → ordre → preview & expo
 
 ### Styles
 
-- `styles/tokens.css` — variables CSS Assemblage (`--ai-rouge`, `--ai-violet`, `--serif`, `--sans`, …) à utiliser dans tout nouveau composant
+- `styles/tokens.css` — variables CSS Assemblage (`--ai-rouge`, `--ai-violet`, `--serif`, `--sans`, …) à utiliser dans tout nouveau composant. ⚠ Ce fichier n'est **pas** importé comme feuille de style au runtime : la source live des variables est `app/globals.css` (importée dans `app/layout.tsx`). Garder les deux `:root` synchrones. `lib/ui/tokens.ts` expose les mêmes tokens en objet TS (`font.sans = 'var(--sans)'`) pour les styles inline.
+- **Police Geomanist (marque Assemblage)** : `--sans = 'Geomanist', 'Open Sans', system-ui, sans-serif`. Deux `@font-face` dans `globals.css` regroupés sous la famille `'Geomanist'` — Light (`/fonts/geomanist-light-webfont.woff2|woff`, graisses 100..450, texte courant) + Medium (`/fonts/Geomanist-Medium.ttf`, graisses 451..900, gras boutons/titres). Texte normal en Light, gras en Medium (vrai contraste, pas de faux-gras).
+- **Geomanist côté export/preview WordPress** : indépendant de l'UI. Le builder (`lib/wordpress/builders.ts → SANS`) demande `'Geomanist Light'` en tête — c'est le nom sous lequel le **thème WP/Elementor** charge la police côté `assemblage.net` (donc rien à servir côté builder pour le post réel). En revanche l'**aperçu WP dans l'app** (`WordpressPreview.tsx`) est une iframe `srcDoc` isolée : elle re-déclare elle-même `@font-face 'Geomanist Light'` (Light + Medium, fichiers `/fonts/…` résolus contre le parent même-origine) sinon elle retombait sur Open Sans.
 - CSS Modules pour les layouts (`layout-editorial.module.css`, `layout-magazine.module.css`)
 - Tailwind v4 disponible mais peu utilisé — préférer les CSS custom properties pour rester cohérent
 
