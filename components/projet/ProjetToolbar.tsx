@@ -168,22 +168,23 @@ export default function ProjetToolbar({
         ))}
       </select>
 
-      <div style={{ flex: 1 }} />
-
+      {/* Toggle de vue admin/user, juste à droite du statut, même style que le
+          bouton statut (fond blanc, police colorée : violet=admin, vert=user).
+          Visible uniquement pour les comptes admin (canSwitch), gardé dans les
+          deux modes pour pouvoir revenir en vue admin. */}
       {canSwitch && (
-        <>
-          <label style={{ color: 'white', fontWeight: 600, marginLeft: 4, marginRight: 4 }}>Vue :</label>
-          <select
-            value={viewMode}
-            onChange={(e) => setViewMode(e.target.value as 'admin' | 'user')}
-            title="Bascule entre la vue admin (tous les contrôles) et la vue user (UI restreinte)"
-            style={{ ...btn, background: 'white', color: 'var(--ai-violet)', border: 'none' }}
-          >
-            <option value="admin">Admin</option>
-            <option value="user">User</option>
-          </select>
-        </>
+        <select
+          value={viewMode}
+          onChange={(e) => setViewMode(e.target.value as 'admin' | 'user')}
+          title="Bascule entre la vue admin (tous les contrôles) et la vue user (UI restreinte)"
+          style={{ ...btn, background: 'white', color: viewMode === 'admin' ? color.violet : feedback.succes, fontWeight: 700, border: 'none' }}
+        >
+          <option value="admin" style={{ background: 'white', color: 'var(--ai-noir)' }}>Vue : Admin</option>
+          <option value="user" style={{ background: 'white', color: 'var(--ai-noir)' }}>Vue : User</option>
+        </select>
       )}
+
+      <div style={{ flex: 1 }} />
 
       {/* "Éditer les champs" + "Recadrer les photos" + sélecteur Template sont
           dans la sidebar gauche pour les templates Str-Env / Dev (qui affichent
