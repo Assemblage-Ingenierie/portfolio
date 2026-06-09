@@ -1,8 +1,5 @@
 import type { Projet } from '@/types/projet';
 import { renderShell, TemplateBundle } from './templates/shared';
-import { renderSolo } from './templates/solo';
-import { renderDiptyque } from './templates/diptyque';
-import { renderTriptyque } from './templates/triptyque';
 import { renderManuel } from './templates/manuel';
 import { renderDev } from './templates/dev';
 import type { ManualConfig } from './manualConfig';
@@ -13,7 +10,9 @@ export interface RenderOptions {
 
 /**
  * Dispatcher : sélectionne le template selon `projet.template`.
- * Les templates supportés sont Solo, Diptyque, Triptyque (défaut) et Manuel.
+ * Seuls deux templates subsistent : Str-Env (Manuel, défaut) et Dev.
+ * Les anciennes valeurs Airtable Solo / Diptyque / Triptyque retombent
+ * sur Str-Env.
  *
  * Pour Str-Env / Dev, si `options.manualConfig` n'est PAS fourni, on
  * retombe sur `projet.savedManualConfig` (mise en page persistée dans
@@ -25,20 +24,10 @@ export interface RenderOptions {
  */
 export function renderTemplate(projet: Projet, options?: RenderOptions): TemplateBundle {
   const manualConfig = options?.manualConfig ?? projet.savedManualConfig;
-  switch (projet.template) {
-    case 'Solo':
-      return renderSolo(projet);
-    case 'Diptyque':
-      return renderDiptyque(projet);
-    case 'Triptyque':
-      return renderTriptyque(projet);
-    case 'Str-Env':
-      return renderManuel(projet, manualConfig);
-    case 'Dev':
-      return renderDev(projet, manualConfig);
-    default:
-      return renderTriptyque(projet);
+  if (projet.template === 'Dev') {
+    return renderDev(projet, manualConfig);
   }
+  return renderManuel(projet, manualConfig);
 }
 
 export function renderPdfHtml(projet: Projet, options?: RenderOptions): string {
