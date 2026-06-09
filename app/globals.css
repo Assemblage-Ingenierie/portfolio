@@ -1,15 +1,25 @@
 @import "tailwindcss";
 
-/* Geomanist Light — police de marque Assemblage (fichiers servis depuis
-   /public/fonts). Une seule graisse fournie : on déclare une plage
-   font-weight 100..900 pour que TOUTES les graisses demandées (400/600/700)
-   rendent dans ce fichier, sans faux-gras incohérent — c'est l'approche du
-   site WordPress (Elementor force « Geomanist Light » sur toutes les graisses). */
+/* Geomanist — police de marque Assemblage (fichiers servis depuis /public/fonts).
+   Deux graisses fournies, regroupées sous une seule famille « Geomanist » :
+   - Light  → graisses 100..450 (texte courant, body 400)
+   - Medium → graisses 451..900 (gras de l'UI : boutons 600, titres 700)
+   Le texte normal rend donc en Light, les éléments « bold » en Medium — vrai
+   contraste de graisse, pas de faux-gras. (L'export WordPress, lui, garde le
+   nom « Geomanist Light » dans builders.ts car c'est le nom sous lequel le
+   thème WP/Elementor charge la police côté site — concern séparé.) */
 @font-face {
-  font-family: 'Geomanist Light';
+  font-family: 'Geomanist';
   src: url('/fonts/geomanist-light-webfont.woff2') format('woff2'),
        url('/fonts/geomanist-light-webfont.woff') format('woff');
-  font-weight: 100 900;
+  font-weight: 100 450;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Geomanist';
+  src: url('/fonts/Geomanist-Medium.ttf') format('truetype');
+  font-weight: 451 900;
   font-style: normal;
   font-display: swap;
 }
@@ -23,7 +33,7 @@
   --ai-noir70: #4D4D4D;
   --ai-noir: #000000;
   --serif: 'Newsreader', Georgia, serif;
-  --sans: 'Geomanist Light', 'Open Sans', system-ui, sans-serif;
+  --sans: 'Geomanist', 'Open Sans', system-ui, sans-serif;
 }
 
 * { box-sizing: border-box; }
