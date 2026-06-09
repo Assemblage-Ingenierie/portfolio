@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<title>Portfolio — Architecture · Assemblage ingénierie</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* Palette Assemblage */
+    --ai-rouge:           #E30513;
+    --ai-violet:          #30323E;
+    --ai-gris:            #DFE4E8;
+    --ai-rouge-clair:     #F9E1E3;
+    --ai-gris-tres-clair: #F2F2F2;
+    --ai-noir70:          #4D4D4D;
+
+    /* Layout web Assemblage */
+    --ai-header-bg:       #F2F2F2;
+    --ai-header-height:   72px;
+    --ai-sidebar-width:   240px;
+    --ai-sidebar-bg:      #30323E;
+    --ai-content-bg:      #FFFFFF;
+
+    /* Canvas blueprint adapté à la charte (violet sombre + accent rouge) */
+    --canvas-bg:          #30323E;
+    --canvas-bg-2:        #3a3d4b;
+    --canvas-grid:        rgba(255, 255, 255, 0.05);
+    --canvas-grid-strong: rgba(255, 255, 255, 0.10);
+    --node-bg:            rgba(255, 255, 255, 0.97);
+    --node-border:        rgba(227, 5, 19, 0.25);
+    --node-ink:           #30323E;
+    --node-ink-dim:       #4D4D4D;
+    --link-color:         rgba(255, 255, 255, 0.45);
+    --link-hi:            #E30513;
+
+    --ai-font: 'Open Sans', system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden;
+    background: var(--ai-content-bg);
+    color: var(--ai-violet);
+    font-family: var(--ai-font);
+    font-size: 14px;
+  }
+
+  /* ───── HEADER ───── */
+  #header {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: var(--ai-header-height);
+    background: var(--ai-header-bg);
+    display: flex; align-items: center;
+    padding: 0 28px;
+    z-index: 20;
+    border-bottom: 1px solid var(--ai-gris);
+  }
+  #header .logo { height: 44px; width: auto; margin-right: 28px; }
+  #header .titles { display: flex; flex-direction: column; line-height: 1.15; }
+  #header h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--ai-violet);
+    letter-spacing: 0.01em;
+  }
+  #header .sub {
+    font-size: 12px;
+    color: var(--ai-noir70);
+    margin-top: 2px;
+  }
+  #header .rule {
+    flex: 1;
+    margin: 0 28px;
+    height: 1px;
+    background: var(--ai-rouge);
+    opacity: 0.6;
+  }
+  #header .meta {
+    font-size: 11px;
+    color: var(--ai-noir70);
+    text-align: right;
+    line-height: 1.5;
+  }
+
+  /* ───── SIDEBAR ───── */
+  #sidebar {
+    position: fixed;
+    top: var(--ai-header-height); left: 0; bottom: 0;
+    width: var(--ai-sidebar-width);
+    background: var(--ai-sidebar-bg);
+    color: #fff;
+    z-index: 15;
+    padding: 24px 0;
+    overflow-y: auto;
+  }
+  #sidebar h2 {
+    margin: 0 24px 10px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #fff;
+    opacity: 0.55;
+  }
+  .nav-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 24px 10px 20px;
+    color: #fff;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 400;
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    transition: background 0.12s ease, border-color 0.12s ease;
+  }
+  .nav-item:hover { background: rgba(255,255,255,0.06); }
+  .nav-item.active {
+    background: rgba(255,255,255,0.08);
+    border-left-color: var(--ai-rouge);
+    font-weight: 600;
+  }
+  .nav-item .count {
+    font-size: 11px;
+    color: #fff;
+    opacity: 0.55;
+    background: rgba(255,255,255,0.08);
+    padding: 1px 7px;
+    border-radius: 10px;
+  }
+  .nav-section {
+    margin-top: 22px;
+    padding: 0 24px;
+    font-size: 11px;
+    color: #fff;
+    opacity: 0.75;
+    line-height: 1.6;
+  }
+  .nav-section kbd {
+    display: inline-block;
+    background: rgba(255,255,255,0.10);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 3px;
+    padding: 0 5px;
+    font-size: 10px;
+    font-family: var(--ai-font);
+    margin-right: 2px;
+  }
+  .nav-footer {
+    margin: 28px 24px 0;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255,255,255,0.12);
+    font-size: 10px;
+    color: #fff;
+    opacity: 0.5;
+    line-height: 1.6;
+  }
+  .nav-footer strong { font-weight: 700; opacity: 0.8; }
+
+  /* ───── CANVAS ───── */
+  #stage {
+    position: fixed;
+    top: var(--ai-header-height);
+    left: var(--ai-sidebar-width);
+    right: 0; bottom: 0;
+    background:
+      radial-gradient(ellipse at top, var(--canvas-bg-2), var(--canvas-bg) 75%),
+      linear-gradient(var(--canvas-grid) 1px, transparent 1px) 0 0 / 24px 24px,
+      linear-gradient(90deg, var(--canvas-grid) 1px, transparent 1px) 0 0 / 24px 24px,
+      linear-gradient(var(--canvas-grid-strong) 1px, transparent 1px) 0 0 / 120px 120px,
+      linear-gradient(90deg, var(--canvas-grid-strong) 1px, transparent 1px) 0 0 / 120px 120px;
+    cursor: grab;
+    overflow: hidden;
+  }
+  #stage.dragging { cursor: grabbing; }
+  #world {
+    position: absolute; left: 0; top: 0;
+    transform-origin: 0 0;
+    will-change: transform;
+  }
+  svg.links {
+    position: absolute; left: 0; top: 0;
+    pointer-events: none;
+    overflow: visible;
+  }
+
+  /* ───── GROUPES ───── */
+  .group {
+    position: absolute;
+    border: 1px dashed rgba(255, 255, 255, 0.20);
+    border-radius: 6px;
+    padding: 16px 14px 12px;
+    background: rgba(255, 255, 255, 0.03);
+  }
+  .group-title {
+    position: absolute; top: -11px; left: 16px;
+    background: var(--canvas-bg);
+    padding: 0 10px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #fff;
+  }
+  .group.gr-auth   .group-title,
+  .group.gr-data   .group-title,
+  .group.gr-api    .group-title,
+  .group.gr-pages  .group-title,
+  .group.gr-ui     .group-title,
+  .group.gr-pdf    .group-title,
+  .group.gr-wp     .group-title,
+  .group.gr-utils  .group-title { color: #fff; }
+  .group.gr-auth   { border-color: rgba(227, 5, 19, 0.45); }
+  .group.gr-pdf    { border-color: rgba(227, 5, 19, 0.45); }
+  .group.gr-wp     { border-color: rgba(227, 5, 19, 0.45); }
+
+  /* ───── NŒUDS (fiches blanches type Assemblage) ───── */
+  .node {
+    position: absolute;
+    background: var(--node-bg);
+    border: 1px solid var(--node-border);
+    border-left: 3px solid var(--ai-rouge);
+    border-radius: 3px;
+    padding: 9px 12px 10px;
+    width: 232px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+    cursor: pointer;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+  }
+  .node:hover {
+    border-color: var(--ai-rouge);
+    box-shadow: 0 6px 20px rgba(227, 5, 19, 0.25);
+    transform: translateY(-1px);
+  }
+  .node.is-dragging {
+    cursor: grabbing;
+    box-shadow: 0 12px 30px rgba(227, 5, 19, 0.45);
+    z-index: 100;
+    transform: none;
+  }
+  .node .name {
+    color: var(--ai-violet);
+    font-weight: 700;
+    font-size: 12.5px;
+    line-height: 1.25;
+  }
+  .node .path {
+    color: var(--node-ink-dim);
+    font-size: 10.5px;
+    margin-top: 3px;
+    word-break: break-all;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  .node .tag {
+    display: inline-block;
+    margin-top: 6px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 1px 7px;
+    border-radius: 2px;
+    color: #fff;
+    background: var(--ai-violet);
+  }
+  .node.k-route .tag { background: var(--ai-rouge); }
+  .node.k-page  .tag { background: var(--ai-violet); }
+  .node.k-pdf   .tag { background: var(--ai-rouge); }
+  .node.k-wp    .tag { background: var(--ai-rouge); }
+  .node.k-auth  .tag { background: var(--ai-violet); }
+  .node.k-data  .tag { background: var(--ai-violet); }
+  .node.k-ui    .tag { background: var(--ai-violet); }
+  .node.k-util  .tag { background: var(--ai-noir70); }
+
+  .node.active {
+    border-color: var(--ai-rouge);
+    border-left-width: 5px;
+    box-shadow: 0 0 0 2px rgba(227, 5, 19, 0.35), 0 6px 20px rgba(227, 5, 19, 0.35);
+  }
+  .node.dimmed { opacity: 0.22; }
+
+  /* ───── PANNEAU DE DÉTAIL ───── */
+  #detail {
+    position: fixed;
+    top: calc(var(--ai-header-height) + 16px);
+    right: 16px;
+    z-index: 18;
+    width: 380px;
+    max-height: calc(100vh - var(--ai-header-height) - 32px);
+    overflow: auto;
+    background: #fff;
+    border: 1px solid var(--ai-gris);
+    border-left: 3px solid var(--ai-rouge);
+    border-radius: 3px;
+    padding: 18px 22px 20px;
+    box-shadow: 0 12px 28px rgba(0,0,0,0.25);
+    display: none;
+  }
+  #detail.open { display: block; }
+  #detail h2 {
+    margin: 0 0 4px;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--ai-rouge);
+  }
+  #detail .path-line {
+    color: var(--ai-noir70);
+    font-size: 11px;
+    margin-bottom: 14px;
+    word-break: break-all;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  #detail h3 {
+    margin: 14px 0 6px;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ai-noir70);
+  }
+  #detail p, #detail li {
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--ai-violet);
+  }
+  #detail ul { margin: 0; padding-left: 18px; }
+  #detail li { margin-bottom: 4px; }
+  #detail a {
+    color: var(--ai-rouge);
+    text-decoration: none;
+    font-weight: 600;
+  }
+  #detail a:hover { text-decoration: underline; }
+  #detail .close {
+    position: absolute;
+    top: 10px; right: 12px;
+    background: none; border: none;
+    color: var(--ai-noir70);
+    cursor: pointer;
+    font-size: 22px;
+    line-height: 1;
+  }
+  #detail .close:hover { color: var(--ai-rouge); }
+
+  /* ───── WATERMARK SIGLE .A ───── */
+  .ai-watermark {
+    position: fixed;
+    bottom: 18px;
+    right: 18px;
+    width: 44px;
+    opacity: 0.85;
+    pointer-events: none;
+    z-index: 5;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+  }
+
+  /* ───── PIED CANVAS ───── */
+  .canvas-footer {
+    position: fixed;
+    bottom: 8px;
+    left: calc(var(--ai-sidebar-width) + 16px);
+    z-index: 5;
+    font-size: 10px;
+    color: rgba(255,255,255,0.45);
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER charte Assemblage -->
+<header id="header">
+  <img class="logo" src="assets/logo_Ai_rouge_HD.png" alt="Assemblage ingénierie" />
+  <div class="titles">
+    <h1>Portfolio &middot; Architecture du code</h1>
+    <div class="sub">Cartographie des fichiers clés &mdash; outil de pilotage interne</div>
+  </div>
+  <div class="rule"></div>
+  <div class="meta">
+    Assemblage ingénierie<br>
+    Bureau d'études techniques
+  </div>
+</header>
+
+<!-- SIDEBAR navigation par domaine -->
+<aside id="sidebar">
+  <h2>Domaines</h2>
+  <div id="nav-groups"></div>
+
+  <div class="nav-section">
+    <strong style="display:block; color:#fff; opacity:0.75; margin-bottom:6px;">Navigation</strong>
+    <kbd>drag</kbd> déplacer<br>
+    <kbd>molette</kbd> zoomer<br>
+    <kbd>clic</kbd> détail d'un fichier<br>
+    <kbd>F</kbd> recadrer · <kbd>R</kbd> reset<br>
+    <kbd>Échap</kbd> fermer
+  </div>
+
+  <div class="nav-footer">
+    <strong>Portfolio interne</strong><br>
+    Airtable &rarr; Next.js &rarr; WordPress<br>
+    Auth Supabase &middot; PDF Puppeteer
+  </div>
+</aside>
+
+<!-- CANVAS -->
+<div id="stage">
+  <div id="world">
+    <svg class="links" id="svg-links"></svg>
+  </div>
+</div>
+
+<div class="canvas-footer">A · Schéma interactif &mdash; pan, zoom, clic</div>
+
+<!-- DETAIL -->
+<div id="detail">
+  <button class="close" onclick="closeDetail()" aria-label="Fermer">×</button>
+  <h2 id="d-title"></h2>
+  <div class="path-line" id="d-path"></div>
+  <h3>Rôle</h3>
+  <p id="d-role"></p>
+  <h3>Connexions</h3>
+  <ul id="d-links"></ul>
+</div>
+
+<!-- WATERMARK .A -->
+<img class="ai-watermark" src="assets/sigle_A_rouge_HD.png" alt="" />
+
+<script>
+/* ──────────────────────────────────────────────────────────
+   Données : nœuds + connexions
+   ──────────────────────────────────────────────────────── */
+
+const GROUPS = {
+  auth:  { title: "Auth · Supabase",    x:   40, y:  60, w: 520, h: 280, cls: "gr-auth"  },
+  data:  { title: "Data · Airtable",    x:  600, y:  60, w: 520, h: 280, cls: "gr-data"  },
+  api:   { title: "API routes",         x: 1160, y:  60, w: 520, h: 320, cls: "gr-api"   },
+  pages: { title: "Pages (app/)",       x:   40, y: 400, w: 520, h: 360, cls: "gr-pages" },
+  ui:    { title: "Composants UI",      x:  600, y: 400, w: 520, h: 420, cls: "gr-ui"    },
+  pdf:   { title: "Rendu PDF",          x: 1160, y: 440, w: 520, h: 480, cls: "gr-pdf"   },
+  wp:    { title: "WordPress",          x: 1720, y:  60, w: 320, h: 280, cls: "gr-wp"    },
+  utils: { title: "Utils & helpers",    x: 1720, y: 400, w: 320, h: 280, cls: "gr-utils" },
+};
+
+const NODES = [
+  // ── AUTH ──
+  { id: "sb-client",   group: "auth", kind: "auth", name: "client.ts",            path: "lib/supabase/client.ts",            x: 20, y: 30,
+    role: "Singleton Supabase JS, flowType 'implicit'. Toute interaction auth client passe par getSupabaseClient()." },
+  { id: "useAuth",     group: "auth", kind: "auth", name: "useAuth.ts",           path: "lib/supabase/useAuth.ts",           x: 250, y: 30,
+    role: "Hook React → {authState, session, profile, logout}. Cache localStorage du profil approuvé." },
+  { id: "authGate",    group: "auth", kind: "ui",   name: "AuthGate.tsx",         path: "app/components/AuthGate.tsx",       x: 20, y: 140,
+    role: "Wrapper de app/layout. Affiche login / waiting / app selon authState. Pas de protection serveur." },
+  { id: "requireUser", group: "auth", kind: "auth", name: "requireApprovedUser",  path: "lib/supabase/requireApprovedUser.ts", x: 250, y: 140,
+    role: "Gate serveur pour les routes API. À appeler en tête de TOUTE route protégée. Lit Bearer JWT puis cookie." },
+  { id: "authHeaders", group: "auth", kind: "auth", name: "authHeaders.ts",       path: "lib/supabase/authHeaders.ts",       x: 20, y: 215,
+    role: "Helper client. Attache Authorization: Bearer <jwt> aux fetch vers les routes API protégées." },
+
+  // ── DATA ──
+  { id: "at-queries",  group: "data", kind: "data", name: "queries.ts",           path: "lib/airtable/queries.ts",           x: 20, y: 30,
+    role: "getProjets() / getProjet(slug). 'use cache' avec tags granulaires (projet:<slug> + projets:list). Collecte les record IDs CRM avant fetchCrmNames." },
+  { id: "at-mappers",  group: "data", kind: "data", name: "mappers.ts",           path: "lib/airtable/mappers.ts",           x: 250, y: 30,
+    role: "recordToProjet(). SEUL endroit où mapper noms de colonnes Airtable → champs Projet. Ajouter/renommer un champ ici." },
+  { id: "at-mutations",group: "data", kind: "data", name: "mutations.ts",         path: "lib/airtable/mutations.ts",         x: 20, y: 140,
+    role: "Updates Airtable avec typecast:true. Invalide les cache tags après écriture." },
+  { id: "at-client",   group: "data", kind: "data", name: "client.ts",            path: "lib/airtable/client.ts",            x: 250, y: 140,
+    role: "Client Airtable + helpers formulaValue/linkedValue/selectValue (gère les shapes hétérogènes des field types)." },
+  { id: "at-crm",      group: "data", kind: "data", name: "crm.ts",               path: "lib/airtable/crm.ts",               x: 20, y: 215,
+    role: "fetchCrmNames(recordIds) → Map<id, nom>. Interroge la table synced 'Sync CRM' dans la base portfolio." },
+
+  // ── API ──
+  { id: "api-fields",  group: "api", kind: "route", name: "fields/route.ts",      path: "app/api/projet/[slug]/fields/route.ts", x: 20, y: 30,
+    role: "PATCH champs éditables. Invalidation granulaire : projet:<slug> toujours, projets:list seulement si champ indexé change." },
+  { id: "api-publish", group: "api", kind: "route", name: "publish/route.ts",     path: "app/api/projet/[slug]/publish/route.ts", x: 250, y: 30,
+    role: "POST → upload médias + crée TOUJOURS un nouveau draft WP. Jamais d'UPDATE sur post existant. SSRF guard sur les URLs Airtable." },
+  { id: "api-update",  group: "api", kind: "route", name: "update-prod/route.ts", path: "app/api/projet/[slug]/update-prod/route.ts", x: 20, y: 140,
+    role: "POST → promeut le contenu du dernier draft vers le post de production (lookup par slug + status=publish). Préserve l'URL SEO." },
+  { id: "api-admin",   group: "api", kind: "route", name: "users/[id]/route.ts",  path: "app/api/admin/users/[id]/route.ts", x: 250, y: 140,
+    role: "PATCH role / is_approved sur portfolio_profiles. Vérifie le rôle admin côté serveur." },
+  { id: "api-public",  group: "api", kind: "route", name: "public/portfolio",     path: "app/api/public/portfolio/", x: 20, y: 235,
+    role: "Endpoint public (extranet) — alimente la grille publique paginée." },
+  { id: "api-imgproxy",group: "api", kind: "route", name: "image-proxy",          path: "app/api/image-proxy/", x: 250, y: 235,
+    role: "Proxy d'images (contournement CORS / cache pour Airtable assets)." },
+
+  // ── PAGES ──
+  { id: "p-layout",    group: "pages", kind: "page", name: "layout.tsx",          path: "app/layout.tsx", x: 20, y: 30,
+    role: "Root layout. Monte AuthGate autour de {children}." },
+  { id: "p-home",      group: "pages", kind: "page", name: "page.tsx (/)",        path: "app/page.tsx", x: 250, y: 30,
+    role: "Home interne — liste de toutes les références (utilise PortfolioGrid)." },
+  { id: "p-projet",    group: "pages", kind: "page", name: "/projet/[slug]",      path: "app/projet/[slug]/", x: 20, y: 130,
+    role: "Fiche projet (view + edit). Monte ProjetView ou ProjetEditor." },
+  { id: "p-builder",   group: "pages", kind: "page", name: "/portfolio/builder",  path: "app/portfolio/builder/", x: 250, y: 130,
+    role: "Constituer un portfolio multi-fiches → export PDF (PortfolioBuilder)." },
+  { id: "p-tableau",   group: "pages", kind: "page", name: "/portfolio/tableau",  path: "app/portfolio/tableau/", x: 20, y: 230,
+    role: "Constituer un tableau de références → TableauBuilder." },
+  { id: "p-print",     group: "pages", kind: "page", name: "/portfolio/print",    path: "app/portfolio/print/", x: 250, y: 230,
+    role: "Page interne consommée par Puppeteer pour générer le PDF d'un portfolio multi-fiches." },
+  { id: "p-public",    group: "pages", kind: "page", name: "/public/portfolio",   path: "app/public/portfolio/", x: 20, y: 290,
+    role: "Tableau public extranet — PublicPortfolioTable." },
+  { id: "p-admin",     group: "pages", kind: "page", name: "/admin",              path: "app/admin/", x: 250, y: 290,
+    role: "Liste des profils + approbation / rôle (client-side, appelle /api/admin/users/[id])." },
+
+  // ── UI ──
+  { id: "c-editor",    group: "ui", kind: "ui", name: "ProjetEditor.tsx",         path: "components/projet/ProjetEditor.tsx", x: 20, y: 30,
+    role: "Éditeur principal de fiche. Save via PATCH /fields, gère slug rename, download PDF via fetch + blob." },
+  { id: "c-view",      group: "ui", kind: "ui", name: "ProjetView.tsx",           path: "components/projet/ProjetView.tsx", x: 250, y: 30,
+    role: "Vue lecture seule d'une fiche projet." },
+  { id: "c-toolbar",   group: "ui", kind: "ui", name: "ProjetToolbar.tsx",        path: "components/projet/ProjetToolbar.tsx", x: 20, y: 130,
+    role: "Toolbar fiche : Export PDF, Export WP, Update prod, statut workflow." },
+  { id: "c-richtext",  group: "ui", kind: "ui", name: "RichTextEditor.tsx",       path: "components/projet/RichTextEditor.tsx", x: 250, y: 130,
+    role: "Contenteditable + toolbar B/I/U/listes/lien. HTML↔Markdown round-trip via marked + turndown." },
+  { id: "c-layoutsb",  group: "ui", kind: "ui", name: "LayoutSidebar.tsx",        path: "components/projet/LayoutSidebar.tsx", x: 20, y: 230,
+    role: "Sidebar mise en page Str-Env (tailles/positions photos, split du texte)." },
+  { id: "c-photocrop", group: "ui", kind: "ui", name: "PhotoCropOverlay.tsx",     path: "components/projet/PhotoCropOverlay.tsx", x: 250, y: 230,
+    role: "Overlay de recadrage des photos (focus point)." },
+  { id: "c-bandeau",   group: "ui", kind: "ui", name: "BandeauConfigPanel.tsx",   path: "components/projet/BandeauConfigPanel.tsx", x: 20, y: 320,
+    role: "Configurateur des cellules visibles dans le bandeau (MOA, Archi, BET, etc.)." },
+  { id: "c-status",    group: "ui", kind: "ui", name: "FicheStatusPopup.tsx",     path: "components/projet/FicheStatusPopup.tsx", x: 250, y: 320,
+    role: "Popup statut de workflow interne (lock admin)." },
+  { id: "c-preview",   group: "ui", kind: "ui", name: "TemplatePreview.tsx",      path: "components/TemplatePreview.tsx", x: 20, y: 360,
+    role: "Aperçu d'une fiche : iframe srcDoc avec le MÊME HTML que l'export PDF." },
+  { id: "c-grid",      group: "ui", kind: "ui", name: "PortfolioGrid.tsx",        path: "components/portfolio/PortfolioGrid.tsx", x: 250, y: 360,
+    role: "Grille/liste + recherche + filtres (home interne)." },
+  { id: "c-pb",        group: "ui", kind: "ui", name: "PortfolioBuilder.tsx",     path: "components/portfolio/PortfolioBuilder.tsx", x: 250, y: 230,
+    role: "Builder multi-fiches → export PDF." },
+  { id: "c-tb",        group: "ui", kind: "ui", name: "TableauBuilder.tsx",       path: "components/portfolio/TableauBuilder.tsx", x: 20, y: 320,
+    role: "Builder tableau de références. Auto-pagination paysage via measureOverflow." },
+
+  // ── PDF ──
+  { id: "pdf-render",  group: "pdf", kind: "pdf", name: "renderHtml.ts",          path: "lib/pdf/renderHtml.ts", x: 20, y: 30,
+    role: "Aiguillage : Dev → renderDev, tout le reste → renderManuel (Str-Env) selon projet.template." },
+  { id: "pdf-portfolio",group:"pdf", kind: "pdf", name: "renderPortfolio.ts",     path: "lib/pdf/renderPortfolio.ts", x: 250, y: 30,
+    role: "Génère le HTML multi-fiches (cover + sommaire + N fiches) pour PortfolioBuilder." },
+  { id: "pdf-select",  group: "pdf", kind: "pdf", name: "selectTemplate.ts",      path: "lib/pdf/selectTemplate.ts", x: 20, y: 130,
+    role: "autoSelectTemplate(projet) — choisit Dev ou Str-Env selon la Vignette pôle quand template absent." },
+  { id: "pdf-tableau", group: "pdf", kind: "pdf", name: "tableauTemplate.ts",     path: "lib/pdf/tableauTemplate.ts", x: 250, y: 130,
+    role: "TABLEAU_FIELDS, TABLEAU_ORDER_BY_MODE, renderTableau() (chunking paysage + footer répété)." },
+  { id: "pdf-shared",  group: "pdf", kind: "pdf", name: "templates/shared.ts",    path: "lib/pdf/templates/shared.ts", x: 20, y: 230,
+    role: "Helpers communs : metaGridHtml(), descriptionHtml(), header, footer. Attention : modifier ici ≠ propager auto à tous les templates." },
+  { id: "pdf-manuel",  group: "pdf", kind: "pdf", name: "templates/manuel.ts",    path: "lib/pdf/templates/manuel.ts", x: 20, y: 380,
+    role: "Layout libre Str-Env (le nom du fichier est historique). Sidebar de mise en page règle taille/position des photos." },
+  { id: "pdf-dev",     group: "pdf", kind: "pdf", name: "templates/dev.ts",       path: "lib/pdf/templates/dev.ts", x: 250, y: 380,
+    role: "Layout pôle Développement. Bandeau ré-ordonné, période YYYY-YYYY, prestation Assemblage superposable." },
+
+  // ── WP ──
+  { id: "wp-client",   group: "wp", kind: "wp", name: "client.ts",                path: "lib/wordpress/client.ts", x: 20, y: 30,
+    role: "Upload media (stream depuis Airtable) + create/update post + findPublishedPostBySlug. Basic auth WP_USER + WP_APP_PASSWORD." },
+  { id: "wp-builders", group: "wp", kind: "wp", name: "builders.ts",              path: "lib/wordpress/builders.ts", x: 20, y: 130,
+    role: "Builder Editorial (PROD). HTML inline-stylé autonome. Ne pas modifier sans demande WP explicite." },
+  { id: "wp-buildersv2",group:"wp", kind: "wp", name: "buildersV2.ts",            path: "lib/wordpress/buildersV2.ts", x: 20, y: 215,
+    role: "Builder Magazine — variante parallèle, archivée. Idem : ne pas modifier sans demande WP explicite." },
+
+  // ── UTILS ──
+  { id: "u-md",        group: "utils", kind: "util", name: "markdown.ts",         path: "lib/utils/markdown.ts", x: 20, y: 30,
+    role: "renderMarkdown(md) — instance marked partagée (gfm:true, breaks:true). TOUS les templates passent par là." },
+  { id: "u-overflow",  group: "utils", kind: "util", name: "measureOverflow.ts",  path: "lib/utils/measureOverflow.ts", x: 20, y: 110,
+    role: "Mesure DOM dans iframe (load + fonts.ready + 2× rAF). Utilisé pour la pagination du tableau." },
+  { id: "u-norm",      group: "utils", kind: "util", name: "normalize.ts",        path: "lib/utils/normalize.ts", x: 20, y: 185,
+    role: "Normalisation des chaînes (accents, casse) pour search/filtres." },
+  { id: "u-parsers",   group: "utils", kind: "util", name: "parsers.ts",          path: "lib/utils/parsers.ts", x: 20, y: 235,
+    role: "Parsers de valeurs Airtable (nombres, dates, certifications)." },
+];
+
+const LINKS = [
+  // Auth
+  ["authGate", "useAuth"], ["useAuth", "sb-client"],
+  ["authHeaders", "sb-client"], ["requireUser", "sb-client"],
+  // Data
+  ["at-queries", "at-mappers"], ["at-queries", "at-client"], ["at-queries", "at-crm"],
+  ["at-mappers", "at-crm"], ["at-mutations", "at-client"],
+  // API
+  ["api-fields", "requireUser"], ["api-publish", "requireUser"], ["api-update", "requireUser"], ["api-admin", "requireUser"],
+  ["api-fields", "at-mutations"], ["api-fields", "at-queries"],
+  ["api-publish", "at-queries"], ["api-publish", "wp-client"], ["api-publish", "wp-builders"],
+  ["api-update", "wp-client"], ["api-update", "wp-builders"],
+  // Pages → composants
+  ["p-layout", "authGate"], ["p-home", "c-grid"],
+  ["p-projet", "c-editor"], ["p-projet", "c-view"],
+  ["p-builder", "c-pb"], ["p-tableau", "c-tb"],
+  ["p-admin", "api-admin"],
+  // UI → API
+  ["c-editor", "api-fields"], ["c-editor", "authHeaders"], ["c-editor", "c-richtext"],
+  ["c-editor", "c-layoutsb"], ["c-editor", "c-bandeau"], ["c-editor", "c-photocrop"], ["c-editor", "c-status"],
+  ["c-toolbar", "api-publish"], ["c-toolbar", "api-update"],
+  ["c-preview", "pdf-render"],
+  ["c-pb", "pdf-portfolio"],
+  ["c-tb", "pdf-tableau"], ["c-tb", "u-overflow"],
+  // PDF
+  ["pdf-render", "pdf-select"], ["pdf-render", "pdf-manuel"], ["pdf-render", "pdf-dev"],
+  ["pdf-manuel", "pdf-shared"], ["pdf-dev", "pdf-shared"],
+  ["pdf-shared", "u-md"], ["pdf-manuel", "u-md"],
+  ["pdf-portfolio", "pdf-render"],
+  // WP
+  ["wp-builders", "u-md"], ["wp-buildersv2", "u-md"],
+];
+
+/* ──────────────────────────────────────────────────────────
+   Rendu
+   ──────────────────────────────────────────────────────── */
+
+const world = document.getElementById("world");
+const stage = document.getElementById("stage");
+const svg = document.getElementById("svg-links");
+
+// Groupes
+const groupEls = {};
+for (const [key, g] of Object.entries(GROUPS)) {
+  const el = document.createElement("div");
+  el.className = "group " + g.cls;
+  el.style.left = g.x + "px"; el.style.top = g.y + "px";
+  el.style.width = g.w + "px"; el.style.height = g.h + "px";
+  el.innerHTML = `<div class="group-title">${g.title}</div>`;
+  el.dataset.group = key;
+  world.appendChild(el);
+  groupEls[key] = el;
+}
+
+// Nœuds
+const nodeEls = {};
+const nodeCenters = {};
+const nodePos = {}; // {id: {x, y}} en coords world (origine top-left)
+const groupCounts = {};
+const NODE_W = 232, NODE_H_APPROX = 64;
+for (const n of NODES) {
+  groupCounts[n.group] = (groupCounts[n.group] || 0) + 1;
+  const g = GROUPS[n.group];
+  const wx = g.x + n.x, wy = g.y + n.y;
+  const el = document.createElement("div");
+  el.className = "node k-" + n.kind;
+  el.style.left = wx + "px";
+  el.style.top  = wy + "px";
+  el.dataset.id = n.id;
+  el.innerHTML = `
+    <div class="name">${n.name}</div>
+    <div class="path">${n.path}</div>
+    <span class="tag">${n.kind}</span>
+  `;
+  attachNodeDrag(el, n.id);
+  world.appendChild(el);
+  nodeEls[n.id] = el;
+  nodePos[n.id] = { x: wx, y: wy };
+  nodeCenters[n.id] = { x: wx + NODE_W / 2, y: wy + NODE_H_APPROX / 2 };
+}
+
+// Sidebar nav (groupes)
+const navContainer = document.getElementById("nav-groups");
+for (const [key, g] of Object.entries(GROUPS)) {
+  const item = document.createElement("div");
+  item.className = "nav-item";
+  item.dataset.group = key;
+  item.innerHTML = `<span>${g.title}</span><span class="count">${groupCounts[key] || 0}</span>`;
+  item.addEventListener("click", () => focusGroup(key));
+  navContainer.appendChild(item);
+}
+
+// SVG size
+let WORLD_W = 0, WORLD_H = 0;
+for (const g of Object.values(GROUPS)) {
+  WORLD_W = Math.max(WORLD_W, g.x + g.w + 60);
+  WORLD_H = Math.max(WORLD_H, g.y + g.h + 60);
+}
+svg.setAttribute("width",  WORLD_W);
+svg.setAttribute("height", WORLD_H);
+svg.setAttribute("viewBox", `0 0 ${WORLD_W} ${WORLD_H}`);
+
+// Liens
+const linkPaths = [];
+for (const [from, to] of LINKS) {
+  const a = nodeCenters[from], b = nodeCenters[to];
+  if (!a || !b) continue;
+  const dx = (b.x - a.x);
+  const c1x = a.x + dx * 0.5, c1y = a.y;
+  const c2x = a.x + dx * 0.5, c2y = b.y;
+  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  path.setAttribute("d", `M ${a.x} ${a.y} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${b.x} ${b.y}`);
+  path.setAttribute("fill", "none");
+  path.setAttribute("stroke", "rgba(255,255,255,0.32)");
+  path.setAttribute("stroke-width", "1.2");
+  path.dataset.from = from; path.dataset.to = to;
+  svg.appendChild(path);
+  linkPaths.push({ el: path, from, to });
+}
+
+// Index des liens par nœud (pour MAJ rapide pendant un drag)
+const linksByNode = {};
+for (const lp of linkPaths) {
+  (linksByNode[lp.from] = linksByNode[lp.from] || []).push(lp);
+  (linksByNode[lp.to]   = linksByNode[lp.to]   || []).push(lp);
+}
+
+function updateNodeLinks(id) {
+  const list = linksByNode[id] || [];
+  for (const lp of list) {
+    const a = nodeCenters[lp.from], b = nodeCenters[lp.to];
+    if (!a || !b) continue;
+    const dx = b.x - a.x;
+    const c1x = a.x + dx * 0.5, c1y = a.y;
+    const c2x = a.x + dx * 0.5, c2y = b.y;
+    lp.el.setAttribute("d", `M ${a.x} ${a.y} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${b.x} ${b.y}`);
+  }
+}
+
+/* Drag des nœuds (avec seuil pour distinguer clic vs drag) */
+function attachNodeDrag(el, id) {
+  let startX = 0, startY = 0;
+  let origX = 0, origY = 0;
+  let moved = false;
+  let active = false;
+
+  const onMove = (e) => {
+    if (!active) return;
+    const dx = (e.clientX - startX) / scale;
+    const dy = (e.clientY - startY) / scale;
+    if (!moved && Math.hypot(e.clientX - startX, e.clientY - startY) > 4) {
+      moved = true;
+      el.classList.add("is-dragging");
+    }
+    if (!moved) return;
+    const nx = origX + dx, ny = origY + dy;
+    el.style.left = nx + "px";
+    el.style.top  = ny + "px";
+    nodePos[id] = { x: nx, y: ny };
+    const h = el.offsetHeight || NODE_H_APPROX;
+    nodeCenters[id] = { x: nx + NODE_W / 2, y: ny + h / 2 };
+    updateNodeLinks(id);
+  };
+
+  const onUp = (e) => {
+    window.removeEventListener("mousemove", onMove);
+    window.removeEventListener("mouseup", onUp);
+    el.classList.remove("is-dragging");
+    if (!moved) {
+      // Simple clic → ouvre le détail
+      e.stopPropagation();
+      openDetail(id);
+    }
+    active = false;
+  };
+
+  el.addEventListener("mousedown", (e) => {
+    if (e.button !== 0) return;
+    e.stopPropagation(); // ne pas déclencher le pan du stage
+    active = true; moved = false;
+    startX = e.clientX; startY = e.clientY;
+    origX = nodePos[id].x; origY = nodePos[id].y;
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  });
+
+  // Le clic est géré dans onUp pour pouvoir distinguer drag vs clic
+  el.addEventListener("click", (e) => e.stopPropagation());
+}
+
+/* Pan + zoom */
+let scale = 0.75, tx = 60, ty = 40;
+function applyTransform() { world.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`; }
+applyTransform();
+
+let dragging = false, lastX = 0, lastY = 0;
+stage.addEventListener("mousedown", (e) => {
+  if (e.target.closest(".node")) return;
+  dragging = true; lastX = e.clientX; lastY = e.clientY;
+  stage.classList.add("dragging");
+});
+window.addEventListener("mousemove", (e) => {
+  if (!dragging) return;
+  tx += e.clientX - lastX; ty += e.clientY - lastY;
+  lastX = e.clientX; lastY = e.clientY;
+  applyTransform();
+});
+window.addEventListener("mouseup", () => { dragging = false; stage.classList.remove("dragging"); });
+
+stage.addEventListener("wheel", (e) => {
+  e.preventDefault();
+  const factor = e.deltaY < 0 ? 1.1 : 1/1.1;
+  const newScale = Math.min(2.5, Math.max(0.2, scale * factor));
+  const rect = stage.getBoundingClientRect();
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  tx = mx - (mx - tx) * (newScale / scale);
+  ty = my - (my - ty) * (newScale / scale);
+  scale = newScale;
+  applyTransform();
+}, { passive: false });
+
+function reset() { scale = 0.75; tx = 60; ty = 40; applyTransform(); }
+function fit() {
+  const rect = stage.getBoundingClientRect();
+  const sx = (rect.width - 80) / WORLD_W;
+  const sy = (rect.height - 80) / WORLD_H;
+  scale = Math.min(sx, sy, 1);
+  tx = (rect.width - WORLD_W * scale) / 2;
+  ty = (rect.height - WORLD_H * scale) / 2;
+  applyTransform();
+}
+function focusGroup(key) {
+  const g = GROUPS[key]; if (!g) return;
+  const rect = stage.getBoundingClientRect();
+  scale = Math.min((rect.width - 120) / g.w, (rect.height - 120) / g.h, 1.4);
+  tx = (rect.width - g.w * scale) / 2 - g.x * scale;
+  ty = (rect.height - g.h * scale) / 2 - g.y * scale;
+  applyTransform();
+  document.querySelectorAll(".nav-item").forEach(n => n.classList.toggle("active", n.dataset.group === key));
+}
+
+window.addEventListener("keydown", (e) => {
+  if (e.key === "r" || e.key === "R") reset();
+  if (e.key === "f" || e.key === "F") fit();
+  if (e.key === "Escape") closeDetail();
+});
+window.addEventListener("load", () => setTimeout(fit, 60));
+window.addEventListener("resize", () => fit());
+
+/* Détail */
+const detail = document.getElementById("detail");
+function openDetail(id) {
+  const n = NODES.find(x => x.id === id); if (!n) return;
+  document.getElementById("d-title").textContent = n.name;
+  document.getElementById("d-path").textContent  = n.path;
+  document.getElementById("d-role").textContent  = n.role;
+
+  const ins = LINKS.filter(([_, t]) => t === id).map(([f]) => f);
+  const outs = LINKS.filter(([f]) => f === id).map(([_, t]) => t);
+  const links = document.getElementById("d-links");
+  links.innerHTML = "";
+  const addLine = (label, ids) => {
+    if (!ids.length) return;
+    const li = document.createElement("li");
+    li.innerHTML = `<strong style="color:var(--ai-noir70); font-weight:700; font-size:11px; letter-spacing:0.04em;">${label}</strong> ` +
+      ids.map(x => {
+        const node = NODES.find(n => n.id === x);
+        return node ? `<a href="#" data-id="${x}">${node.name}</a>` : x;
+      }).join(", ");
+    links.appendChild(li);
+  };
+  addLine("appelé par →", ins);
+  addLine("appelle →",   outs);
+  links.querySelectorAll("a").forEach(a => a.addEventListener("click", (e) => {
+    e.preventDefault(); openDetail(a.dataset.id);
+  }));
+
+  Object.values(nodeEls).forEach(el => el.classList.remove("active", "dimmed"));
+  const related = new Set([id, ...ins, ...outs]);
+  Object.entries(nodeEls).forEach(([nid, el]) => {
+    if (nid === id) el.classList.add("active");
+    else if (!related.has(nid)) el.classList.add("dimmed");
+  });
+  linkPaths.forEach(({ el, from, to }) => {
+    const involved = from === id || to === id;
+    el.setAttribute("stroke", involved ? "var(--link-hi)" : "rgba(255,255,255,0.10)");
+    el.setAttribute("stroke-width", involved ? "2" : "1");
+  });
+
+  detail.classList.add("open");
+}
+function closeDetail() {
+  detail.classList.remove("open");
+  Object.values(nodeEls).forEach(el => el.classList.remove("active", "dimmed"));
+  linkPaths.forEach(({ el }) => {
+    el.setAttribute("stroke", "rgba(255,255,255,0.32)");
+    el.setAttribute("stroke-width", "1.2");
+  });
+  document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
+}
+stage.addEventListener("click", (e) => { if (!e.target.closest(".node")) closeDetail(); });
+</script>
+</body>
+</html>
