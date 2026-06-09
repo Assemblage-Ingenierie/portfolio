@@ -93,8 +93,12 @@ const CSS = `
 .man-text em { font-style: italic; }
 .man-text u { text-decoration: underline; }
 .man-text a { color: var(--ai-rouge); text-decoration: underline; }
-.man-text ul, .man-text ol { margin: 0 0 2.5mm; padding-left: 5mm; }
-.man-text li { margin-bottom: 0.8mm; }
+.man-text ul, .man-text ol { list-style: none; margin: 0 0 2.5mm; padding-left: 0; }
+.man-text li { position: relative; padding-left: 5mm; margin-bottom: 0.8mm; }
+.man-text ul > li::before { content: "•"; position: absolute; left: 1.5mm; }
+.man-text ol { counter-reset: mtext-li; }
+.man-text ol > li { counter-increment: mtext-li; }
+.man-text ol > li::before { content: counter(mtext-li) "."; position: absolute; left: 0; }
 .man-text--2col {
   display: grid;
   grid-template-columns: 1fr 1fr;
