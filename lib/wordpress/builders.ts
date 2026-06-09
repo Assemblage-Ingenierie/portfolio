@@ -32,7 +32,7 @@ export const VIOLET = '#30323E';
 export const GRIS   = '#DFE4E8';
 export const NOIR70 = '#4D4D4D';
 export const SERIF  = 'Georgia, serif';
-export const SANS   = "Geomanist, 'Open Sans', system-ui, sans-serif";
+export const SANS   = "'Geomanist Light', Geomanist, 'Open Sans', system-ui, sans-serif";
 
 /**
  * Sécurise une URL pour un attribut href : n'autorise que http(s).
