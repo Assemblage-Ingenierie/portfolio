@@ -38,8 +38,13 @@ export default function WordpressPreview({
     [projet, wpConfig],
   );
 
-  // Document complet pour l'iframe : on charge Open Sans (utilisé par le
-  // builder) + un wrapper qui imite la colonne de contenu d'un article.
+  // Document complet pour l'iframe. Le builder demande « Geomanist Light » (le
+  // nom sous lequel le thème WP charge la police côté site) : ici, l'iframe
+  // étant isolée, on déclare nous-mêmes le @font-face en servant les fichiers
+  // depuis /public/fonts de l'app. Les URLs racine-relatives (/fonts/…) se
+  // résolvent contre le document parent → même origine que l'app. On déclare
+  // deux graisses (Light 100..450, Medium 451..900) pour reproduire le vrai
+  // contraste de graisse. Open Sans reste chargé en ultime fallback.
   const html = useMemo(
     () => `<!doctype html>
 <html lang="fr">
@@ -49,6 +54,17 @@ export default function WordpressPreview({
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet" />
 <style>
+  @font-face {
+    font-family: 'Geomanist Light';
+    src: url('/fonts/geomanist-light-webfont.woff2') format('woff2'),
+         url('/fonts/geomanist-light-webfont.woff') format('woff');
+    font-weight: 100 450; font-style: normal; font-display: swap;
+  }
+  @font-face {
+    font-family: 'Geomanist Light';
+    src: url('/fonts/Geomanist-Medium.ttf') format('truetype');
+    font-weight: 451 900; font-style: normal; font-display: swap;
+  }
   html, body { margin: 0; padding: 0; background: #ffffff; }
   body { padding: 40px 32px 64px; }
   .wp-preview-wrap { max-width: 1000px; margin: 0 auto; }
