@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/supabase/useAuth';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import AdminTable from './AdminTable';
 import TemplateDefaultsPanel from './TemplateDefaultsPanel';
+import WpDefaultsPanel from './WpDefaultsPanel';
 import styles from './admin.module.css';
 
 interface Profile {
@@ -47,6 +48,7 @@ export default function AdminPage() {
       </header>
       {loaded && <AdminTable profiles={profiles} />}
       <TemplateDefaultsPanel />
+      <WpDefaultsPanel />
     </div>
   );
 }

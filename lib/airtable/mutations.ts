@@ -15,6 +15,7 @@ import {
   ASSEMBLAGE_DEFAULT_BANDEAU,
   ASSEMBLAGE_DEFAULT_MANUAL,
 } from '@/lib/pdf/assemblageDefaults';
+import { ASSEMBLAGE_WP_DEFAULTS } from '@/lib/wordpress/wpConfig';
 import {
   FIELD_PROGRAMME_PRINCIPAL,
   FIELD_PROGRAMME_SECONDAIRE,
@@ -169,6 +170,42 @@ export async function applyAssemblageDefaultsToUnfinished(): Promise<{ slugs: st
       ...existing,
       bandeau: ASSEMBLAGE_DEFAULT_BANDEAU,
       manuel: ASSEMBLAGE_DEFAULT_MANUAL,
+    };
+    updates.push({ id: rec.id, fields: { [PROJECT_CONFIG_FIELD]: serializeProjectConfig(merged) } });
+    const slug = rec.fields['Slug'];
+    if (typeof slug === 'string' && slug) slugs.push(slug);
+  }
+
+  // Airtable limite chaque appel update() à 10 records.
+  for (let i = 0; i < updates.length; i += 10) {
+    await base(TABLE).update(updates.slice(i, i + 10), { typecast: true });
+  }
+
+  return { slugs };
+}
+
+/**
+ * Applique le preset WordPress (`ASSEMBLAGE_WP_DEFAULTS`) à TOUTES les fiches
+ * au statut « Pas faite ». Calqué sur `applyAssemblageDefaultsToUnfinished`,
+ * mais le merge porte sur la clé `wp` du ProjectConfig : c'est un partial
+ * (typo / champs du bandeau / espacements) appliqué par-dessus la config WP
+ * existante → les réglages photos / catégories / prestation de chaque fiche
+ * sont préservés (même logique que le bouton par-fiche de la sidebar WP).
+ */
+export async function applyWpDefaultsToUnfinished(): Promise<{ slugs: string[] }> {
+  const records = await base(TABLE).select().all();
+
+  const updates: { id: string; fields: Record<string, string> }[] = [];
+  const slugs: string[] = [];
+
+  for (const rec of records) {
+    const existing = deserializeProjectConfig(rec.fields[PROJECT_CONFIG_FIELD]) ?? {};
+    const status = existing.ficheStatus ?? DEFAULT_FICHE_STATUS;
+    if (status !== 'Pas faite') continue;
+
+    const merged: ProjectConfig = {
+      ...existing,
+      wp: { ...(existing.wp ?? {}), ...ASSEMBLAGE_WP_DEFAULTS },
     };
     updates.push({ id: rec.id, fields: { [PROJECT_CONFIG_FIELD]: serializeProjectConfig(merged) } });
     const slug = rec.fields['Slug'];
