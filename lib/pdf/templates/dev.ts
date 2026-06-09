@@ -93,7 +93,7 @@ const CSS = `
 .dev-text em { font-style: italic; }
 .dev-text u { text-decoration: underline; }
 .dev-text a { color: var(--ai-rouge); text-decoration: underline; }
-.dev-text ul, .dev-text ol { margin: 0 0 2.5mm 5mm; padding: 0; }
+.dev-text ul, .dev-text ol { margin: 0 0 2.5mm; padding-left: 5mm; }
 .dev-text li { margin-bottom: 0.8mm; }
 .dev-text--2col {
   display: grid;
@@ -247,7 +247,7 @@ const CSS = `
 .dev-presta .dev-presta-body em { font-style: italic; }
 .dev-presta .dev-presta-body u { text-decoration: underline; }
 .dev-presta .dev-presta-body a { color: var(--ai-rouge); text-decoration: underline; }
-.dev-presta .dev-presta-body ul, .dev-presta .dev-presta-body ol { margin: 0 0 2mm 5mm; padding: 0; }
+.dev-presta .dev-presta-body ul, .dev-presta .dev-presta-body ol { margin: 0 0 2mm; padding-left: 5mm; }
 .dev-presta--2col .dev-presta-body {
   column-count: 2;
   column-gap: 6mm;

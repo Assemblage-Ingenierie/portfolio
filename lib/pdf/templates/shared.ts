@@ -244,7 +244,7 @@ html, body { background: white; }
 .t-texte-md strong { font-weight: 700; }
 .t-texte-md em { font-style: italic; }
 .t-texte-md a { color: var(--ai-rouge); text-decoration: underline; }
-.t-texte-md ul, .t-texte-md ol { margin: 0 0 2.5mm 5mm; padding: 0; }
+.t-texte-md ul, .t-texte-md ol { margin: 0 0 2.5mm; padding-left: 5mm; }
 .t-texte-md li { margin-bottom: 0.8mm; }
 .t-texte-md h1, .t-texte-md h2, .t-texte-md h3 {
   font-family: var(--serif); font-weight: 600; margin: 3mm 0 1.5mm;

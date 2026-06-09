@@ -93,7 +93,7 @@ const CSS = `
 .man-text em { font-style: italic; }
 .man-text u { text-decoration: underline; }
 .man-text a { color: var(--ai-rouge); text-decoration: underline; }
-.man-text ul, .man-text ol { margin: 0 0 2.5mm 5mm; padding: 0; }
+.man-text ul, .man-text ol { margin: 0 0 2.5mm; padding-left: 5mm; }
 .man-text li { margin-bottom: 0.8mm; }
 .man-text--2col {
   display: grid;
