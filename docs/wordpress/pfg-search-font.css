@@ -1,0 +1,26 @@
+/*
+ * Police du champ de recherche PFG (Portfolio Filter Gallery)
+ * ===========================================================
+ * Le champ « Rechercher » (input PFG) est apparu avec la MAJ PHP 8.4 et hérite
+ * d'une police par défaut. On le force en « Geomanist Light » (police chargée
+ * par le thème sur assemblage.net) — texte saisi + placeholder.
+ *
+ * La classe `.filtr_search` est commune aux 3 galeries (Structure 2461,
+ * Développement 4904, Environnement 7826) → une seule règle couvre les 3 pages.
+ *
+ * À coller dans Code Snippets en snippet de type CSS (Snippets → Add New → CSS),
+ * actif partout. Réversible : désactiver le snippet.
+ */
+
+.filtr_search,
+input[name="filtr-search"] {
+  font-family: 'Geomanist Light', 'Geomanist', 'Open Sans', system-ui, sans-serif !important;
+  font-weight: 300 !important;
+}
+
+.filtr_search::placeholder,
+input[name="filtr-search"]::placeholder {
+  font-family: 'Geomanist Light', 'Geomanist', 'Open Sans', system-ui, sans-serif !important;
+  font-weight: 300 !important;
+  opacity: 1; /* certains thèmes grisent le placeholder ; on garde la lisibilité */
+}
