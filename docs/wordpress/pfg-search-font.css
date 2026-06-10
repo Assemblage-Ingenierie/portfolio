@@ -24,3 +24,11 @@ input[name="filtr-search"]::placeholder {
   font-weight: 300 !important;
   opacity: 1; /* certains thèmes grisent le placeholder ; on garde la lisibilité */
 }
+
+/*
+ * Position : champ de recherche AU-DESSUS des boutons de filtre.
+ * Le conteneur PFG (.col-lg-12) empile : [ul TOUS][ul filtres][#seacrh_shuffle][galerie].
+ * On le passe en flex-column et on remonte la recherche via order:-1.
+ */
+.portfolio_wrapper .col-lg-12.col-md-12.col-xs-12 { display: flex; flex-direction: column; }
+.portfolio_wrapper #seacrh_shuffle { order: -1; }
