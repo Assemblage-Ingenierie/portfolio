@@ -66,6 +66,16 @@ if (!function_exists('assemblage_pfg_append_callback')) {
             return new WP_Error('bad_title', 'title manquant', array('status' => 400));
         }
 
+        // Le thème PFG affiche le `post_title` de l'attachment (PAS le champ
+        // image_title de la galerie). Les tuiles curées ont un attachment dont
+        // le titre = nom du projet ; on aligne donc le titre de l'image de
+        // couverture sur le nom du projet (sinon on verrait « slug-cover »).
+        // Fait avant la vérif d'idempotence pour qu'un re-clic répare un titre.
+        $current = get_post($imageId);
+        if ($current && $current->post_title !== $title) {
+            wp_update_post(array('ID' => $imageId, 'post_title' => $title));
+        }
+
         $metaKey = 'awl_filter_gallery' . $galleryId;
         $g = get_post_meta($galleryId, $metaKey, true);
         if (!is_array($g)) {
