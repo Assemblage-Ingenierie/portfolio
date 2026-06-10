@@ -29,6 +29,10 @@ const FICHE_ONLY_FIELDS: ReadonlySet<keyof ProjetEditableFields> = new Set([
   // que les CRM-linked fields sont en lecture seule (cf. mutations.ts).
   'departement',
   'motsCles',
+  // Tags export WP + méta description SEO : utilisés uniquement à l'export WP,
+  // jamais affichés/filtrés dans les vues agrégées → pas d'invalidation liste.
+  'tagsExportWp',
+  'metaDescription',
   // `ficheStatus` NE figure PAS ici : le sidebar de la home dénombre les
   // fiches par status (workflow), donc tout changement doit invalider la
   // liste.

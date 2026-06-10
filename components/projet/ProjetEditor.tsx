@@ -19,10 +19,11 @@ interface SelectOptions {
   etatAvancement: string[];
   materiaux: string[];
   rehabNeuf: string[];
+  tagsExportWp: string[];
 }
 const EMPTY_OPTIONS: SelectOptions = {
   missionAi: [], programmesPrincipaux: [], programmesSecondaires: [],
-  etatAvancement: [], materiaux: [], rehabNeuf: [],
+  etatAvancement: [], materiaux: [], rehabNeuf: [], tagsExportWp: [],
 };
 
 interface Props { projet: Projet; }
@@ -100,6 +101,9 @@ export default function ProjetEditor({ projet }: Props) {
   );
   const [materiaux, setMateriaux] = useState<string[]>(projet.materiaux ?? []);
   const [rehabNeufValues, setRehabNeufValues] = useState<string[]>(projet.rehabNeufValues ?? []);
+  // Export WordPress : tags (multi-select) + méta description SEO (override aiText).
+  const [tagsExportWp, setTagsExportWp] = useState<string[]>(projet.tagsExportWp ?? []);
+  const [metaDescription, setMetaDescription] = useState(projet.metaDescription ?? '');
 
   // Options canoniques chargées depuis la metadata Airtable.
   const [selectOptions, setSelectOptions] = useState<SelectOptions>(EMPTY_OPTIONS);
@@ -118,6 +122,7 @@ export default function ProjetEditor({ projet }: Props) {
           etatAvancement: data.etatAvancement ?? [],
           materiaux: data.materiaux ?? [],
           rehabNeuf: data.rehabNeuf ?? [],
+          tagsExportWp: data.tagsExportWp ?? [],
         });
       } catch {
         // En mode dégradé : l'utilisateur peut quand même taper des valeurs
@@ -191,6 +196,8 @@ export default function ProjetEditor({ projet }: Props) {
           template,
           certifications: certifications.split(/[,;]+/).map(s => s.trim()).filter(Boolean),
           motsCles: motsCles.split(/[,;]+/).map(s => s.trim()).filter(Boolean),
+          tagsExportWp,
+          metaDescription: metaDescription || undefined,
         }),
       });
       const data = await res.json();
@@ -270,6 +277,8 @@ export default function ProjetEditor({ projet }: Props) {
       chiffresCles: parseChiffres(),
       certifications: certifications.split(/[,;]+/).map(s => s.trim()).filter(Boolean),
       motsCles: motsCles.split(',').map(s => s.trim()).filter(Boolean),
+      tagsExportWp,
+      metaDescription: metaDescription || undefined,
     };
     return (
       <>
@@ -282,7 +291,7 @@ export default function ProjetEditor({ projet }: Props) {
   return (
     <div style={{ background: ui.fondPage, minHeight: '100vh' }}>
       {toolbar}
-      <div style={{ maxWidth: '760px', margin: '32px auto', padding: '0 24px 48px', fontFamily: 'var(--sans)' }}>
+      <div style={{ maxWidth: '1080px', margin: '32px auto', padding: '0 24px 48px', fontFamily: 'var(--sans)' }}>
 
         <h1 style={{ fontFamily: 'var(--serif)', fontSize: '22pt', fontWeight: 500, color: 'var(--ai-violet)', marginBottom: '28px' }}>
           {projet.nom}
@@ -300,7 +309,8 @@ export default function ProjetEditor({ projet }: Props) {
           </div>
         </div>
 
-        <div style={SECTION}>
+        <div style={{ ...SECTION, display: 'flex', gap: '32px', alignItems: 'flex-start' }}>
+          <div style={{ flex: '1.7 1 0', minWidth: 0 }}>
           <div style={STITLE}>Identité</div>
           <div style={{ marginBottom: '14px' }}><label style={LABEL}>Nom du projet</label><input value={nom} onChange={e => setNom(e.target.value)} style={INPUT} /></div>
           <div style={{ marginBottom: '14px' }}><label style={LABEL}>Adresse</label><input value={adresse} onChange={e => setAdresse(e.target.value)} style={INPUT} /></div>
@@ -334,6 +344,37 @@ export default function ProjetEditor({ projet }: Props) {
               </p>
             </div>
           )}
+          </div>
+
+          {/* Colonne « Export Wordpress » — affichée à droite de l'identité.
+              Tags export WP (multi-select Airtable) + Méta description SEO. */}
+          <div style={{ flex: '1 1 0', minWidth: '260px', maxWidth: '340px' }}>
+            <div style={STITLE}>Export Wordpress</div>
+            <div style={{ marginBottom: '18px' }}>
+              <MultiSelectField
+                label="Tags export WP"
+                values={tagsExportWp}
+                onChange={setTagsExportWp}
+                options={selectOptions.tagsExportWp}
+                placeholder="Ajouter un tag…"
+                hint="Multi-select Airtable. Assignés comme catégories WordPress à l'export."
+              />
+            </div>
+            <div>
+              <label style={LABEL}>Méta description SEO</label>
+              <textarea
+                value={metaDescription}
+                onChange={e => setMetaDescription(e.target.value)}
+                rows={5}
+                style={TEXTAREA}
+                placeholder="Méta description envoyée à Yoast (≈ 150-160 caractères)…"
+              />
+              <p style={HINT}>
+                Champ IA généré par Airtable depuis « Description projet ».
+                Modifiable ici — votre saisie remplace la valeur générée.
+              </p>
+            </div>
+          </div>
         </div>
 
         <div style={SECTION}>

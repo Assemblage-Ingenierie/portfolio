@@ -28,6 +28,7 @@ const FIELD_IDS = {
   etatAvancement:        'fldxXNdE0uNaomeby',
   materiaux:             'fldC4SW9n1H2PZ3MH',
   rehabNeuf:             'fldyD7L9E7cGL26vH',
+  tagsExportWp:          'fld2y9rIk9DVEf9eo',
 } as const;
 
 type FieldKey = keyof typeof FIELD_IDS;
@@ -90,7 +91,7 @@ export async function GET(req: NextRequest) {
 
     const result: Record<FieldKey, string[]> = {
       missionAi: [], programmesPrincipaux: [], programmesSecondaires: [],
-      etatAvancement: [], materiaux: [], rehabNeuf: [],
+      etatAvancement: [], materiaux: [], rehabNeuf: [], tagsExportWp: [],
     };
 
     for (const [key, fieldId] of Object.entries(FIELD_IDS) as [FieldKey, string][]) {
