@@ -194,9 +194,21 @@ if (!function_exists('assemblage_pfg_append_callback')) {
 
         // 2. Filtres PFG : on (re)pose l'assignation de CETTE image AVANT la vérif
         //    d'idempotence → un re-clic répare/MAJ les filtres d'une tuile existante.
-        //    `filters[idStr] = [ids]` + `filter-image[fid][] = idStr` (sans doublon).
-        //    `filters` vide => on ne touche pas (la tuile reste sous « all »).
+        //    Sémantique REMPLACER (les filtres deviennent exactement $filterIds) :
+        //    on retire d'abord $idStr de TOUTES les listes filter-image (purge des
+        //    entrées périmées), puis on pose filters[idStr] et on ré-ajoute idStr
+        //    aux seules listes voulues. `filters` vide => on ne touche à rien.
         if (!empty($filterIds)) {
+            // a) purge : retire cette image de toutes les listes de filtres.
+            foreach ($g['filter-image'] as $fidStr => $imgs) {
+                if (is_array($imgs)) {
+                    $g['filter-image'][$fidStr] = array_values(array_filter(
+                        $imgs,
+                        function ($x) use ($idStr) { return (string) $x !== $idStr; }
+                    ));
+                }
+            }
+            // b) (ré)assigne l'ensemble exact voulu.
             $g['filters'][$idStr] = array_map('strval', $filterIds);
             foreach ($filterIds as $fid) {
                 $fidStr = (string) $fid;
