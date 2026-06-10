@@ -27,8 +27,11 @@ input[name="filtr-search"]::placeholder {
 
 /*
  * Position : champ de recherche AU-DESSUS des boutons de filtre.
- * Le conteneur PFG (.col-lg-12) empile : [ul TOUS][ul filtres][#seacrh_shuffle][galerie].
- * On le passe en flex-column et on remonte la recherche via order:-1.
+ * Arborescence PFG : .portfolio_wrapper > [ .col-lg-12 (filtres) | #seacrh_shuffle
+ * (recherche) | .loader_img | #filter_gallery_viewer (galerie) ].
+ * Le champ recherche est FRÈRE du conteneur de filtres → on flexe le parent
+ * commun (.portfolio_wrapper) et on remonte la recherche via order:-1.
+ * (NE PAS flexer .col-lg-12 : ça détache le bouton « TOUS » des autres filtres.)
  */
-.portfolio_wrapper .col-lg-12.col-md-12.col-xs-12 { display: flex; flex-direction: column; }
+.portfolio_wrapper { display: flex; flex-direction: column; }
 .portfolio_wrapper #seacrh_shuffle { order: -1; }
