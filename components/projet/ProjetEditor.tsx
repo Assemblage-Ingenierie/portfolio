@@ -103,7 +103,9 @@ export default function ProjetEditor({ projet }: Props) {
   const [rehabNeufValues, setRehabNeufValues] = useState<string[]>(projet.rehabNeufValues ?? []);
   // Export WordPress : tags (multi-select) + méta description SEO (override aiText).
   const [tagsExportWp, setTagsExportWp] = useState<string[]>(projet.tagsExportWp ?? []);
-  const [metaDescription, setMetaDescription] = useState(projet.metaDescription ?? '');
+  // Méta description SEO : champ aiText Airtable, non éditable via l'API → affiché
+  // en lecture seule. Valeur lue directement depuis le Projet.
+  const metaDescription = projet.metaDescription ?? '';
 
   // Options canoniques chargées depuis la metadata Airtable.
   const [selectOptions, setSelectOptions] = useState<SelectOptions>(EMPTY_OPTIONS);
@@ -197,7 +199,8 @@ export default function ProjetEditor({ projet }: Props) {
           certifications: certifications.split(/[,;]+/).map(s => s.trim()).filter(Boolean),
           motsCles: motsCles.split(/[,;]+/).map(s => s.trim()).filter(Boolean),
           tagsExportWp,
-          metaDescription: metaDescription || undefined,
+          // metaDescription : champ aiText non éditable via l'API Airtable
+          // (lecture seule dans l'UI) — on ne l'envoie pas.
         }),
       });
       const data = await res.json();
@@ -364,14 +367,13 @@ export default function ProjetEditor({ projet }: Props) {
               <label style={LABEL}>Méta description SEO</label>
               <textarea
                 value={metaDescription}
-                onChange={e => setMetaDescription(e.target.value)}
                 rows={5}
-                style={TEXTAREA}
+                readOnly
+                style={{ ...TEXTAREA, background: color.grisTresClair, color: ui.disabled, cursor: 'not-allowed' }}
                 placeholder="Méta description envoyée à Yoast (≈ 150-160 caractères)…"
               />
               <p style={HINT}>
-                Champ IA généré par Airtable depuis « Description projet ».
-                Modifiable ici — votre saisie remplace la valeur générée.
+                Champ IA généré par Airtable depuis en lecture seule ici, modifiable dans Airtable si besoin.
               </p>
             </div>
           </div>
