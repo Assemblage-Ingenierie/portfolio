@@ -180,6 +180,8 @@ export async function appendToPoleGallery(payload: {
   title: string;
   description: string;
   link: string;
+  /** Ids de filtres PFG à assigner à la tuile (facultatif). */
+  filters?: number[];
 }): Promise<{ added: boolean; reason?: string; total?: number }> {
   const res = await fetch(`${wpSiteRoot()}/wp-json/assemblage/v1/pfg/append`, {
     method: 'POST',
