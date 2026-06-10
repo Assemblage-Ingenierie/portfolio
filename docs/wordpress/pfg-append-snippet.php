@@ -83,6 +83,42 @@ add_action('rest_api_init', function () {
     ));
 });
 
+/**
+ * POST /wp-json/assemblage/v1/pfg/gallery-flags
+ *   body JSON : { galleryId:int, logic?: 'and'|'or' }
+ *   réponse   : { ok:true, multi_filters, multi_filters_logic }
+ *
+ * Active la multi-sélection des filtres en logique ET (par défaut) sur une
+ * galerie : `multi_filters = '1'` + `multi_filters_logic = 'and'`. Ne touche à
+ * aucune autre clé de la meta. Allowlist + capability.
+ */
+add_action('rest_api_init', function () {
+    register_rest_route('assemblage/v1', '/pfg/gallery-flags', array(
+        'methods'  => 'POST',
+        'permission_callback' => function () { return current_user_can('edit_posts'); },
+        'callback' => function (WP_REST_Request $req) {
+            $galleryId = (int) $req->get_param('galleryId');
+            $logic     = $req->get_param('logic');
+            $logic     = ($logic === 'or') ? 'or' : 'and';
+
+            $allow = array(2461, 4904, 7826);
+            if (!in_array($galleryId, $allow, true)) {
+                return new WP_Error('forbidden_gallery', 'Galerie non autorisée', array('status' => 403));
+            }
+            $metaKey = 'awl_filter_gallery' . $galleryId;
+            $g = get_post_meta($galleryId, $metaKey, true);
+            if (!is_array($g)) {
+                return new WP_Error('no_meta', 'Meta galerie introuvable', array('status' => 500));
+            }
+            $g['multi_filters']       = '1';
+            $g['multi_filters_logic'] = $logic;
+            update_post_meta($galleryId, $metaKey, $g);
+            clean_post_cache($galleryId);
+            return array('ok' => true, 'multi_filters' => '1', 'multi_filters_logic' => $logic);
+        },
+    ));
+});
+
 add_action('rest_api_init', function () {
     register_rest_route('assemblage/v1', '/pfg/append', array(
         'methods'  => 'POST',
