@@ -52,6 +52,11 @@ export default function ProjetToolbar({
   const [statusSaveState, setStatusSaveState] = useState<'idle' | 'saving' | 'error'>('idle');
   // Modale de confirmation au clic sur "← Portfolio" si modifications non sauvegardées.
   const [showLeaveModal, setShowLeaveModal] = useState(false);
+  // Modale de confirmation au clic sur "Télécharger PDF" si la mise en page
+  // n'est pas sauvegardée (bandeau / photoCrops ne sont pas embarqués dans
+  // l'URL d'impression — seul manualConfig l'est — donc le PDF ne refléterait
+  // pas ces changements tant qu'ils ne sont pas persistés).
+  const [showPdfModal, setShowPdfModal] = useState(false);
 
   const { profile } = useAuth();
   const isAdmin = profile?.role === 'admin';
@@ -124,12 +129,29 @@ export default function ProjetToolbar({
     router.push('/');
   }
 
-  async function handleDownloadPdf() {
+  function doDownloadPdf() {
     const params = new URLSearchParams({ template });
     if ((template === 'Str-Env' || template === 'Dev') && manualConfig) {
       params.set('config', encodeConfig(manualConfig));
     }
     window.open(`/projet/${projet.slug}/print?${params.toString()}`, '_blank');
+  }
+
+  function handleDownloadPdf() {
+    // Mise en page non sauvegardée → demander confirmation avant le téléchargement.
+    if (isDirty) {
+      setShowPdfModal(true);
+      return;
+    }
+    doDownloadPdf();
+  }
+
+  async function handleSaveAndDownloadPdf() {
+    const ok = await handleSaveLayout();
+    if (ok) {
+      setShowPdfModal(false);
+      doDownloadPdf();
+    }
   }
 
   const btn: React.CSSProperties = {
@@ -277,6 +299,51 @@ export default function ProjetToolbar({
                 style={{ ...btn, background: 'var(--ai-rouge)', color: 'white', border: 'none' }}
               >
                 {saveState === 'saving' ? 'Sauvegarde…' : 'Sauvegarder la mise en page'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showPdfModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 9999,
+          }}
+          onClick={() => setShowPdfModal(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'white', padding: '24px 28px', borderRadius: 4,
+              maxWidth: 480, width: '90%',
+              fontFamily: 'var(--sans)', color: 'var(--ai-noir)',
+              boxShadow: '0 10px 30px rgba(0,0,0,0.25)',
+            }}
+          >
+            <h2 style={{ fontFamily: 'var(--serif)', fontSize: '14pt', fontWeight: 500, margin: '0 0 12px', color: 'var(--ai-violet)' }}>
+              Vous n&apos;avez pas sauvegardé la mise en page
+            </h2>
+            <p style={{ fontSize: '10pt', lineHeight: 1.5, margin: '0 0 20px', color: 'var(--ai-noir70)' }}>
+              Le PDF ne reflétera pas vos modifications tant qu&apos;elles ne sont pas enregistrées. Que voulez-vous faire ?
+            </p>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+              <button
+                onClick={() => setShowPdfModal(false)}
+                style={{ ...btn, background: 'white', color: 'var(--ai-noir70)', border: `1px solid ${color.gris}` }}
+              >
+                Retour à la mise en page
+              </button>
+              <button
+                onClick={handleSaveAndDownloadPdf}
+                disabled={saveState === 'saving'}
+                style={{ ...btn, background: 'var(--ai-rouge)', color: 'white', border: 'none' }}
+              >
+                {saveState === 'saving' ? 'Sauvegarde…' : 'Sauvegarder et télécharger la fiche PDF'}
               </button>
             </div>
           </div>

@@ -26,6 +26,8 @@ import {
   FIELD_CERTIFICATION,
   FIELD_PRESTATION_ASSEMBLAGE,
   FIELD_POLE,
+  FIELD_TAGS_EXPORT_WP,
+  FIELD_META_DESCRIPTION,
 } from './mappers';
 
 export interface ProjetEditableFields {
@@ -59,6 +61,10 @@ export interface ProjetEditableFields {
   motsCles?: string[];
   /** Champ rich text long "Prestation Assemblage" (field id flddrMLBDxOc8r4lJ). */
   prestationAssemblage?: string;
+  /** Multi-select "Tags export WP" (fld2y9rIk9DVEf9eo) — catégories WordPress. */
+  tagsExportWp?: string[];
+  /** Méta description SEO (aiText fldQmXMJpDY7TrbfL) — override manuel. */
+  metaDescription?: string;
   savedManualConfig?: ManualConfig;
   bandeauConfig?: BandeauConfig;
   photoCrops?: Record<string, CropData>;
@@ -110,6 +116,11 @@ export async function updateProjetFields(slug: string, fields: ProjetEditableFie
   if (fields.certifications !== undefined) update[FIELD_CERTIFICATION]  = fields.certifications.join('\n');
   if (fields.motsCles !== undefined)       update['Mots-clés']          = fields.motsCles.join(', ');
   if (fields.prestationAssemblage !== undefined) update[FIELD_PRESTATION_ASSEMBLAGE] = fields.prestationAssemblage;
+  // Multi-select WP + override de la méta description SEO. Écrits par FIELD ID
+  // (renommables). La méta description est un champ aiText : Airtable accepte un
+  // override manuel via l'API (le contenu généré par l'IA est alors remplacé).
+  if (fields.tagsExportWp !== undefined)    update[FIELD_TAGS_EXPORT_WP]   = fields.tagsExportWp;
+  if (fields.metaDescription !== undefined) update[FIELD_META_DESCRIPTION] = fields.metaDescription;
   // Config unifiée (bandeau + manuel) dans le même champ Airtable. On lit
   // l'existant pour merger correctement quand l'API ne reçoit qu'une des
   // deux sous-configs (ex. update bandeau seul ne doit pas effacer manuel).

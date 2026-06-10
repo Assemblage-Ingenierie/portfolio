@@ -99,6 +99,21 @@ export default function WordpressView({ projet }: { projet: Projet }) {
   }
 
   async function handlePublish() {
+    // Garde-fous SEO : on bloque l'export tant que les Tags export WP ou la
+    // méta description SEO ne sont pas renseignés (champs édités dans
+    // « Éditer les champs » → section Export Wordpress).
+    const errors: string[] = [];
+    if (!projet.tagsExportWp || projet.tagsExportWp.length === 0) {
+      errors.push('Veuillez renseigner les tags-web afin de publier la fiche.');
+    }
+    if (!projet.metaDescription || !projet.metaDescription.trim()) {
+      errors.push("La méta-description n'est pas remplie. C'est un champ IA généré par Airtable. Vérifiez que tous les champs nécessaires pour le faire tourner sont remplis.");
+    }
+    if (errors.length > 0) {
+      alert(errors.join('\n\n'));
+      return;
+    }
+
     if (isDirty && !confirm('Le style n’est pas sauvegardé : l’export utilisera la dernière version enregistrée. Continuer ?')) return;
     if (!confirm('Publier cette fiche sur WordPress (Export WP 1) en brouillon ?')) return;
     setPublishing(true);
