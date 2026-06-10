@@ -47,6 +47,16 @@ if (!function_exists('assemblage_pfg_append_callback')) {
         $title       = sanitize_text_field((string) $req->get_param('title'));
         $description = sanitize_text_field((string) $req->get_param('description'));
         $link        = esc_url_raw((string) $req->get_param('link'));
+        // Filtres PFG (ids globaux, ex. 1=Acier, 6=Neuf, 13=Espace public) :
+        // l'app les résout depuis les attributs du projet. Facultatif.
+        $filtersIn   = $req->get_param('filters');
+        $filterIds   = array();
+        if (is_array($filtersIn)) {
+            foreach ($filtersIn as $f) {
+                $fi = (int) $f;
+                if ($fi > 0 && !in_array($fi, $filterIds, true)) $filterIds[] = $fi;
+            }
+        }
 
         // 1. Garde-fous.
         $allow = array(2461, 4904, 7826);
@@ -83,47 +93,62 @@ if (!function_exists('assemblage_pfg_append_callback')) {
         }
 
         // Normalise les sous-structures attendues.
-        if (!isset($g['image-ids'])   || !is_array($g['image-ids']))   $g['image-ids']   = array();
-        if (!isset($g['image_title']) || !is_array($g['image_title'])) $g['image_title'] = array();
-        if (!isset($g['image-desc'])  || !is_array($g['image-desc']))  $g['image-desc']  = array();
-        if (!isset($g['slide-type'])  || !is_array($g['slide-type']))  $g['slide-type']  = array();
-        if (!isset($g['image-link'])  || !is_array($g['image-link']))  $g['image-link']  = array();
+        if (!isset($g['image-ids'])    || !is_array($g['image-ids']))    $g['image-ids']    = array();
+        if (!isset($g['image_title'])  || !is_array($g['image_title']))  $g['image_title']  = array();
+        if (!isset($g['image-desc'])   || !is_array($g['image-desc']))   $g['image-desc']   = array();
+        if (!isset($g['slide-type'])   || !is_array($g['slide-type']))   $g['slide-type']   = array();
+        if (!isset($g['image-link'])   || !is_array($g['image-link']))   $g['image-link']   = array();
+        if (!isset($g['filters'])      || !is_array($g['filters']))      $g['filters']      = array();
+        if (!isset($g['filter-image']) || !is_array($g['filter-image'])) $g['filter-image'] = array();
 
         $idStr = (string) $imageId;
 
-        // 2. Idempotence : déjà présent par lien OU par image id → ne rien faire.
+        // 2. Filtres PFG : on (re)pose l'assignation de CETTE image AVANT la vérif
+        //    d'idempotence → un re-clic répare/MAJ les filtres d'une tuile existante.
+        //    `filters[idStr] = [ids]` + `filter-image[fid][] = idStr` (sans doublon).
+        //    `filters` vide => on ne touche pas (la tuile reste sous « all »).
+        if (!empty($filterIds)) {
+            $g['filters'][$idStr] = array_map('strval', $filterIds);
+            foreach ($filterIds as $fid) {
+                $fidStr = (string) $fid;
+                if (!isset($g['filter-image'][$fidStr]) || !is_array($g['filter-image'][$fidStr])) {
+                    $g['filter-image'][$fidStr] = array();
+                }
+                if (!in_array($idStr, array_map('strval', $g['filter-image'][$fidStr]), true)) {
+                    $g['filter-image'][$fidStr][] = $idStr;
+                }
+            }
+        }
+
+        // 3. Idempotence côté TUILE : si déjà présente (par lien ou image id), on
+        //    ne ré-ajoute pas dans les listes — mais on sauve quand même (les
+        //    filtres ci-dessus / le titre ont pu changer).
         $linkExists = in_array($link, array_values($g['image-link']), true);
         $idExists   = in_array($idStr, array_map('strval', $g['image-ids']), true);
-        if ($linkExists || $idExists) {
-            return array(
-                'added'  => false,
-                'reason' => 'duplicate',
-                'total'  => count($g['image-ids']),
-            );
+        $isDuplicate = ($linkExists || $idExists);
+
+        if (!$isDuplicate) {
+            // Append : listes parallèles (même position) + maps par id.
+            $g['image-ids'][]   = $idStr;
+            $g['image_title'][] = $title;
+            $g['image-desc'][]  = $description;
+            $g['slide-type'][$idStr] = 'image';
+            $g['image-link'][$idStr] = $link;
         }
 
-        // 3. Append : on pousse dans les listes parallèles (même position) et on
-        //    renseigne les maps par id. Pas de filtre → tuile visible en « all ».
-        $g['image-ids'][]   = $idStr;
-        $g['image_title'][] = $title;
-        $g['image-desc'][]  = $description;
-        $g['slide-type'][$idStr] = 'image';
-        $g['image-link'][$idStr] = $link;
-
-        $ok = update_post_meta($galleryId, $metaKey, $g);
-        if ($ok === false) {
-            // update_post_meta renvoie false si la valeur est identique — ici on
-            // a forcément modifié le tableau, donc false = vraie erreur.
-            return new WP_Error('save_failed', 'Échec écriture meta', array('status' => 500));
-        }
+        // Sauvegarde unique (le titre de l'attachment a été géré via wp_update_post).
+        // On n'erreur pas sur `false` : update_post_meta renvoie false si la valeur
+        // est inchangée (cas possible d'un re-clic strictement identique).
+        update_post_meta($galleryId, $metaKey, $g);
 
         // Purge le cache objet du post galerie (le rendu front peut rester caché
         // par un plugin de cache de page — non géré ici).
         clean_post_cache($galleryId);
 
         return array(
-            'added' => true,
-            'total' => count($g['image-ids']),
+            'added'  => !$isDuplicate,
+            'reason' => $isDuplicate ? 'duplicate' : null,
+            'total'  => count($g['image-ids']),
         );
     }
 }

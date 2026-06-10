@@ -14,6 +14,40 @@
  * Password de l'app y a accès via Basic auth. AUCUNE écriture.
  */
 
+// --- Étape A : registre des filtres PFG (libellé <-> id) -------------------
+// Les libellés des filtres ne sont PAS dans la meta de galerie → ils vivent
+// probablement dans une wp_option globale. Cette route (lecture seule) liste
+// les options dont le nom ressemble à PFG pour qu'on identifie le registre.
+add_action('rest_api_init', function () {
+    register_rest_route('assemblage/v1', '/pfg/options', array(
+        'methods' => 'GET',
+        'permission_callback' => function () { return current_user_can('edit_posts'); },
+        'callback' => function () {
+            global $wpdb;
+            $rows = $wpdb->get_results(
+                "SELECT option_name FROM {$wpdb->options}
+                 WHERE option_name LIKE 'awl%'
+                    OR option_name LIKE '%pfg%'
+                    OR option_name LIKE '%portfolio%filter%'
+                    OR option_name LIKE '%filter%gallery%'",
+                ARRAY_A
+            );
+            $out = array();
+            foreach ($rows as $r) {
+                $name = $r['option_name'];
+                $val  = get_option($name);
+                // On tronque les très grosses valeurs pour rester lisible.
+                $json = wp_json_encode($val);
+                $out[$name] = array(
+                    'type'    => gettype($val),
+                    'preview' => is_string($json) ? substr($json, 0, 4000) : null,
+                );
+            }
+            return array('count' => count($out), 'options' => $out);
+        },
+    ));
+});
+
 add_action('rest_api_init', function () {
     register_rest_route('assemblage/v1', '/pfg/diag/(?P<id>\d+)', array(
         'methods'  => 'GET',
