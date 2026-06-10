@@ -1,0 +1,381 @@
+{
+  "galleryId": 7826,
+  "metaKey": "awl_filter_gallery7826",
+  "capturedAt": "2026-06-10",
+  "config": {
+    "image-ids": [
+      "11348",
+      "12464",
+      "11988",
+      "11317",
+      "13218",
+      "8471",
+      "11305",
+      "13217",
+      "13234",
+      "13219",
+      "13221",
+      "8164",
+      "11352",
+      "13220",
+      "8516",
+      "9193",
+      "9153",
+      "8493",
+      "11771",
+      "13484",
+      "8406",
+      "11402",
+      "11387",
+      "11418",
+      "11367",
+      "13241"
+    ],
+    "image_title": [
+      "Extension et réhabilitation d’un groupe scolaire",
+      "Restructuration et extension d’un immeuble MML",
+      "Réhabilitation et extension de Ecole Saint-Bernard",
+      "Rénovation du bâtiment scolaire de la MELH",
+      "Rénovation de la Halle aux Oliviers de la Bellevilloise",
+      "Réhabilitation du pavillon sur dalle – Site Keller",
+      "Construction d’un ensemble de chalets",
+      "Construction d’un groupe scolaire et centre de loisirs",
+      "Rénovation de la halle du marché du canal couvert et aménagement de ses espaces extérieurs",
+      "Réhabilitation et extension d’un groupe scolaire – MGP",
+      "Réhabilitation de la Résidence LODS",
+      "Rénovation d’un bâtiment de la Fondation La Ruche – Seydoux",
+      "Construction neuve du Sleep’in",
+      "Réhabilitation de 2 bâtiments",
+      "Rénovation d’un immeuble de bureau boulevard Brune",
+      "Construction d’une pension de famille",
+      "Construction de deux bâtiments d’artisanat",
+      "Construction d’un crématorium",
+      "Projet d’efficacité énergétique des bâtiments publics",
+      "Projet d’efficacité énergétique des bâtiments publics",
+      "Aménagement îlot aux poissons",
+      "Réhabilitation du Fort de Lahore",
+      "Construction Collège de Naplouse",
+      "Pot@maï – Unité de Services Essentiels",
+      "Projet d’appui aux EFMT en Tunisie",
+      "Réhabilitation/Extension pour les Jeux Méditerranéens 2030"
+    ],
+    "slide-type": {
+      "8164": "image",
+      "8406": "image",
+      "8471": "image",
+      "8493": "image",
+      "8516": "image",
+      "9153": "image",
+      "9193": "image",
+      "11305": "image",
+      "11317": "image",
+      "11348": "image",
+      "11352": "image",
+      "11367": "image",
+      "11387": "image",
+      "11402": "image",
+      "11418": "image",
+      "11771": "image",
+      "11988": "image",
+      "12464": "image",
+      "13217": "image",
+      "13218": "image",
+      "13219": "image",
+      "13220": "image",
+      "13221": "image",
+      "13234": "image",
+      "13241": "image",
+      "13484": "image"
+    },
+    "image-desc": [
+      "Roubaix (59), France",
+      "Paris 18 (75), France",
+      "Villepreux (78), France",
+      "Saint-Denis (93), France",
+      "Paris 20 (75), France",
+      "Paris 15 (75), France",
+      "Arâches-la-Frasse (74), France",
+      "Amiens (80), France",
+      "Mulhouse (68), France",
+      "Gennevilliers (92), France",
+      "Bagneux (92), France",
+      "Paris 15 (75), France",
+      "Paris 18 (75), France",
+      "Nanterre (92), France",
+      "Paris 13 (75), France",
+      "Paris 14 (75), France",
+      "Romainville (93), France",
+      "Niort (79), France",
+      "Moldavie",
+      "Argentine",
+      "Fort-de-France (97), Martinique",
+      "Lahore, Pakistan",
+      "Naplouse, Palestine",
+      "République du Congo",
+      "Tunisie",
+      "Kosovo"
+    ],
+    "image-link": {
+      "8164": "https://assemblage.net/renovation-structure-dun-batiment-sur-le-site-de-la-fondation-la-ruche-seydoux/",
+      "8406": "https://assemblage.net/amenagement-de-lilot-marche-aux-poissons/",
+      "8471": "https://assemblage.net/rehabilitation-du-pavillon-sur-dalle-site-keller/",
+      "8493": "https://assemblage.net/construction-dun-crematorium/",
+      "8516": "https://assemblage.net/renovation-dun-immeuble-de-bureau-boulevard-brune-2/",
+      "9153": "https://assemblage.net/construction-de-deux-batiments-a-destination-dartisanat/",
+      "9193": "https://assemblage.net/construction-dune-pension-de-famille-de-24-logements-et-dun-commerce/",
+      "11305": "https://assemblage.net/?p=11304&preview=true",
+      "11317": "https://assemblage.net/renovation-du-batiment-scolaire-de-la-melh/",
+      "11348": "https://assemblage.net/extension-et-rehabilitation-dun-groupe-scolaire/",
+      "11352": "https://assemblage.net/environnement-structure-std-bois-paille-medico-social-logement/",
+      "11367": "https://assemblage.net/projet-dappui-aux-efmt-en-tunisie-2/",
+      "11387": "https://assemblage.net/construction-de-libn-sina-college-de-naplouse-2/",
+      "11402": "https://assemblage.net/rehabilitation-du-fort-de-lahore-2/",
+      "11418": "https://assemblage.net/potmai-unite-de-services-essentiels/",
+      "11771": "https://assemblage.net/projet-defficacite-energetique-des-batiments-publics-2/",
+      "11988": "https://assemblage.net/ecole-saint-bernard-rehabilitation-et-extension-2/",
+      "12464": "https://assemblage.net/restructuration-et-extension-dun-immeuble/",
+      "13217": "https://assemblage.net/construction-dun-groupe-scolaire-et-centre-de-loisirs/",
+      "13218": "https://assemblage.net/renovation-de-la-halle-aux-oliviers-de-la-bellevilloise/",
+      "13219": "https://assemblage.net/rehabilitation-et-extension-groupe-scolaire-henri-wallon-icu/",
+      "13220": "https://assemblage.net/rehabilitation-de-2-batiments-de-logements-nanterre/",
+      "13221": "https://assemblage.net/rehabilitation-de-la-residence-lods/",
+      "13234": "https://assemblage.net/renovation-de-la-halle-du-marche-du-canal-couvert-et-amenagement-de-ses-espaces-exterieurs/",
+      "13241": "https://assemblage.net/rehabilitation-extension-pour-les-jeux-mediterraneens-2030/",
+      "13484": "https://assemblage.net/projet-defficacite-energetique-des-batiments-publics/"
+    },
+    "filters": {
+      "8164": [
+        "15",
+        "16",
+        "17"
+      ],
+      "8406": [
+        "13",
+        "16"
+      ],
+      "8471": [
+        "5",
+        "15",
+        "18"
+      ],
+      "8493": [
+        "6",
+        "11",
+        "16"
+      ],
+      "8516": [
+        "5",
+        "15",
+        "18"
+      ],
+      "9153": [
+        "6",
+        "11",
+        "15"
+      ],
+      "9193": [
+        "6",
+        "15",
+        "17"
+      ],
+      "11305": [
+        "6",
+        "15",
+        "17"
+      ],
+      "11317": [
+        "16",
+        "19"
+      ],
+      "11348": [
+        "10",
+        "15",
+        "19"
+      ],
+      "11352": [
+        "6",
+        "11",
+        "15",
+        "17"
+      ],
+      "11367": [
+        "11",
+        "16",
+        "19"
+      ],
+      "11387": [
+        "10",
+        "16",
+        "19"
+      ],
+      "11402": [
+        "5",
+        "8",
+        "16"
+      ],
+      "11418": [
+        "12",
+        "15",
+        "16"
+      ],
+      "11771": [
+        "16",
+        "20"
+      ],
+      "11988": [
+        "5",
+        "10",
+        "15",
+        "19"
+      ]
+    },
+    "filter-image": {
+      "5": [
+        "11988",
+        "8471",
+        "8516",
+        "11402"
+      ],
+      "6": [
+        "11305",
+        "11352",
+        "9193",
+        "9153",
+        "8493"
+      ],
+      "8": [
+        "11402"
+      ],
+      "10": [
+        "11348",
+        "11988",
+        "11387"
+      ],
+      "11": [
+        "11352",
+        "9153",
+        "8493",
+        "11367"
+      ],
+      "12": [
+        "11418"
+      ],
+      "13": [
+        "8406"
+      ],
+      "15": [
+        "11348",
+        "11988",
+        "8471",
+        "11305",
+        "8164",
+        "11352",
+        "8516",
+        "9193",
+        "9153",
+        "11418"
+      ],
+      "16": [
+        "11317",
+        "8164",
+        "8493",
+        "11771",
+        "8406",
+        "11402",
+        "11387",
+        "11418",
+        "11367"
+      ],
+      "17": [
+        "11305",
+        "8164",
+        "11352",
+        "9193"
+      ],
+      "18": [
+        "8471",
+        "8516"
+      ],
+      "19": [
+        "11348",
+        "11988",
+        "11317",
+        "11387",
+        "11367"
+      ],
+      "20": [
+        "11771"
+      ]
+    },
+    "pfg_theme": "pfg_theme1",
+    "gallery_direction": "ltr",
+    "image_hover_effect_theme2": "overlay_zoom",
+    "image_hover_effect_one_2d": "hvr-buzz",
+    "image_hover_effect_two": "overlay_zoom",
+    "image_hover_effect_type": "2d",
+    "image_hover_effect_one": "hvr-buzz",
+    "title_color": "#020202",
+    "title_bg_color": "#f4f4f4",
+    "title_size2": "16",
+    "pfg_read_more": "hide",
+    "link_on_img": "yes",
+    "read_txt": "Read More",
+    "border_hide": "0",
+    "border_size": "0",
+    "border_color": "#FFFFFF",
+    "thumb_spacing": "6",
+    "thumb_spacing2": "2",
+    "title_thumb2": "show",
+    "title_color2": "#FFFFFF",
+    "title_bg_color2": "1",
+    "title_bg_opacity": "1",
+    "title_size": "20",
+    "border_hide2": "0",
+    "border_size2": "0",
+    "border_color2": "#FFFFFF",
+    "image_numbering2": "1",
+    "video_auto_play": "0",
+    "link_nofollow": "nofollow",
+    "link_noopener": "noopener",
+    "link_noreferrer": "noreferrer",
+    "hide_filters": "0",
+    "hide_all_button": "0",
+    "all_txt": "Tous",
+    "sort_filter_order": "0",
+    "pfg_filter_style": "pfg_filter_style2",
+    "filter_position": "left",
+    "multi_filters": "0",
+    "multi_filters_logic": "or",
+    "ascending": "0",
+    "asc_txt": "Asc",
+    "descending": "0",
+    "desc_txt": "Desc",
+    "shuffle": "0",
+    "shuffle_txt": "Shuffle",
+    "search_box": "1",
+    "search_txt": "Rechercher",
+    "filter_bg_color": "#dd0000",
+    "light_boxt1": "6",
+    "pf_gallery_load_more": "no",
+    "pf_limit": "9",
+    "load_text": "Load More",
+    "load_button_color": "#B2B5BC",
+    "load_text_color": "#B2B5BC",
+    "no_more_text": "No More Images",
+    "gal_size": "thumbnail_500_x_500",
+    "col_large_desktops": "col-lg-4",
+    "col_desktops": "col-md-4",
+    "col_tablets": "col-sm-6",
+    "col_phones": "col-12",
+    "image_hover_effect_four": "hvr-box-shadow-outset",
+    "title_thumb": "show",
+    "image_numbering": "0",
+    "no_spacing": "0",
+    "gray_scale": "0",
+    "url_target": "_self",
+    "filter_title_color": "#4a4747",
+    "light-box": "4",
+    "bootstrap_disable": "no",
+    "custom-css": "/*hauteur boite sous img portfolio*/\r\n.pfg_title_box_7826 {\r\n    position: relative;\r\n    background-color: #f4f4f4;\r\n    padding: 20px 20px;\r\n        padding-top: 20px;\r\n        padding-right: 20px;\r\n        padding-bottom: 0px;\r\n        padding-left: 20px;\r\n    border: 1px solid #d5d8dd;\r\n}\r\n\r\n\r\n.pfg_title_7826 {\r\n    margin-top: 0;\r\n    font-size: 16px !important;\r\n    margin-bottom: 0;\r\n    color: #30323e;\r\n}\r\n\r\n.simplefilter_7826 li {\r\nfont-size: 14px;\r\n\t\t}\r\n\r\n\r\n/*gestion filtre portfolio*/\r\n@media only screen and (max-device-width : 767px) {\r\n.simplefilter_7826 li {\r\npadding-top: 15px;\r\npadding-right: 13px;\r\npadding-bottom: 15px;\r\npadding-left: 0px;\r\n}\r\n}\r\n\r\n/*gestion typo portfolio*/\r\n@media only screen and (max-device-width : 767px) {\r\n.simplefilter_7826 li {\r\n    font-size: 12px;\r\ncolor: #000000;\r\nfont-weight: 600;\r\n}\r\n}\r\n\r\n/*couleur texte ville*/\r\n.pfg_desc_7826 {\r\n    font-size: 12px;\r\n    color: #000;\r\n}\r\n"
+  }
+}

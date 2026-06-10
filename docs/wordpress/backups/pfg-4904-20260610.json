@@ -1,0 +1,298 @@
+{
+  "galleryId": 4904,
+  "metaKey": "awl_filter_gallery4904",
+  "capturedAt": "2026-06-10",
+  "config": {
+    "image-ids": [
+      "12894",
+      "12986",
+      "12324",
+      "13484",
+      "11370",
+      "11781",
+      "13241",
+      "8857",
+      "8875",
+      "8863",
+      "8852",
+      "8842",
+      "4834",
+      "13518",
+      "4635",
+      "4871",
+      "4894",
+      "4637",
+      "11387",
+      "8729",
+      "11418"
+    ],
+    "image_title": [
+      "Réhabilitation et extension du Musée National de Guinée",
+      "Réhabilitation du Fort de Lahore",
+      "Réhabilitation/Construction de 3 établissements de Formation professionnelle en Guinée",
+      "Projet d’efficacité énergétique des bâtiments publics",
+      "Réhabilitation/Extension de 4 écoles hôtelières en Tunisie",
+      "Projet d’efficacité énergétique des bâtiments publics",
+      "Réhabilitation/Extension pour les Jeux Méditerranéens 2030",
+      "Appui à la construction de Collèges de proximité en Côte d’Ivoire",
+      "Programmation et appui à la réhabilitation du Lycée Scientifique de Yamoussoukro en Côte d’Ivoire",
+      "PAES : Réhabilitation d’une quarantaine d’établissements scolaires aux Comores",
+      "PISE : Dispositif de gestion du patrimoine scolaire",
+      "Réhabilitation/Construction de 4 établissements Formation professionnelle au Rwanda",
+      "Viabilisation d’un quartier informel",
+      "Réhabilitation de 2 villas patrimoniales en musées",
+      "Ajout d’une passerelle piétonne en acier Corten",
+      "Aménagement de murs de soutènement dans un parc",
+      "Viabilisation du site des lauriers",
+      "Renforcement parasismiques de pavillons en maçonnerie",
+      "Construction Collège de Naplouse",
+      "Réhabilitation/Construction de 6 établissements de Formation professionnelle aux Comores",
+      "Pot@maï – Unité de Services Essentiels"
+    ],
+    "slide-type": {
+      "4635": "image",
+      "4637": "image",
+      "4834": "image",
+      "4871": "image",
+      "4894": "image",
+      "8729": "image",
+      "8842": "image",
+      "8852": "image",
+      "8857": "image",
+      "8863": "image",
+      "8875": "image",
+      "11370": "image",
+      "11387": "image",
+      "11418": "image",
+      "11781": "image",
+      "12324": "image",
+      "12894": "image",
+      "12986": "image",
+      "13241": "image",
+      "13484": "image",
+      "13518": "image"
+    },
+    "image-desc": [
+      "Guinée",
+      "Lahore, Pakistan",
+      "Guinée ",
+      "Argentine",
+      "Tunisie",
+      "Moldavie",
+      "Kosovo",
+      "Côte d'Ivoire",
+      "Yamoussoukro, Côte d'Ivoire",
+      "Comores",
+      "Gabon",
+      "Rwanda",
+      "Indonésie",
+      "Bolivie",
+      "Port-Au-Prince, Haïti",
+      "Port-Au-Prince, Haïti",
+      "Port-Au-Prince, Haïti",
+      "Port-au-Prince, Haïti",
+      "Naplouse, Palestine",
+      "Comores",
+      "République du Congo"
+    ],
+    "image-link": {
+      "4635": "https://assemblage.net/passerelle-pietonne-en-corten/",
+      "4637": "https://assemblage.net/port-au-prince-renforcement-parasismiques-de-pavillons-en-maconnerie/",
+      "4834": "https://assemblage.net/viabilisation-dun-quartier-informel/",
+      "4871": "https://assemblage.net/murs-de-soutenement-dans-un-parc/",
+      "4894": "https://assemblage.net/viabilisation-du-site-des-lauriers/",
+      "8729": "https://assemblage.net/projet-profi-rehabilitation-construction-de-6-etablissements-formation-professionnelle-aux-comores/",
+      "8842": "https://assemblage.net/projet-after-ii-rehabilitation-extension-de-4-etablissements-formation-professionnelle/",
+      "8852": "https://assemblage.net/projet-pise-dispositif-de-gestion-du-patrimoine-scolaire-au-gabon-nettoyage-entretien-maintenance-rehabilitation-2/",
+      "8857": "https://assemblage.net/c2d-education-pret-souverain-appui-a-la-construction-de-colleges-de-proximite-en-cote-divoire/",
+      "8863": "https://assemblage.net/rehabilitation-40-etablissements-scolaires-aux-comores/",
+      "8875": "https://assemblage.net/rehabilitation-lsy-cote-d-ivoire/",
+      "11370": "https://assemblage.net/projet-dappui-aux-efmt-en-tunisie-2/",
+      "11387": "https://assemblage.net/construction-de-libn-sina-college-de-naplouse-2/",
+      "11418": "https://assemblage.net/potmai-unite-de-services-essentiels-2/",
+      "11781": "https://assemblage.net/projet-defficacite-energetique-des-batiments-publics-2/",
+      "12324": "https://assemblage.net/projet-paied-rehabilitation-construction-de-3-etablissements-formation-professionnelle-au-rwanda-2/",
+      "12894": "https://assemblage.net/projet-mng/",
+      "12986": "https://assemblage.net/rehabilitation-du-fort-de-lahore-2/",
+      "13241": "https://assemblage.net/rehabilitation-extension-pour-les-jeux-mediterraneens-2030/?preview_id=13222&preview_nonce=ccd0be5a79&preview=true",
+      "13484": "https://assemblage.net/projet-defficacite-energetique-des-batiments-publics/",
+      "13518": "https://assemblage.net/rehabilitation-de-2-villas-patrimoniales-en-musees/"
+    },
+    "filters": {
+      "4635": [
+        "11"
+      ],
+      "4637": [
+        "11"
+      ],
+      "4834": [
+        "12",
+        "14"
+      ],
+      "4871": [
+        "11",
+        "13"
+      ],
+      "4894": [
+        "11"
+      ],
+      "8729": [
+        "5",
+        "6",
+        "10"
+      ],
+      "8842": [
+        "5",
+        "6",
+        "10"
+      ],
+      "8852": [
+        "10"
+      ],
+      "8857": [
+        "6",
+        "10"
+      ],
+      "8863": [
+        "5",
+        "6",
+        "10"
+      ],
+      "8875": [
+        "5",
+        "10"
+      ],
+      "11370": [
+        "10",
+        "20"
+      ],
+      "11387": [
+        "6",
+        "10"
+      ],
+      "11418": [
+        "11",
+        "12"
+      ],
+      "11781": [
+        "20"
+      ]
+    },
+    "filter-image": {
+      "5": [
+        "8875",
+        "8863",
+        "8842",
+        "8729"
+      ],
+      "6": [
+        "8857",
+        "8863",
+        "8842",
+        "11387",
+        "8729"
+      ],
+      "10": [
+        "11370",
+        "8857",
+        "8875",
+        "8863",
+        "8852",
+        "8842",
+        "11387",
+        "8729"
+      ],
+      "11": [
+        "4635",
+        "4871",
+        "4894",
+        "4637",
+        "11418"
+      ],
+      "12": [
+        "4834",
+        "11418"
+      ],
+      "13": [
+        "4871"
+      ],
+      "14": [
+        "4834"
+      ],
+      "20": [
+        "11370",
+        "11781"
+      ]
+    },
+    "pfg_theme": "pfg_theme1",
+    "gallery_direction": "ltr",
+    "image_hover_effect_theme2": "overlay_zoom",
+    "image_hover_effect_one_2d": "hvr-buzz",
+    "image_hover_effect_two": "overlay_zoom",
+    "image_hover_effect_type": "2d",
+    "image_hover_effect_one": "hvr-buzz",
+    "title_color": "#000000",
+    "title_bg_color": "#edeef0",
+    "title_size2": "14",
+    "pfg_read_more": "hide",
+    "link_on_img": "yes",
+    "read_txt": "Read More",
+    "border_hide": "0",
+    "border_size": "0",
+    "border_color": "#FFFFFF",
+    "thumb_spacing": "6",
+    "thumb_spacing2": "2",
+    "title_thumb2": "show",
+    "title_color2": "#FFFFFF",
+    "title_bg_color2": "1",
+    "title_bg_opacity": "1",
+    "title_size": "20",
+    "border_hide2": "0",
+    "border_size2": "0",
+    "border_color2": "#FFFFFF",
+    "image_numbering2": "1",
+    "video_auto_play": "0",
+    "link_nofollow": "nofollow",
+    "link_noopener": "noopener",
+    "link_noreferrer": "noreferrer",
+    "hide_filters": "0",
+    "hide_all_button": "0",
+    "all_txt": "Tous",
+    "sort_filter_order": "0",
+    "pfg_filter_style": "pfg_filter_style2",
+    "filter_position": "left",
+    "multi_filters": "0",
+    "multi_filters_logic": "or",
+    "ascending": "0",
+    "asc_txt": "Asc",
+    "descending": "0",
+    "desc_txt": "Desc",
+    "shuffle": "0",
+    "shuffle_txt": "Shuffle",
+    "search_box": "1",
+    "search_txt": "Rechercher",
+    "filter_bg_color": "#dd0000",
+    "light_boxt1": "6",
+    "pf_gallery_load_more": "no",
+    "pf_limit": "9",
+    "load_text": "Load More",
+    "load_button_color": "#B2B5BC",
+    "load_text_color": "#B2B5BC",
+    "no_more_text": "No More Images",
+    "gal_size": "thumbnail_500_x_500",
+    "col_large_desktops": "col-lg-4",
+    "col_desktops": "col-md-4",
+    "col_tablets": "col-sm-6",
+    "col_phones": "col-12",
+    "image_hover_effect_four": "hvr-box-shadow-outset",
+    "title_thumb": "show",
+    "image_numbering": "0",
+    "no_spacing": "0",
+    "gray_scale": "0",
+    "url_target": "_self",
+    "filter_title_color": "#4a4747",
+    "light-box": "4",
+    "bootstrap_disable": "no",
+    "custom-css": "/*hauteur boite sous img portfolio*/\r\n.pfg_title_box_4904 {\r\n    position: relative;\r\n    background-color: #f4f4f4;\r\n    padding: 20px 20px;\r\n        padding-top: 20px;\r\n        padding-right: 20px;\r\n        padding-bottom: 0px;\r\n        padding-left: 20px;\r\n    border: 1px solid #d5d8dd;\r\n}\r\n\r\n\r\n.pfg_title_4904 {\r\n    margin-top: 0;\r\n    font-size: 16px;\r\n    margin-bottom: 0;\r\n    color: #30323e;\r\n}\r\n\r\n.simplefilter_4904 li {\r\nfont-size: 14px;\r\n\t\t}\r\n\r\n/*gestion filtre portfolio*/\r\n@media only screen and (max-device-width : 767px) {\r\n.simplefilter_4904 li {\r\npadding-top: 15px;\r\npadding-right: 13px;\r\npadding-bottom: 15px;\r\npadding-left: 0px;\r\n}\r\n}\r\n\r\n/*gestion typo portfolio*/\r\n@media only screen and (max-device-width : 767px) {\r\n.simplefilter_4904 li {\r\n    font-size: 12px;\r\ncolor: #000000;\r\nfont-weight: 600;\r\n}\r\n}\r\n\r\n/*couleur texte ville*/\r\n.pfg_desc_4904 {\r\n    font-size: 12px;\r\n    color: #000;\r\n}"
+  }
+}

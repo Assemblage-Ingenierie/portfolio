@@ -5,6 +5,8 @@ import {
   extractWpPostId,
   findPublishedPostBySlug,
   getPostContent,
+  addProjetToPoleGalleries,
+  type PoleGalleryResult,
 } from '@/lib/wordpress';
 import { requireApprovedUser } from '@/lib/supabase/requireApprovedUser';
 
@@ -101,11 +103,25 @@ export async function POST(
       updatedStatus: updated.status,
     });
 
+    // 4. Ajout (non-bloquant) du projet sur sa/ses page(s) de pôle. Un échec
+    //    galerie NE DOIT PAS faire échouer la promotion en production.
+    let gallery: PoleGalleryResult[] | undefined;
+    try {
+      gallery = await addProjetToPoleGalleries(projet, {
+        link: updated.url,
+        imageId: draftContent.featured_media ?? 0,
+      });
+      console.log('[WP-UPDATE-PROD] gallery', gallery);
+    } catch (galErr) {
+      console.warn('Ajout galerie pôle échoué (non-fatal):', galErr);
+    }
+
     return NextResponse.json({
       prodId: updated.id,
       prodUrl: updated.url,
       draftId,
       draftUrl: draftUrlFromAirtable,
+      gallery,
     });
   } catch (err) {
     console.error('Update-prod error:', err);

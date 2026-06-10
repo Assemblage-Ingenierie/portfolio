@@ -1,9 +1,14 @@
+function wpSiteRoot(): string {
+  // Racine du site, sans suffixe `/wp-json/...` — accepte `https://site.tld`
+  // ou `https://site.tld/wp-json/wp/v2`.
+  return process.env.WP_BASE_URL!.replace(/\/$/, '').replace(/\/wp-json\/wp\/v2$/, '');
+}
+
 function wpApi(): string {
   // Accepte indifféremment `https://site.tld` ou `https://site.tld/wp-json/wp/v2`
   // pour éviter que les requêtes finissent en `/wp-json/wp/v2/wp-json/wp/v2/...`
   // (cause de publications qui n'arrivent jamais en brouillon).
-  const base = process.env.WP_BASE_URL!.replace(/\/$/, '').replace(/\/wp-json\/wp\/v2$/, '');
-  return `${base}/wp-json/wp/v2`;
+  return `${wpSiteRoot()}/wp-json/wp/v2`;
 }
 
 function authHeaders(): Record<string, string> {
@@ -159,6 +164,41 @@ export async function createOrUpdatePost(
     type: data.type ?? 'unknown',
     author: data.author ?? 0,
   };
+}
+
+/**
+ * Ajoute une tuile à une galerie « Portfolio Filter Gallery Premium » via
+ * l'endpoint custom `POST /wp-json/assemblage/v1/pfg/append` (snippet Code
+ * Snippets, cf. docs/wordpress/pfg-append-snippet.php).
+ *
+ * L'endpoint est idempotent (pas de doublon par lien) et borné à l'allowlist
+ * des galeries de pôle côté WP. Renvoie `{ added, reason?, total? }`.
+ */
+export async function appendToPoleGallery(payload: {
+  galleryId: number;
+  imageId: number;
+  title: string;
+  description: string;
+  link: string;
+  /** Ids de filtres PFG à assigner à la tuile (facultatif). */
+  filters?: number[];
+}): Promise<{ added: boolean; reason?: string; total?: number }> {
+  const res = await fetch(`${wpSiteRoot()}/wp-json/assemblage/v1/pfg/append`, {
+    method: 'POST',
+    headers: { ...authHeaders(), 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const raw = await res.text();
+  if (!res.ok) {
+    throw new Error(`PFG append ${res.status}: ${raw.slice(0, 300)}`);
+  }
+  let data: { added?: boolean; reason?: string; total?: number };
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    throw new Error(`PFG append a renvoyé du non-JSON (status ${res.status}): ${raw.slice(0, 200)}`);
+  }
+  return { added: Boolean(data.added), reason: data.reason, total: data.total };
 }
 
 export function extractWpPostId(url: string): number | undefined {

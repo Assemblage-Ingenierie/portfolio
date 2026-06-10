@@ -21,6 +21,30 @@ import WordpressPreview from './WordpressPreview';
  * - « Export WP 1 » lance la publication réelle (route /publish), qui relit la
  *   config persistée — donc sauvegarder AVANT d'exporter.
  */
+/** Résultat d'ajout d'une tuile sur une galerie de pôle (miroir de
+ *  PoleGalleryResult côté serveur — typé localement pour éviter d'embarquer le
+ *  client WordPress server-only dans le bundle client). */
+type PoleResult = {
+  pole: string;
+  label: string;
+  galleryId: number;
+  added: boolean;
+  reason?: string;
+  error?: string;
+};
+
+/** Rend un résumé lisible « ✓ Développement · Structure (déjà présent) ». */
+function poleResultsSummary(results: PoleResult[]): string {
+  if (results.length === 0) return 'aucun pôle';
+  return results
+    .map((r) => {
+      if (r.error) return `${r.label} (échec)`;
+      if (!r.added) return `${r.label} (déjà présent)`;
+      return r.label;
+    })
+    .join(' · ');
+}
+
 export default function WordpressView({ projet }: { projet: Projet }) {
   const router = useRouter();
   const wpTemplate = wpTemplateFor(projet.vignettePoles);
@@ -42,7 +66,9 @@ export default function WordpressView({ projet }: { projet: Projet }) {
   const [publishing, setPublishing] = useState(false);
   const [result, setResult] = useState<{ url?: string; error?: string; id?: number; categoryNames?: string[]; categoryCount?: number; hasMetaDescription?: boolean } | null>(null);
   const [promoting, setPromoting] = useState(false);
-  const [promoteResult, setPromoteResult] = useState<{ prodUrl?: string; prodId?: number; draftUrl?: string; error?: string } | null>(null);
+  const [promoteResult, setPromoteResult] = useState<{ prodUrl?: string; prodId?: number; draftUrl?: string; error?: string; gallery?: PoleResult[] } | null>(null);
+  const [addingPole, setAddingPole] = useState(false);
+  const [poleResult, setPoleResult] = useState<{ results?: PoleResult[]; error?: string } | null>(null);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
 
   const initialSnapshotRef = useRef<string>(
@@ -104,11 +130,30 @@ export default function WordpressView({ projet }: { projet: Projet }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Erreur inconnue');
-      setPromoteResult({ prodUrl: data.prodUrl, prodId: data.prodId, draftUrl: data.draftUrl });
+      setPromoteResult({ prodUrl: data.prodUrl, prodId: data.prodId, draftUrl: data.draftUrl, gallery: data.gallery });
     } catch (e) {
       setPromoteResult({ error: e instanceof Error ? e.message : 'Erreur' });
     } finally {
       setPromoting(false);
+    }
+  }
+
+  async function handleAddToPole() {
+    if (!confirm('Ajouter ce projet sur sa/ses page(s) de pôle WordPress (selon la Vignette pôle) ?')) return;
+    setAddingPole(true);
+    setPoleResult(null);
+    try {
+      const res = await authedFetch(`/api/projet/${projet.slug}/pole-gallery`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Erreur inconnue');
+      setPoleResult({ results: data.results });
+    } catch (e) {
+      setPoleResult({ error: e instanceof Error ? e.message : 'Erreur' });
+    } finally {
+      setAddingPole(false);
     }
   }
 
@@ -214,6 +259,20 @@ export default function WordpressView({ projet }: { projet: Projet }) {
           </button>
         )}
 
+        {/* « Ajouter à la page pôle » : vue admin uniquement. Ajoute la tuile du
+            projet sur la/les galerie(s) de pôle (Développement / Structure /
+            Environnement) selon la Vignette pôle. Nécessite un article publié. */}
+        {viewMode === 'admin' && (
+          <button
+            onClick={handleAddToPole}
+            disabled={addingPole}
+            title="Ajoute le projet sur sa/ses page(s) de pôle WordPress (galerie). Nécessite un article déjà publié."
+            style={{ ...btn, background: 'white', color: 'var(--ai-violet)' }}
+          >
+            {addingPole ? 'Ajout…' : 'Ajouter à la page pôle'}
+          </button>
+        )}
+
         {projet.urlWordpress && (
           <a href={projet.urlWordpress} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--ai-gris)', textDecoration: 'none', fontWeight: 600 }}>
             Voir sur le site →
@@ -238,9 +297,19 @@ export default function WordpressView({ projet }: { projet: Projet }) {
           <span style={{ color: feedback.succesClair, fontWeight: 600 }}>
             ✓ Production mise à jour #{promoteResult.prodId} —{' '}
             <a href={promoteResult.prodUrl} target="_blank" rel="noopener noreferrer" style={{ color: feedback.succesClair }}>voir l&apos;article publié</a>
+            {promoteResult.gallery && promoteResult.gallery.length > 0 && (
+              <span style={{ marginLeft: 8, fontWeight: 400 }}>· page pôle : {poleResultsSummary(promoteResult.gallery)}</span>
+            )}
           </span>
         )}
         {promoteResult?.error && <span style={{ color: feedback.erreurClair, fontWeight: 600 }}>✗ {promoteResult.error}</span>}
+
+        {poleResult?.results && (
+          <span style={{ color: feedback.succesClair, fontWeight: 600 }}>
+            ✓ Page pôle : {poleResultsSummary(poleResult.results)}
+          </span>
+        )}
+        {poleResult?.error && <span style={{ color: feedback.erreurClair, fontWeight: 600 }}>✗ {poleResult.error}</span>}
       </div>
 
       <div style={{ display: 'flex', alignItems: 'stretch', background: ui.fondPage, height: 'calc(100vh - 48px)', overflow: 'hidden' }}>
