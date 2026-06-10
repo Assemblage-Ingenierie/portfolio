@@ -30,6 +30,59 @@
  *   - sanitisation de toutes les entrées
  */
 
+/**
+ * POST /wp-json/assemblage/v1/pfg/add-categories
+ *   body JSON : { labels: string[] }
+ *   réponse   : { map: { "<id>": "<label>" }, added: string[] }
+ *
+ * Ajoute (append-only) des catégories de filtre dans l'option globale
+ * `awl_portfolio_filter_gallery_categories` (tableau plat ; l'id d'un filtre =
+ * son index). On n'insère JAMAIS au milieu et on ne réordonne/supprime JAMAIS
+ * (sinon les ids des filtres déjà assignés seraient décalés) : on pousse en fin,
+ * en sautant les libellés déjà présents (comparaison insensible casse/accents).
+ * Renvoie la map id→libellé complète pour que l'app fige son mapping.
+ */
+add_action('rest_api_init', function () {
+    register_rest_route('assemblage/v1', '/pfg/add-categories', array(
+        'methods'  => 'POST',
+        'permission_callback' => function () { return current_user_can('edit_posts'); },
+        'callback' => function (WP_REST_Request $req) {
+            $labels = $req->get_param('labels');
+            if (!is_array($labels)) {
+                return new WP_Error('bad_labels', 'labels (array) attendu', array('status' => 400));
+            }
+            $cats = get_option('awl_portfolio_filter_gallery_categories');
+            if (!is_array($cats)) {
+                return new WP_Error('no_registry', 'Registre de catégories introuvable', array('status' => 500));
+            }
+            $norm = function ($s) {
+                $s = remove_accents((string) $s);
+                return strtolower(trim($s));
+            };
+            $existing = array();
+            foreach ($cats as $c) { $existing[$norm($c)] = true; }
+
+            $added = array();
+            foreach ($labels as $raw) {
+                $label = sanitize_text_field((string) $raw);
+                if ($label === '') continue;
+                $k = $norm($label);
+                if (isset($existing[$k])) continue;     // déjà présent → skip
+                $cats[] = $label;                        // append-only
+                $existing[$k] = true;
+                $added[] = $label;
+            }
+            if (!empty($added)) {
+                update_option('awl_portfolio_filter_gallery_categories', $cats);
+            }
+
+            $map = array();
+            foreach ($cats as $i => $c) { $map[(string) $i] = $c; }
+            return array('map' => $map, 'added' => $added);
+        },
+    ));
+});
+
 add_action('rest_api_init', function () {
     register_rest_route('assemblage/v1', '/pfg/append', array(
         'methods'  => 'POST',
