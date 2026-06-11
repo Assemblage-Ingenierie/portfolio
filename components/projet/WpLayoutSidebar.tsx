@@ -398,6 +398,7 @@ export default function WpLayoutSidebar({
           </Section>
         )}
 
+        {!isUserView && (
         <Section label="Champs du bandeau">
             <p style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70, margin: '0 0 12px', lineHeight: 1.4 }}>
               Défauts appliqués à tous les champs, puis surcharges par champ ci-dessous (couleurs = palette Assemblage).
@@ -492,6 +493,7 @@ export default function WpLayoutSidebar({
             })}
             </div>
         </Section>
+        )}
 
         {template === 'Dev' && (
           <Section label="Prestation Assemblage">
