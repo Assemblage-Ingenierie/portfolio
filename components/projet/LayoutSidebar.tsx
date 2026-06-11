@@ -32,7 +32,7 @@ interface SectionDef { id: SectionId; label: string; devOnly?: boolean; }
 // statut (cf. headerHtml dans shared.ts), la liste flottante n'est plus
 // configurable côté UI.
 const SECTIONS: SectionDef[] = [
-  { id: 'typo',           label: 'Mise en page typographique' },
+  { id: 'typo',           label: 'Mise en page' },
   { id: 'main',           label: 'Photo principale' },
   { id: 'text',           label: 'Texte description' },
   { id: 'extra',          label: 'Photos additionnelles' },
