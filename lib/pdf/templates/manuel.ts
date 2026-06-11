@@ -227,12 +227,13 @@ function clampPercent(v: number): number {
 
 /**
  * Trouve l'index de coupure le plus proche d'une cible donnée, en se calant
- * sur un caractère "." pour finir proprement une phrase.
+ * sur un caractère espace (séparation de mot) pour ne jamais couper au milieu
+ * d'un mot.
  *
  * Algorithme :
  * - Deux pointeurs partent de `target` (un vers la droite, un vers la gauche)
- * - Le premier qui tombe sur '.' gagne, on coupe à p + 2 (saute "." + espace)
- * - Fallback si aucun '.' : premier espace après target ; sinon `target`
+ * - Le premier qui tombe sur un espace gagne, on coupe juste après (p + 1)
+ * - Fallback si aucun espace : `target`
  * - Index est clampé dans [0, text.length]
  */
 function findSplitIndex(text: string, target: number): number {
@@ -242,13 +243,12 @@ function findSplitIndex(text: string, target: number): number {
   let r = X;
   let l = X;
   while (r < T || l > 0) {
-    if (r < T && text[r] === '.') return Math.min(T, r + 2);
-    if (l > 0 && text[l] === '.') return Math.min(T, l + 2);
+    if (r < T && /\s/.test(text[r])) return Math.min(T, r + 1);
+    if (l > 0 && /\s/.test(text[l])) return Math.min(T, l + 1);
     r++;
     l--;
   }
-  const sp = text.indexOf(' ', X);
-  return sp >= 0 ? sp + 1 : X;
+  return X;
 }
 
 function paragraphsToHtml(text: string): string {

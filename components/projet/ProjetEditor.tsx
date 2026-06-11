@@ -343,7 +343,7 @@ export default function ProjetEditor({ projet }: Props) {
               />
               <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', marginTop: '4px' }}>
                 Texte enrichi (Markdown) — synchronisé avec le champ Airtable « Prestation Assemblage ».
-                Police et taille modifiables via la section dédiée dans <em>Mise en page typographique</em> ci-dessus.
+                Police et taille modifiables via la section dédiée dans <em>Mise en page</em> ci-dessus.
               </p>
             </div>
           )}

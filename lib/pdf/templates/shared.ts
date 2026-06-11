@@ -508,16 +508,18 @@ export function metaGridHtml(
   // forcé dans `breaksOf` (cf. plus bas), donc l'utilisateur ne peut pas
   // l'inliner. Budget (fldc9yGvzPAdhG6JR) toujours affiché avant Surface
   // (fld9HmFcoH2XYpm6y).
-  // Comportement conditionnel :
-  //  - les deux vides   → cellule absente du bandeau (array vide)
-  //  - les deux remplis → les deux valeurs (budget, surface)
-  //  - une seule remplie → la valeur connue + "NC" pour l'autre, Budget en 1er
+  // Comportement conditionnel (règles distinctes par champ) :
+  //  - Budget (fldc9yGvzPAdhG6JR)  → "NC" si vide (la ligne budget est toujours
+  //    affichée dès que la cellule apparaît)
+  //  - Surface (fld9HmFcoH2XYpm6y) → si vide, on n'affiche RIEN (pas de "NC") :
+  //    la ligne surface est simplement omise
+  //  - les deux vides → cellule absente du bandeau (array vide)
   const hasBudget = !!projet.budgetHT;
   const hasSurface = !!projet.surface;
   const budgetSurfaceValues: string[] = (hasBudget || hasSurface)
     ? [
         hasBudget ? projet.budgetHT! : 'NC',
-        hasSurface ? `${projet.surface!.toLocaleString('fr-FR')} m²` : 'NC',
+        ...(hasSurface ? [`${projet.surface!.toLocaleString('fr-FR')} m²`] : []),
       ]
     : [];
 
