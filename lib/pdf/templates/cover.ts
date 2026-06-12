@@ -48,7 +48,7 @@ const CSS = `
 }
 .pdg-logo { height: 22mm; width: auto; display: block; }
 .pdg-vignettes { display: flex; align-items: center; gap: 4mm; }
-.pdg-vignette { height: 17mm; width: auto; display: block; }
+.pdg-vignette { height: 15mm; width: auto; display: block; }
 
 /* Accroche + lignes Portfolio / Date. */
 .pdg-intro {
@@ -57,12 +57,12 @@ const CSS = `
 }
 .pdg-title {
   font-family: var(--sans);
-  font-size: 19pt;
-  font-weight: 700;
+  font-size: 14pt;
+  font-weight: 600;
   color: var(--ai-rouge);
   line-height: 1.25;
   letter-spacing: -0.005em;
-  max-width: 150mm;
+  white-space: nowrap;
   margin-bottom: 12mm;
 }
 .pdg-lines {
@@ -82,9 +82,11 @@ const CSS = `
   color: var(--ai-noir);
 }
 
-/* Photo de couverture pleine largeur, remplit l'espace restant. */
+/* Photo de couverture pleine largeur. Hauteur réduite à ~0.7× de l'espace
+   qu'elle occupait quand elle remplissait toute la page (≈180mm). Le footer
+   est poussé en bas via margin-top:auto. */
 .pdg-photo-frame {
-  flex: 1 1 auto;
+  flex: 0 0 126mm;
   overflow: hidden;
   display: flex;
 }
@@ -95,16 +97,17 @@ const CSS = `
   display: block;
 }
 
-/* Pied de page : adresse (gros) + email (petit). */
+/* Pied de page : adresse + email, même taille. */
 .pdg-footer {
   flex: 0 0 auto;
+  margin-top: auto;
   padding: 6mm 18mm 9mm 18mm;
   font-family: var(--sans);
   font-size: 9pt;
   color: var(--ai-noir70);
 }
 .pdg-footer-addr {
-  font-size: 13pt;
+  font-size: 9pt;
   color: var(--ai-noir);
   font-weight: 400;
 }
@@ -145,7 +148,7 @@ export function renderCover(params: CoverParams = {}): TemplateBundle {
       <h1 class="pdg-title">Vers des constructions plus sobres et durables</h1>
       <div class="pdg-lines">
         <div class="pdg-line"><span class="pdg-line-label">Portfolio :</span> ${countLine}</div>
-        <div class="pdg-line"><span class="pdg-line-label">Date :</span> ${dateStr}</div>
+        <div class="pdg-line">${dateStr}</div>
       </div>
     </div>
 
