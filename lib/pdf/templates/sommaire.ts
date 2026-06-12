@@ -49,7 +49,7 @@ const CSS = `
   gap: 1mm;
 }
 .toc-nom {
-  font-family: var(--serif);
+  font-family: var(--sans);
   font-size: 11.5pt;
   font-weight: 500;
   color: var(--ai-noir);
