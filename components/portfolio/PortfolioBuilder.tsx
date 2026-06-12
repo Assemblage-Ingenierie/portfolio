@@ -249,14 +249,19 @@ export default function PortfolioBuilder({ projets }: Props) {
   }
 
   // ----- Export -----
-  // Ouvre la fenêtre d'impression. `includeCover` = false → uniquement les
-  // fiches de références (sans page de garde ni sommaire), via `cover=0`.
-  function runExport(includeCover: boolean) {
+  // Ouvre la fenêtre d'impression.
+  //  - includeCover = false → uniquement les fiches (cover=0, sans page de
+  //    garde ni sommaire).
+  //  - includeCover = true → page de garde + sommaire + fiches. `variant`
+  //    (STR/ENV/DEV) choisit la photo de couverture de la page de garde.
+  function runExport(includeCover: boolean, variant?: 'STR' | 'ENV' | 'DEV') {
     if (orderedSlugs.length === 0) return;
     const ordered = orderedSlugs
       .filter(s => selection.has(s))
       .map(s => `${s}:${selection.get(s)}`);
-    const params = `items=${encodeURIComponent(ordered.join(','))}${includeCover ? '' : '&cover=0'}`;
+    let params = `items=${encodeURIComponent(ordered.join(','))}`;
+    if (!includeCover) params += '&cover=0';
+    else if (variant) params += `&pdg=${variant}`;
     setShowExportModal(false);
     window.open(`/portfolio/print?${params}`, '_blank');
   }
@@ -655,21 +660,37 @@ export default function PortfolioBuilder({ projets }: Props) {
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <button
-                onClick={() => runExport(true)}
-                style={{
-                  textAlign: 'left', padding: '14px 16px', borderRadius: 10,
-                  border: `1px solid ${color.gris}`, background: 'white', cursor: 'pointer',
-                }}
-              >
+              {/* Option 1 : page de garde + sommaire. La page de garde se
+                  décline en 3 variantes (STR/ENV/DEV) — seule la photo change. */}
+              <div style={{
+                padding: '14px 16px', borderRadius: 10,
+                border: `1px solid ${color.gris}`, background: 'white',
+              }}>
                 <div style={{ fontSize: '10pt', fontWeight: 700, color: 'var(--ai-noir)' }}>
-                  Portfolio complet
+                  Page de garde + sommaire
                 </div>
-                <div style={{ fontSize: '8.5pt', color: 'var(--ai-noir70)', marginTop: 2 }}>
-                  Page de garde + sommaire + fiches de références.
+                <div style={{ fontSize: '8.5pt', color: 'var(--ai-noir70)', marginTop: 2, marginBottom: 10 }}>
+                  Choisis la page de garde selon le pôle (la photo de couverture change) :
                 </div>
-              </button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {(['STR', 'ENV', 'DEV'] as const).map(v => (
+                    <button
+                      key={v}
+                      onClick={() => runExport(true, v)}
+                      style={{
+                        flex: 1, padding: '8px 10px', borderRadius: 8,
+                        border: 'none', background: 'var(--ai-rouge)', color: 'white',
+                        fontFamily: 'var(--sans)', fontSize: '9pt', fontWeight: 700,
+                        letterSpacing: '0.05em', cursor: 'pointer',
+                      }}
+                    >
+                      Page de garde {v}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
+              {/* Option 2 : fiches seules. */}
               <button
                 onClick={() => runExport(false)}
                 style={{

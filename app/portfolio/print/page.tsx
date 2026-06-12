@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import type { Projet, TemplateChoice } from '@/types/projet';
 import { isTemplateChoice } from '@/lib/pdf/selectTemplate';
 import { renderPortfolioBundle, PortfolioItem } from '@/lib/pdf/renderPortfolio';
+import { COVER_VARIANTS, type CoverVariant } from '@/lib/pdf/templates/cover';
 import { SHARED_CSS } from '@/lib/pdf/templates/shared';
 import PrintRunner from '@/components/PrintRunner';
 
@@ -16,6 +17,9 @@ import PrintRunner from '@/components/PrintRunner';
  * Paramètre optionnel `cover` : `cover=0` exporte uniquement les fiches de
  * références (sans page de garde ni sommaire). Toute autre valeur (ou absence)
  * inclut la page de garde + le sommaire.
+ *
+ * Paramètre optionnel `pdg` : variante de page de garde (STR/ENV/DEV) — change
+ * la photo de couverture. Défaut STR.
  */
 
 interface ParsedItem {
@@ -40,14 +44,18 @@ function parseItemsParam(raw: string | undefined): ParsedItem[] {
 export default async function PortfolioPrintPage({
   searchParams,
 }: {
-  searchParams: Promise<{ items?: string; cover?: string }>;
+  searchParams: Promise<{ items?: string; cover?: string; pdg?: string }>;
 }) {
-  const { items: rawItems, cover } = await searchParams;
+  const { items: rawItems, cover, pdg } = await searchParams;
   const parsed = parseItemsParam(rawItems);
   if (parsed.length === 0) notFound();
 
   // `cover=0` → uniquement les fiches (pas de page de garde ni de sommaire).
   const includeCover = cover !== '0';
+  // `pdg` → variante de page de garde (photo de couverture). Défaut STR.
+  const coverVariant: CoverVariant = COVER_VARIANTS.includes(pdg as CoverVariant)
+    ? (pdg as CoverVariant)
+    : 'STR';
 
   // Fetch parallèle de tous les projets sélectionnés
   const projets = await Promise.all(parsed.map(p => getProjet(p.slug)));
@@ -58,7 +66,7 @@ export default async function PortfolioPrintPage({
 
   if (items.length === 0) notFound();
 
-  const bundle = renderPortfolioBundle(items, 'Portfolio', includeCover);
+  const bundle = renderPortfolioBundle(items, 'Portfolio', includeCover, coverVariant);
 
   // Affichage écran : fond gris, pages avec ombre (visualisation A4)
   // Impression : on retire toute la chrome et le moteur natif rend chaque .page

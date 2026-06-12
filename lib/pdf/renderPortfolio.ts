@@ -1,6 +1,6 @@
 import type { Projet, TemplateChoice } from '@/types/projet';
 import { renderTemplate } from './renderHtml';
-import { renderCover } from './templates/cover';
+import { renderCover, type CoverVariant } from './templates/cover';
 import { renderSommaire } from './templates/sommaire';
 import { SHARED_CSS } from './templates/shared';
 
@@ -84,11 +84,14 @@ export function renderPortfolioHtml(items: PortfolioItem[], title?: string): str
  *
  * `includeCover` (défaut true) ajoute la page de garde + le sommaire en tête.
  * Mettre à false pour exporter uniquement les fiches de références.
+ *
+ * `coverVariant` (STR/ENV/DEV) ne change que la photo de la page de garde.
  */
 export function renderPortfolioBundle(
   items: PortfolioItem[],
   title?: string,
   includeCover = true,
+  coverVariant: CoverVariant = 'STR',
 ): PortfolioBundle {
   const fiches = items.map(item =>
     renderTemplate({ ...item.projet, template: item.template })
@@ -103,7 +106,7 @@ export function renderPortfolioBundle(
     return { body, css };
   }
 
-  const cover = renderCover({ title, count: items.length });
+  const cover = renderCover({ title, count: items.length, variant: coverVariant });
 
   const tocEntries = items.map((item, idx) => ({
     affaire: item.projet.affaire,
