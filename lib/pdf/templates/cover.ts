@@ -46,7 +46,11 @@ const CSS = `
   align-items: center;
   padding: 14mm 18mm 0 18mm;
 }
-.pdg-logo { height: 22mm; width: auto; display: block; }
+/* Le SVG du logo a ~5.4% de blanc à gauche dans son viewBox (le glyphe
+   commence à x=30.6 sur 566.9). À 22mm de haut (largeur rendue ≈61.9mm) ça
+   représente ~3.3mm. On compense par une marge négative pour que le bord
+   gauche visible du logo s'aligne sur le « V » de l'accroche (18mm). */
+.pdg-logo { height: 22mm; width: auto; display: block; margin-left: -3.3mm; }
 .pdg-vignettes { display: flex; align-items: center; gap: 4mm; }
 .pdg-vignette { height: 15mm; width: auto; display: block; }
 
@@ -129,7 +133,7 @@ export function renderCover(params: CoverParams = {}): TemplateBundle {
   });
   const variant: CoverVariant = params.variant ?? 'STR';
   const count = params.count ?? 0;
-  const countLine = `${count} référence${count > 1 ? 's' : ''}`;
+  const countLine = `${count} Référence${count > 1 ? 's' : ''}`;
   const photoUrl = COVER_PHOTOS[variant];
 
   const vignettes = VIGNETTES
