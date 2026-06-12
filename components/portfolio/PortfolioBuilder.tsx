@@ -40,6 +40,8 @@ export default function PortfolioBuilder({ projets }: Props) {
   // Ordre de mise en page (slugs). Initialisé en entrant dans l'étape 'order'.
   // Les flèches haut/bas réorganisent ce tableau ; l'export l'utilise tel quel.
   const [orderedSlugs, setOrderedSlugs] = useState<string[]>([]);
+  // Pop-up de choix d'export : page de garde + sommaire, ou fiches seules.
+  const [showExportModal, setShowExportModal] = useState(false);
 
   // ----- Filtres (mêmes que la grille principale) -----
   const years = useMemo(() => {
@@ -247,13 +249,16 @@ export default function PortfolioBuilder({ projets }: Props) {
   }
 
   // ----- Export -----
-  function handleExport() {
+  // Ouvre la fenêtre d'impression. `includeCover` = false → uniquement les
+  // fiches de références (sans page de garde ni sommaire), via `cover=0`.
+  function runExport(includeCover: boolean) {
     if (orderedSlugs.length === 0) return;
     const ordered = orderedSlugs
       .filter(s => selection.has(s))
       .map(s => `${s}:${selection.get(s)}`);
-    const url = `/portfolio/print?items=${encodeURIComponent(ordered.join(','))}`;
-    window.open(url, '_blank');
+    const params = `items=${encodeURIComponent(ordered.join(','))}${includeCover ? '' : '&cover=0'}`;
+    setShowExportModal(false);
+    window.open(`/portfolio/print?${params}`, '_blank');
   }
 
   const projetsBySlug = useMemo(() => {
@@ -596,7 +601,7 @@ export default function PortfolioBuilder({ projets }: Props) {
           </button>
         ) : (
           <button
-            onClick={handleExport}
+            onClick={() => setShowExportModal(true)}
             disabled={orderedSlugs.length === 0}
             style={{
               padding: '10px 20px',
@@ -611,6 +616,78 @@ export default function PortfolioBuilder({ projets }: Props) {
           </button>
         )}
       </div>
+
+      {/* Pop-up de choix d'export */}
+      {showExportModal && (
+        <div
+          onClick={() => setShowExportModal(false)}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 200,
+            background: 'rgba(0,0,0,0.45)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 24,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: 'white', borderRadius: 16, padding: '28px 28px 24px',
+              maxWidth: 460, width: '100%',
+              boxShadow: '0 12px 48px rgba(0,0,0,0.25)',
+              fontFamily: 'var(--sans)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+              <h2 style={{ fontFamily: 'var(--sans)', fontSize: '13pt', fontWeight: 600, color: 'var(--ai-violet)' }}>
+                Exporter le portfolio
+              </h2>
+              <button
+                onClick={() => setShowExportModal(false)}
+                aria-label="Fermer"
+                style={{
+                  border: 'none', background: 'transparent', cursor: 'pointer',
+                  fontSize: '14pt', lineHeight: 1, color: 'var(--ai-noir70)',
+                }}
+              >✕</button>
+            </div>
+            <p style={{ fontSize: '9pt', color: 'var(--ai-noir70)', marginBottom: 18 }}>
+              {orderedSlugs.length} référence{orderedSlugs.length > 1 ? 's' : ''} — choisis le format du document à générer.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <button
+                onClick={() => runExport(true)}
+                style={{
+                  textAlign: 'left', padding: '14px 16px', borderRadius: 10,
+                  border: `1px solid ${color.gris}`, background: 'white', cursor: 'pointer',
+                }}
+              >
+                <div style={{ fontSize: '10pt', fontWeight: 700, color: 'var(--ai-noir)' }}>
+                  Portfolio complet
+                </div>
+                <div style={{ fontSize: '8.5pt', color: 'var(--ai-noir70)', marginTop: 2 }}>
+                  Page de garde + sommaire + fiches de références.
+                </div>
+              </button>
+
+              <button
+                onClick={() => runExport(false)}
+                style={{
+                  textAlign: 'left', padding: '14px 16px', borderRadius: 10,
+                  border: `1px solid ${color.gris}`, background: 'white', cursor: 'pointer',
+                }}
+              >
+                <div style={{ fontSize: '10pt', fontWeight: 700, color: 'var(--ai-noir)' }}>
+                  Fiches de références uniquement
+                </div>
+                <div style={{ fontSize: '8.5pt', color: 'var(--ai-noir70)', marginTop: 2 }}>
+                  Sans page de garde ni sommaire.
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

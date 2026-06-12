@@ -12,6 +12,10 @@ import PrintRunner from '@/components/PrintRunner';
  * un seul PDF concaténé.
  *
  * Format de l'URL : /portfolio/print?items=slug1:Solo,slug2:Diptyque,...
+ *
+ * Paramètre optionnel `cover` : `cover=0` exporte uniquement les fiches de
+ * références (sans page de garde ni sommaire). Toute autre valeur (ou absence)
+ * inclut la page de garde + le sommaire.
  */
 
 interface ParsedItem {
@@ -36,11 +40,14 @@ function parseItemsParam(raw: string | undefined): ParsedItem[] {
 export default async function PortfolioPrintPage({
   searchParams,
 }: {
-  searchParams: Promise<{ items?: string }>;
+  searchParams: Promise<{ items?: string; cover?: string }>;
 }) {
-  const { items: rawItems } = await searchParams;
+  const { items: rawItems, cover } = await searchParams;
   const parsed = parseItemsParam(rawItems);
   if (parsed.length === 0) notFound();
+
+  // `cover=0` → uniquement les fiches (pas de page de garde ni de sommaire).
+  const includeCover = cover !== '0';
 
   // Fetch parallèle de tous les projets sélectionnés
   const projets = await Promise.all(parsed.map(p => getProjet(p.slug)));
@@ -51,7 +58,7 @@ export default async function PortfolioPrintPage({
 
   if (items.length === 0) notFound();
 
-  const bundle = renderPortfolioBundle(items, 'Portfolio');
+  const bundle = renderPortfolioBundle(items, 'Portfolio', includeCover);
 
   // Affichage écran : fond gris, pages avec ombre (visualisation A4)
   // Impression : on retire toute la chrome et le moteur natif rend chaque .page

@@ -81,8 +81,28 @@ export function renderPortfolioHtml(items: PortfolioItem[], title?: string): str
 /**
  * Variante qui retourne juste le body + css (sans la coque HTML),
  * pour l'utiliser dans une page Next.js qui fournit déjà <html>/<body>.
+ *
+ * `includeCover` (défaut true) ajoute la page de garde + le sommaire en tête.
+ * Mettre à false pour exporter uniquement les fiches de références.
  */
-export function renderPortfolioBundle(items: PortfolioItem[], title?: string): PortfolioBundle {
+export function renderPortfolioBundle(
+  items: PortfolioItem[],
+  title?: string,
+  includeCover = true,
+): PortfolioBundle {
+  const fiches = items.map(item =>
+    renderTemplate({ ...item.projet, template: item.template })
+  );
+
+  if (!includeCover) {
+    const css = [
+      ...fiches.map(f => f.css),
+      `.page + .page { page-break-before: always; break-before: page; }`,
+    ].join('\n');
+    const body = fiches.map(f => f.body).join('\n');
+    return { body, css };
+  }
+
   const cover = renderCover({ title, count: items.length });
 
   const tocEntries = items.map((item, idx) => ({
@@ -94,10 +114,6 @@ export function renderPortfolioBundle(items: PortfolioItem[], title?: string): P
   }));
 
   const sommaire = renderSommaire(items[0]?.projet ?? null, tocEntries);
-
-  const fiches = items.map(item =>
-    renderTemplate({ ...item.projet, template: item.template })
-  );
 
   const css = [
     cover.css,
