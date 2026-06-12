@@ -77,12 +77,12 @@ const CSS = `
 }
 .pdg-line {
   font-size: 11pt;
-  font-weight: 400;
+  font-weight: 500;
   color: var(--ai-noir);
 }
 .pdg-line-label {
   font-size: 13pt;
-  font-weight: 400;
+  font-weight: 500;
   color: var(--ai-noir);
 }
 
@@ -127,9 +127,9 @@ export interface CoverParams {
 
 export function renderCover(params: CoverParams = {}): TemplateBundle {
   const date = params.date ?? new Date();
-  // Format numérique JJ/MM/AAAA (cf. template fourni).
+  // Format "JJ mois AAAA" — mois en toutes lettres (ex. "12 juin 2026").
   const dateStr = date.toLocaleDateString('fr-FR', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
+    day: 'numeric', month: 'long', year: 'numeric',
   });
   const variant: CoverVariant = params.variant ?? 'STR';
   const count = params.count ?? 0;
