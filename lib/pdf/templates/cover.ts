@@ -126,11 +126,6 @@ export interface CoverParams {
 }
 
 export function renderCover(params: CoverParams = {}): TemplateBundle {
-  const date = params.date ?? new Date();
-  // Format "JJ mois AAAA" — mois en toutes lettres (ex. "12 juin 2026").
-  const dateStr = date.toLocaleDateString('fr-FR', {
-    day: 'numeric', month: 'long', year: 'numeric',
-  });
   const variant: CoverVariant = params.variant ?? 'STR';
   const count = params.count ?? 0;
   const countLine = `${count} Référence${count > 1 ? 's' : ''}`;
@@ -152,7 +147,6 @@ export function renderCover(params: CoverParams = {}): TemplateBundle {
       <h1 class="pdg-title">Vers des constructions plus sobres et durables</h1>
       <div class="pdg-lines">
         <div class="pdg-line"><span class="pdg-line-label">Portfolio :</span> ${countLine}</div>
-        <div class="pdg-line">${dateStr}</div>
       </div>
     </div>
 
