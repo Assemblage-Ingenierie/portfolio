@@ -32,12 +32,6 @@ const CSS = `
   display: flex;
   flex-direction: column;
 }
-/* Filet rouge plein cadre en tête de page. */
-.pdg-bar {
-  flex: 0 0 auto;
-  height: 2.5mm;
-  background: var(--ai-rouge);
-}
 /* Bandeau logo (gauche) + vignettes pôle (droite). */
 .pdg-head {
   flex: 0 0 auto;
@@ -137,8 +131,6 @@ export function renderCover(params: CoverParams = {}): TemplateBundle {
     .join('');
 
   const body = `<article class="page pdg-page">
-    <div class="pdg-bar"></div>
-
     <div class="pdg-head">
       <img class="pdg-logo" src="${LOGO_URL}" alt="Assemblage ingénierie" />
       <div class="pdg-vignettes">${vignettes}</div>
