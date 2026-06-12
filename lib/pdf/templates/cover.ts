@@ -1,103 +1,169 @@
 import type { TemplateBundle } from './shared';
 
+/** Variante de page de garde : pilote uniquement la photo de couverture.
+ *  Le reste de la mise en page est identique pour les trois pôles. */
+export type CoverVariant = 'STR' | 'ENV' | 'DEV';
+
+export const COVER_VARIANTS: CoverVariant[] = ['STR', 'ENV', 'DEV'];
+
+const BRANDING =
+  'https://hhkofvbptnrtwbazftlm.supabase.co/storage/v1/object/public/Branding';
+
+// Logo Assemblage ingénierie (wordmark rouge) — coin haut gauche.
+const LOGO_URL = `${BRANDING}/logo/logo_Ai_rouge.svg`;
+
+// Vignettes pôle (SVG nativement rouges) — coin haut droit, ordre STR · ENV · DEV.
+const VIGNETTE_BASE = `${BRANDING}/vignettes%20svg`;
+const VIGNETTES: ReadonlyArray<{ code: CoverVariant; url: string }> = [
+  { code: 'STR', url: `${VIGNETTE_BASE}/STR.svg` },
+  { code: 'ENV', url: `${VIGNETTE_BASE}/ENV.svg` },
+  { code: 'DEV', url: `${VIGNETTE_BASE}/DEV.svg` },
+];
+
+// Photo de couverture par variante de page de garde (bucket Branding).
+const COVER_PHOTOS: Record<CoverVariant, string> = {
+  STR: `${BRANDING}/portfolio%20-%20photos%20sommaire/Pole-Structure.jpg`,
+  ENV: `${BRANDING}/portfolio%20-%20photos%20sommaire/Pole-Environnement.jpg`,
+  DEV: `${BRANDING}/portfolio%20-%20photos%20sommaire/Pole-Developpement.jpg`,
+};
+
 const CSS = `
-.cover-page {
-  padding: 40mm 30mm;
+.pdg-page {
   display: flex;
   flex-direction: column;
+}
+/* Filet rouge plein cadre en tête de page. */
+.pdg-bar {
+  flex: 0 0 auto;
+  height: 2.5mm;
+  background: var(--ai-rouge);
+}
+/* Bandeau logo (gauche) + vignettes pôle (droite). */
+.pdg-head {
+  flex: 0 0 auto;
+  display: flex;
   justify-content: space-between;
   align-items: center;
-  text-align: center;
+  padding: 14mm 18mm 0 18mm;
 }
-.cover-top {
+/* Le SVG du logo a ~5.4% de blanc à gauche dans son viewBox (le glyphe
+   commence à x=30.6 sur 566.9). À 22mm de haut (largeur rendue ≈61.9mm) ça
+   représente ~3.3mm. On compense par une marge négative pour que le bord
+   gauche visible du logo s'aligne sur le « V » de l'accroche (18mm). */
+.pdg-logo { height: 22mm; width: auto; display: block; margin-left: -3.3mm; }
+.pdg-vignettes { display: flex; align-items: center; gap: 4mm; }
+.pdg-vignette { height: 15mm; width: auto; display: block; }
+
+/* Accroche + lignes Portfolio / Date. */
+.pdg-intro {
+  flex: 0 0 auto;
+  padding: 16mm 18mm 12mm 18mm;
+}
+.pdg-title {
   font-family: var(--sans);
-  font-size: 9pt;
-  font-weight: 700;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: var(--ai-noir70);
+  font-size: 14pt;
+  font-weight: 600;
+  color: var(--ai-rouge);
+  line-height: 1.25;
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+  margin-bottom: 12mm;
 }
-.cover-center {
+.pdg-lines {
+  font-family: var(--sans);
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 8mm;
+  gap: 4mm;
 }
-.cover-sigle {
-  width: 60mm;
-  height: auto;
-  display: block;
-}
-.cover-title {
-  font-family: var(--sans);
-  font-size: 24pt;
+.pdg-line {
+  font-size: 11pt;
   font-weight: 500;
   color: var(--ai-noir);
-  letter-spacing: -0.01em;
-  line-height: 1.1;
-  max-width: 140mm;
 }
-.cover-subtitle {
-  font-family: var(--sans);
-  font-size: 11pt;
-  font-weight: 600;
-  color: var(--ai-noir70);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+.pdg-line-label {
+  font-size: 13pt;
+  font-weight: 500;
+  color: var(--ai-noir);
 }
-.cover-rule {
-  width: 30mm;
-  height: 1px;
-  background: var(--ai-rouge);
-  margin: 6mm auto;
+
+/* Photo de couverture pleine largeur. Hauteur réduite à ~0.7× de l'espace
+   qu'elle occupait quand elle remplissait toute la page (≈180mm). Le footer
+   est poussé en bas via margin-top:auto. */
+.pdg-photo-frame {
+  flex: 0 0 126mm;
+  overflow: hidden;
+  display: flex;
 }
-.cover-bottom {
+.pdg-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Pied de page : adresse + email, même taille. */
+.pdg-footer {
+  flex: 0 0 auto;
+  margin-top: auto;
+  padding: 6mm 18mm 9mm 18mm;
   font-family: var(--sans);
   font-size: 9pt;
   color: var(--ai-noir70);
 }
-.cover-bottom strong { color: var(--ai-noir); font-weight: 700; }
+.pdg-footer-addr {
+  font-size: 9pt;
+  color: var(--ai-noir);
+  font-weight: 400;
+}
 `;
 
 export interface CoverParams {
   title?: string;
   date?: Date;
   count?: number;
+  /** Variante (STR/ENV/DEV). Défaut STR. Ne change que la photo de couverture. */
+  variant?: CoverVariant;
 }
 
 export function renderCover(params: CoverParams = {}): TemplateBundle {
   const date = params.date ?? new Date();
+  // Format "JJ mois AAAA" — mois en toutes lettres (ex. "12 juin 2026").
   const dateStr = date.toLocaleDateString('fr-FR', {
     day: 'numeric', month: 'long', year: 'numeric',
   });
-  const title = params.title ?? 'Portfolio';
-  const countLine = params.count
-    ? `${params.count} référence${params.count > 1 ? 's' : ''}`
-    : '';
+  const variant: CoverVariant = params.variant ?? 'STR';
+  const count = params.count ?? 0;
+  const countLine = `${count} Référence${count > 1 ? 's' : ''}`;
+  const photoUrl = COVER_PHOTOS[variant];
 
-  const body = `<article class="page cover-page">
-    <div class="cover-top">Assemblage ingénierie · Bureau d'études techniques</div>
+  const vignettes = VIGNETTES
+    .map(v => `<img class="pdg-vignette" src="${v.url}" alt="${v.code}" />`)
+    .join('');
 
-    <div class="cover-center">
-      <img class="cover-sigle" src="https://hhkofvbptnrtwbazftlm.supabase.co/storage/v1/object/public/Branding/logo/sigle_Ai_rouge.svg" alt=".A" />
-      <div class="cover-rule"></div>
-      <h1 class="cover-title">${escape(title)}</h1>
-      ${countLine ? `<div class="cover-subtitle">${countLine}</div>` : ''}
+  const body = `<article class="page pdg-page">
+    <div class="pdg-bar"></div>
+
+    <div class="pdg-head">
+      <img class="pdg-logo" src="${LOGO_URL}" alt="Assemblage ingénierie" />
+      <div class="pdg-vignettes">${vignettes}</div>
     </div>
 
-    <div class="cover-bottom">
-      <strong>${dateStr}</strong><br/>
-      137 rue d'Aboukir, 75002 Paris · contact@assemblage.net · assemblage.net
+    <div class="pdg-intro">
+      <h1 class="pdg-title">Vers des constructions plus sobres et durables</h1>
+      <div class="pdg-lines">
+        <div class="pdg-line"><span class="pdg-line-label">Portfolio :</span> ${countLine}</div>
+        <div class="pdg-line">${dateStr}</div>
+      </div>
+    </div>
+
+    <div class="pdg-photo-frame">
+      <img class="pdg-photo" src="${photoUrl}" alt="" />
+    </div>
+
+    <div class="pdg-footer">
+      <span class="pdg-footer-addr">137 rue d'Aboukir, 75002 Paris</span> – contact@assemblage.net
     </div>
   </article>`;
 
   return { body, css: CSS };
-}
-
-function escape(v: string): string {
-  return v
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
 }

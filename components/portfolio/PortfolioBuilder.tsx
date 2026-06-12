@@ -40,6 +40,20 @@ export default function PortfolioBuilder({ projets }: Props) {
   // Ordre de mise en page (slugs). Initialisé en entrant dans l'étape 'order'.
   // Les flèches haut/bas réorganisent ce tableau ; l'export l'utilise tel quel.
   const [orderedSlugs, setOrderedSlugs] = useState<string[]>([]);
+  // Pop-up de choix d'export : page de garde + sommaire, ou fiches seules.
+  const [showExportModal, setShowExportModal] = useState(false);
+  // Vue de la pop-up : 'menu' = choix du format ; 'variants' = choix de la
+  // page de garde (STR/ENV/DEV), affiché après "Page de garde + sommaire".
+  const [exportView, setExportView] = useState<'menu' | 'variants'>('menu');
+
+  function openExportModal() {
+    setExportView('menu');
+    setShowExportModal(true);
+  }
+  function closeExportModal() {
+    setShowExportModal(false);
+    setExportView('menu');
+  }
 
   // ----- Filtres (mêmes que la grille principale) -----
   const years = useMemo(() => {
@@ -247,13 +261,21 @@ export default function PortfolioBuilder({ projets }: Props) {
   }
 
   // ----- Export -----
-  function handleExport() {
+  // Ouvre la fenêtre d'impression.
+  //  - includeCover = false → uniquement les fiches (cover=0, sans page de
+  //    garde ni sommaire).
+  //  - includeCover = true → page de garde + sommaire + fiches. `variant`
+  //    (STR/ENV/DEV) choisit la photo de couverture de la page de garde.
+  function runExport(includeCover: boolean, variant?: 'STR' | 'ENV' | 'DEV') {
     if (orderedSlugs.length === 0) return;
     const ordered = orderedSlugs
       .filter(s => selection.has(s))
       .map(s => `${s}:${selection.get(s)}`);
-    const url = `/portfolio/print?items=${encodeURIComponent(ordered.join(','))}`;
-    window.open(url, '_blank');
+    let params = `items=${encodeURIComponent(ordered.join(','))}`;
+    if (!includeCover) params += '&cover=0';
+    else if (variant) params += `&pdg=${variant}`;
+    closeExportModal();
+    window.open(`/portfolio/print?${params}`, '_blank');
   }
 
   const projetsBySlug = useMemo(() => {
@@ -596,7 +618,7 @@ export default function PortfolioBuilder({ projets }: Props) {
           </button>
         ) : (
           <button
-            onClick={handleExport}
+            onClick={openExportModal}
             disabled={orderedSlugs.length === 0}
             style={{
               padding: '10px 20px',
@@ -611,6 +633,112 @@ export default function PortfolioBuilder({ projets }: Props) {
           </button>
         )}
       </div>
+
+      {/* Pop-up de choix d'export */}
+      {showExportModal && (
+        <div
+          onClick={closeExportModal}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 200,
+            background: 'rgba(0,0,0,0.45)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 24,
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: 'white', borderRadius: 16, padding: '28px 28px 24px',
+              maxWidth: 460, width: '100%',
+              boxShadow: '0 12px 48px rgba(0,0,0,0.25)',
+              fontFamily: 'var(--sans)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+              <h2 style={{ fontFamily: 'var(--sans)', fontSize: '13pt', fontWeight: 600, color: 'var(--ai-violet)' }}>
+                {exportView === 'menu' ? 'Exporter le portfolio' : 'Choisir la page de garde'}
+              </h2>
+              <button
+                onClick={closeExportModal}
+                aria-label="Fermer"
+                style={{
+                  border: 'none', background: 'transparent', cursor: 'pointer',
+                  fontSize: '14pt', lineHeight: 1, color: 'var(--ai-noir70)',
+                }}
+              >✕</button>
+            </div>
+            <p style={{ fontSize: '9pt', color: 'var(--ai-noir70)', marginBottom: 18 }}>
+              {exportView === 'menu'
+                ? `${orderedSlugs.length} référence${orderedSlugs.length > 1 ? 's' : ''} — choisis le format du document à générer.`
+                : 'Sélectionne la page de garde selon le pôle (seule la photo de couverture change).'}
+            </p>
+
+            {exportView === 'menu' ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {/* Option 1 : page de garde + sommaire → passe au choix de variante. */}
+                <button
+                  onClick={() => setExportView('variants')}
+                  style={{
+                    textAlign: 'left', padding: '14px 16px', borderRadius: 10,
+                    border: `1px solid ${color.gris}`, background: 'white', cursor: 'pointer',
+                  }}
+                >
+                  <div style={{ fontSize: '10pt', fontWeight: 700, color: 'var(--ai-noir)' }}>
+                    Page de garde + sommaire
+                  </div>
+                  <div style={{ fontSize: '8.5pt', color: 'var(--ai-noir70)', marginTop: 2 }}>
+                    Page de garde + sommaire + fiches de références.
+                  </div>
+                </button>
+
+                {/* Option 2 : fiches seules. */}
+                <button
+                  onClick={() => runExport(false)}
+                  style={{
+                    textAlign: 'left', padding: '14px 16px', borderRadius: 10,
+                    border: `1px solid ${color.gris}`, background: 'white', cursor: 'pointer',
+                  }}
+                >
+                  <div style={{ fontSize: '10pt', fontWeight: 700, color: 'var(--ai-noir)' }}>
+                    Fiches de références uniquement
+                  </div>
+                  <div style={{ fontSize: '8.5pt', color: 'var(--ai-noir70)', marginTop: 2 }}>
+                    Sans page de garde ni sommaire.
+                  </div>
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {(['STR', 'ENV', 'DEV'] as const).map(v => (
+                  <button
+                    key={v}
+                    onClick={() => runExport(true, v)}
+                    style={{
+                      textAlign: 'left', padding: '14px 16px', borderRadius: 10,
+                      border: `1px solid ${color.gris}`, background: 'white', cursor: 'pointer',
+                      fontFamily: 'var(--sans)', fontSize: '10pt', fontWeight: 700,
+                      color: 'var(--ai-noir)',
+                    }}
+                  >
+                    Page de garde {v}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setExportView('menu')}
+                  style={{
+                    alignSelf: 'flex-start', marginTop: 2,
+                    border: 'none', background: 'transparent', cursor: 'pointer',
+                    fontFamily: 'var(--sans)', fontSize: '9pt', fontWeight: 600,
+                    color: 'var(--ai-noir70)', padding: 0,
+                  }}
+                >
+                  ← Retour
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
