@@ -55,7 +55,7 @@ const CSS = `
 }
 .pdg-title {
   font-family: var(--sans);
-  font-size: 14pt;
+  font-size: 16pt;
   font-weight: 600;
   color: var(--ai-rouge);
   line-height: 1.25;
