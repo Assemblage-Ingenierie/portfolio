@@ -46,11 +46,11 @@ const CSS = `
   align-items: center;
   padding: 14mm 18mm 0 18mm;
 }
-/* Le SVG du logo a ~5.4% de blanc à gauche dans son viewBox (le glyphe
-   commence à x=30.6 sur 566.9). À 22mm de haut (largeur rendue ≈61.9mm) ça
-   représente ~3.3mm. On compense par une marge négative pour que le bord
-   gauche visible du logo s'aligne sur le « V » de l'accroche (18mm). */
-.pdg-logo { height: 22mm; width: auto; display: block; margin-left: -3.3mm; }
+/* Logo 26mm de haut (largeur rendue ≈73.1mm). Le SVG a ~5.4% de blanc à
+   gauche dans son viewBox (glyphe à x=30.6 sur 566.9) → ≈3.95mm à cette
+   taille. La marge négative place le bord gauche VISIBLE du logo à 0.6mm du
+   bord de page : 0.6 − 18 (padding head) − 3.95 (blanc interne) ≈ −21.35mm. */
+.pdg-logo { height: 26mm; width: auto; display: block; margin-left: -21.35mm; }
 .pdg-vignettes { display: flex; align-items: center; gap: 4mm; }
 .pdg-vignette { height: 15mm; width: auto; display: block; }
 
@@ -74,6 +74,9 @@ const CSS = `
   display: flex;
   flex-direction: column;
   gap: 4mm;
+  /* Décalé de 17.4mm vers la gauche (18mm padding intro → 0.6mm du bord),
+     même offset que le logo et l'adresse. L'accroche reste à 18mm. */
+  margin-left: -17.4mm;
 }
 .pdg-line {
   font-size: 11pt;
@@ -105,7 +108,8 @@ const CSS = `
 .pdg-footer {
   flex: 0 0 auto;
   margin-top: auto;
-  padding: 6mm 18mm 9mm 18mm;
+  /* Marge gauche 0.6mm (même offset que logo et Portfolio). */
+  padding: 6mm 18mm 9mm 0.6mm;
   font-family: var(--sans);
   font-size: 9pt;
   color: var(--ai-noir70);
