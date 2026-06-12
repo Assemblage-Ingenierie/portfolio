@@ -70,13 +70,13 @@ const CSS = `
   gap: 4mm;
 }
 .pdg-line {
-  font-size: 11pt;
-  font-weight: 500;
+  font-size: 14pt;
+  font-weight: 550;
   color: var(--ai-noir);
 }
 .pdg-line-label {
-  font-size: 13pt;
-  font-weight: 500;
+  font-size: 14pt;
+  font-weight: 550;
   color: var(--ai-noir);
 }
 
