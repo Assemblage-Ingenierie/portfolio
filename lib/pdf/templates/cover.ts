@@ -102,11 +102,12 @@ const CSS = `
   /* Marge gauche 6mm (alignée sur le logo, l'accroche et Portfolio). */
   padding: 6mm 18mm 9mm 6mm;
   font-family: var(--sans);
-  font-size: 9pt;
+  font-size: 12pt;
+  font-weight: 400;
   color: var(--ai-noir70);
 }
 .pdg-footer-addr {
-  font-size: 9pt;
+  font-size: 12pt;
   color: var(--ai-noir);
   font-weight: 400;
 }
