@@ -48,13 +48,28 @@ const SECTIONS: SectionDef[] = [
 // ─── Styles partagés ─────────────────────────────────────────────────────────
 
 // En-tête des deux menus déroulants de la nav (« Données » / « Mise en page »).
+// Geomanist (var(--sans)), rouge, sans majuscules. Le chevron est rendu par
+// <Caret/> (fin + noir) ; le triangle natif est masqué via la classe .ls-group.
 const GROUP_SUMMARY: React.CSSProperties = {
   cursor: 'pointer', userSelect: 'none',
+  display: 'flex', alignItems: 'center', gap: 8,
   padding: '10px 14px', borderBottom: `1px solid ${color.gris}`,
-  fontFamily: 'var(--sans)', fontSize: '8pt', fontWeight: 700,
-  letterSpacing: '0.08em', textTransform: 'uppercase',
-  color: 'var(--ai-violet)', background: '#FAFAFA',
+  fontFamily: 'var(--sans)', fontSize: '9pt', fontWeight: 700,
+  letterSpacing: '0.04em',
+  color: 'var(--ai-rouge)', background: '#FAFAFA',
 };
+
+// Chevron fin et noir des en-têtes de menu. Pivote de 90° à l'ouverture du
+// <details> via la règle .ls-group[open] > summary .ls-caret (globals.css).
+function Caret() {
+  return (
+    <span className="ls-caret" aria-hidden="true">
+      <svg width="9" height="9" viewBox="0 0 12 12" fill="none">
+        <path d="M4 2.5 L8 6 L4 9.5" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </span>
+  );
+}
 
 const ROW: React.CSSProperties = { display: 'flex', gap: 6, alignItems: 'center', fontSize: '9pt' };
 const SUBROW: React.CSSProperties = { ...ROW, paddingLeft: 8, borderLeft: `2px solid ${color.gris}` };
@@ -707,19 +722,19 @@ export default function LayoutSidebar({ projet, config, onChange, bandeauConfig,
           </div>
         )}
         {/* ─── Menu déroulant « Données » : édition des champs + recadrage ─── */}
-        <details open>
-          <summary style={GROUP_SUMMARY}>Données</summary>
+        <details className="ls-group" open>
+          <summary style={GROUP_SUMMARY}><Caret />Données</summary>
           <Link
             href={`/projet/${projet.slug}/edit`}
             style={{
               display: 'block', width: '100%', textAlign: 'left',
-              padding: '11px 14px', textDecoration: 'none',
+              padding: '11px 14px 11px 22px', textDecoration: 'none',
               border: 'none', borderBottom: `1px solid ${color.gris}`,
               borderLeft: '3px solid transparent',
               cursor: 'pointer',
-              fontFamily: 'var(--sans)', fontSize: '7.5pt', fontWeight: 700,
-              letterSpacing: '0.06em', textTransform: 'uppercase',
-              color: 'var(--ai-violet)', background: 'white',
+              fontFamily: 'var(--sans)', fontSize: '8.5pt', fontWeight: 700,
+              letterSpacing: '0.02em',
+              color: 'var(--ai-noir)', background: 'white',
             }}
           >
             ✎ Éditer les champs
@@ -729,24 +744,24 @@ export default function LayoutSidebar({ projet, config, onChange, bandeauConfig,
               onClick={() => onCropEditModeChange(!cropEditMode)}
               style={{
                 display: 'block', width: '100%', textAlign: 'left',
-                padding: '11px 14px',
+                padding: '11px 14px 11px 22px',
                 border: 'none', borderBottom: `1px solid ${color.gris}`,
                 borderLeft: cropEditMode ? '3px solid var(--ai-rouge)' : '3px solid transparent',
                 cursor: 'pointer',
-                fontFamily: 'var(--sans)', fontSize: '7.5pt', fontWeight: 700,
-                letterSpacing: '0.06em', textTransform: 'uppercase',
-                color: cropEditMode ? 'var(--ai-rouge)' : 'var(--ai-violet)',
+                fontFamily: 'var(--sans)', fontSize: '8.5pt', fontWeight: 700,
+                letterSpacing: '0.02em',
+                color: cropEditMode ? 'var(--ai-rouge)' : 'var(--ai-noir)',
                 background: cropEditMode ? '#FFF5F5' : 'white',
               }}
             >
-              {cropEditMode ? '✓ Terminer le recadrage' : '✂ Recadrer les photos'}
+              {cropEditMode ? 'Terminer le recadrage' : 'Recadrer les photos'}
             </button>
           )}
         </details>
 
         {/* ─── Menu déroulant « Mise en page » : sections accordion ─── */}
-        <details open>
-          <summary style={GROUP_SUMMARY}>Mise en page</summary>
+        <details className="ls-group" open>
+          <summary style={GROUP_SUMMARY}><Caret />Mise en page</summary>
           {visibleSections.map(s => (
             <button
               key={s.id}
@@ -757,9 +772,9 @@ export default function LayoutSidebar({ projet, config, onChange, bandeauConfig,
                 border: 'none', borderBottom: `1px solid ${color.gris}`,
                 borderLeft: active === s.id ? '3px solid var(--ai-rouge)' : '3px solid transparent',
                 cursor: 'pointer',
-                fontFamily: 'var(--sans)', fontSize: '7.5pt', fontWeight: 700,
-                letterSpacing: '0.06em', textTransform: 'uppercase',
-                color: active === s.id ? 'var(--ai-rouge)' : 'var(--ai-noir70)',
+                fontFamily: 'var(--sans)', fontSize: '8.5pt', fontWeight: 700,
+                letterSpacing: '0.02em',
+                color: active === s.id ? 'var(--ai-rouge)' : 'var(--ai-noir)',
                 background: active === s.id ? '#FFF5F5' : 'white',
                 transition: 'background 0.1s',
               }}

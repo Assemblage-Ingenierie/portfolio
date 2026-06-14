@@ -100,3 +100,16 @@ body {
   border: 2px solid white;
   box-shadow: 0 1px 4px rgba(0,0,0,0.3);
 }
+
+/* Menus déroulants de la sidebar /projet (LayoutSidebar « Données » /
+   « Mise en page »). On masque le triangle natif du <summary> pour rendre
+   un chevron custom plus fin et noir (cf. .ls-caret), qui pivote à l'ouverture. */
+.ls-group > summary { list-style: none; }
+.ls-group > summary::-webkit-details-marker { display: none; }
+.ls-caret {
+  transition: transform 0.15s ease;
+  color: var(--ai-noir);
+  flex: 0 0 auto;
+  display: inline-flex;
+}
+.ls-group[open] > summary .ls-caret { transform: rotate(90deg); }
