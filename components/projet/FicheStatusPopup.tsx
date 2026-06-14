@@ -30,7 +30,7 @@ export default function FicheStatusPopup({ status, onClose, onForceEdit }: Props
     >
       <div
         style={{
-          background: 'white', borderRadius: 4, maxWidth: 460, width: 'calc(100% - 32px)',
+          background: 'white', borderRadius: 12, maxWidth: 460, width: 'calc(100% - 32px)',
           padding: '24px 28px', boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
           borderTop: `4px solid ${isLocked ? color.rouge : 'var(--ai-violet)'}`,
         }}
@@ -42,7 +42,7 @@ export default function FicheStatusPopup({ status, onClose, onForceEdit }: Props
           Statut de la fiche
         </div>
         <h2 style={{
-          fontFamily: 'var(--serif)', fontSize: '18pt', fontWeight: 500,
+          fontFamily: 'var(--sans)', fontSize: '18pt', fontWeight: 300,
           color: 'var(--ai-noir)', marginBottom: 12,
         }}>
           {status}
