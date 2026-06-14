@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { authHeaders } from '@/lib/supabase/authHeaders';
 import styles from './admin.module.css';
 
 interface Profile {
@@ -19,7 +20,7 @@ export default function AdminTable({ profiles: initial }: { profiles: Profile[] 
     setLoading(id);
     const res = await fetch(`/api/admin/users/${id}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
       body: JSON.stringify(patch),
     });
     if (res.ok) {

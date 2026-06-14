@@ -1,8 +1,8 @@
-import { createClient } from '@/lib/supabase/server';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireApprovedUser } from '@/lib/supabase/requireApprovedUser';
 
 export async function PATCH(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
@@ -10,17 +10,13 @@ export async function PATCH(
     return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
   }
 
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const { data: caller } = await supabase
-    .from('portfolio_profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-
-  if (!caller || caller.role !== 'admin') {
+  // Auth via Bearer (flow implicit → JWT en localStorage, pas en cookie).
+  // requireApprovedUser vérifie le JWT + is_approved ; on exige en plus le
+  // rôle admin. Aucune écriture Airtable / aucun revalidateTag ici → zéro
+  // write ISR ajouté.
+  const auth = await requireApprovedUser(request);
+  if (auth instanceof NextResponse) return auth;
+  if (auth.profile.role !== 'admin') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
@@ -33,7 +29,9 @@ export async function PATCH(
     return NextResponse.json({ error: 'Nothing to update' }, { status: 400 });
   }
 
-  const { error } = await supabase
+  // Écriture sous RLS via le client authentifié de l'appelant (policy
+  // "Admin updates" / is_admin()).
+  const { error } = await auth.supabase
     .from('portfolio_profiles')
     .update(patch)
     .eq('id', id);

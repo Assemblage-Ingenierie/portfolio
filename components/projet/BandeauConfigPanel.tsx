@@ -428,12 +428,6 @@ export default function BandeauConfigPanel({ value, onChange, projet, onResetAll
     else next.programme = p;
     onChange(next);
   };
-  const gapOnChange = (key: 'titleMetaGap' | 'photoTextGap' | 'bandeauPhotoGap') => (v: number | undefined) => {
-    const next = { ...value };
-    if (v === undefined || v === 50) delete next[key];
-    else next[key] = v;
-    onChange(next);
-  };
   const hiddenCellsOnChange = (h: MetaLabel[]) => {
     const next = { ...value };
     if (h.length === 0) delete next.hiddenCells;
@@ -496,12 +490,34 @@ export default function BandeauConfigPanel({ value, onChange, projet, onResetAll
           {!isUserView && (
             <LinesRow value={value.lines ?? {}} onChange={(l) => onChange({ ...value, lines: l })} />
           )}
-          <TitleMetaGapRow value={value.titleMetaGap} onChange={gapOnChange('titleMetaGap')} />
-          <PhotoTextGapRow value={value.photoTextGap} onChange={gapOnChange('photoTextGap')} />
-          <BandeauPhotoGapRow value={value.bandeauPhotoGap} onChange={gapOnChange('bandeauPhotoGap')} />
+          {/* Les 3 sliders d'espacement (titre↔bandeau, photo↔description,
+              photo↔bandeau) ont été déplacés dans la section « Espacements »
+              de la sidebar — cf. <EspacementsPanel/> ci-dessous. */}
           <FieldVisibilityRow hidden={value.hiddenCells ?? []} onChange={hiddenCellsOnChange} />
         </div>
       </details>
+    </div>
+  );
+}
+
+/**
+ * Panneau « Espacements » — regroupe les 3 sliders d'espacement extraits du
+ * sous-menu « Bandeau » : titre ↔ bandeau, photo ↔ description, photo ↔ bandeau.
+ * Opère directement sur le BandeauConfig (clés titleMetaGap / photoTextGap /
+ * bandeauPhotoGap). 50 = défaut → la clé est supprimée pour rester neutre.
+ */
+export function EspacementsPanel({ value, onChange }: { value: BandeauConfig; onChange: (next: BandeauConfig) => void }) {
+  const gapOnChange = (key: 'titleMetaGap' | 'photoTextGap' | 'bandeauPhotoGap') => (v: number | undefined) => {
+    const next = { ...value };
+    if (v === undefined || v === 50) delete next[key];
+    else next[key] = v;
+    onChange(next);
+  };
+  return (
+    <div>
+      <TitleMetaGapRow value={value.titleMetaGap} onChange={gapOnChange('titleMetaGap')} />
+      <PhotoTextGapRow value={value.photoTextGap} onChange={gapOnChange('photoTextGap')} />
+      <BandeauPhotoGapRow value={value.bandeauPhotoGap} onChange={gapOnChange('bandeauPhotoGap')} />
     </div>
   );
 }
@@ -512,7 +528,7 @@ function PhotoTextGapRow({ value, onChange }: { value: number | undefined; onCha
     <div style={{ marginBottom: '14px', paddingBottom: '14px' }}>
       <label style={LABEL_S}>Espacement photo ↔ description</label>
       <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', margin: '0 0 6px' }}>
-        Rapproche ou éloigne le bloc Description projet de la photo principale. 50 = défaut, &lt; 50 = rapproché, &gt; 50 = éloigné. Appliqué sur Str-Env et Dev.
+        Rapproche ou éloigne le bloc Description projet de la photo principale.
       </p>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
         <input
@@ -546,7 +562,7 @@ function BandeauPhotoGapRow({ value, onChange }: { value: number | undefined; on
     <div style={{ marginBottom: '14px', paddingBottom: '14px' }}>
       <label style={LABEL_S}>Espacement photo ↔ bandeau</label>
       <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', margin: '0 0 6px' }}>
-        Rapproche ou éloigne la photo principale du bandeau métadonnées. 50 = défaut, &lt; 50 = rapproché, &gt; 50 = éloigné. Appliqué sur Str-Env et Dev.
+        Rapproche ou éloigne la photo principale du bandeau métadonnées.
       </p>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
         <input
@@ -590,7 +606,7 @@ function FieldVisibilityRow({ hidden, onChange }: { hidden: MetaLabel[]; onChang
     <div style={{ marginBottom: '14px', paddingBottom: '14px' }}>
       <label style={LABEL_S}>Activer / désactiver les champs</label>
       <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', margin: '0 0 6px' }}>
-        Masque certains champs du bandeau pour gagner en largeur. Un champ désactivé n&apos;apparaît plus dans la fiche, même s&apos;il est renseigné dans Airtable.
+        Masque certains champs pour gagner en largeur de bandeau
       </p>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
         {TOGGLEABLE_CELLS.map((label) => {
@@ -618,7 +634,7 @@ function TitleMetaGapRow({ value, onChange }: { value: number | undefined; onCha
     <div style={{ marginBottom: '14px', paddingBottom: '14px' }}>
       <label style={LABEL_S}>Espacement titre ↔ bandeau</label>
       <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', margin: '0 0 6px' }}>
-        Rapproche ou éloigne le bandeau métadonnées du titre. 50 = défaut, &lt; 50 = rapproché, &gt; 50 = éloigné. Appliqué sur les 4 templates.
+        Rapproche ou éloigne le bandeau métadonnées du titre.
       </p>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
         <input
@@ -739,15 +755,15 @@ function CellsLayoutRow({
     <div style={{ marginBottom: '14px', paddingBottom: '14px' }}>
       <label style={LABEL_S}>Cellules du bandeau</label>
       <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', margin: '0 0 6px' }}>
-        Contrôle la largeur des cellules et l&apos;espace entre elles. « Adaptée au contenu » = chaque cellule prend la place qu&apos;elle a besoin (recommandé). « Équirépartie » = toutes les cellules sont de même largeur (ancien comportement).
+        Contrôle la largeur des cellules et l&apos;espace entre elles
       </p>
 
       <div style={{ display: 'flex', gap: '6px', marginBottom: '10px' }}>
         <button type="button" onClick={() => setLayout('content')} style={layoutBtn(layout === 'content')}>
-          Adaptée au contenu
+          Adaptées au contenu
         </button>
         <button type="button" onClick={() => setLayout('equal')} style={layoutBtn(layout === 'equal')}>
-          Équirépartie
+          Équiréparties
         </button>
       </div>
 
@@ -899,7 +915,7 @@ function CellsLayoutRow({
             ▸ Sauts de ligne intra-valeur{Object.keys(wordBreaks).length > 0 ? ` • ${Object.keys(wordBreaks).length}` : ''}
           </summary>
           <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', margin: '6px 0 10px' }}>
-            Pour wrapper une valeur longue, un point de coupure (toujours en fin de mot) est proposé environ tous les 10 caractères. Fonctionne aussi sur les champs multi-valeurs — en plus des sauts inter-options ci-dessus. La virgule indique le séparateur entre deux options (réglable via « Sauts de ligne »).
+            Point de coupure en fin de mot proposé ~ tous les 10 caractères.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {[...wordBreakCells.entries()].map(([label, model]) => {
@@ -978,18 +994,17 @@ function ProgrammeOptionsRow({
     <div style={{ marginBottom: '14px', paddingBottom: '14px' }}>
       <label style={LABEL_S}>Cellule Programme</label>
       <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', margin: '0 0 6px' }}>
-        Contrôle le contenu de la cellule « Programme » du bandeau. Par défaut, le Programme principal est affiché en grand et le Programme secondaire en sous-titre.
+        Affiche ou non le programme secondaire
       </p>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
-        <button
-          type="button"
-          onClick={() => onChange({ ...(value ?? {}), hideSecondaire: !hideSecondaire })}
-          style={hideSecondaire ? TOGGLE_ON : TOGGLE}
-          title={hideSecondaire ? 'Le Programme secondaire est masqué — seul le principal s’affiche.' : 'Le Programme secondaire s’affiche en sous-titre.'}
-        >
-          {hideSecondaire ? '✓ Programme secondaire masqué' : '✕ Programme secondaire visible'}
-        </button>
-      </div>
+      <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '8.5pt', color: 'var(--ai-noir)' }}>
+        <input
+          type="checkbox"
+          checked={!hideSecondaire}
+          onChange={(e) => onChange({ ...(value ?? {}), hideSecondaire: !e.target.checked })}
+          style={{ accentColor: color.rouge, width: 15, height: 15, cursor: 'pointer' }}
+        />
+        Afficher le programme secondaire
+      </label>
     </div>
   );
 }

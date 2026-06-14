@@ -296,7 +296,7 @@ export default function ProjetEditor({ projet }: Props) {
       {toolbar}
       <div style={{ maxWidth: '1080px', margin: '32px auto', padding: '0 24px 48px', fontFamily: 'var(--sans)' }}>
 
-        <h1 style={{ fontFamily: 'var(--serif)', fontSize: '22pt', fontWeight: 500, color: 'var(--ai-violet)', marginBottom: '28px' }}>
+        <h1 style={{ fontFamily: 'var(--sans)', fontSize: '22pt', fontWeight: 300, color: 'var(--ai-violet)', marginBottom: '28px' }}>
           {projet.nom}
           <span style={{ fontFamily: 'var(--sans)', fontSize: '9pt', color: 'var(--ai-noir70)', marginLeft: '12px', fontWeight: 400 }}>{projet.affaire}</span>
         </h1>
@@ -343,7 +343,6 @@ export default function ProjetEditor({ projet }: Props) {
               />
               <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', marginTop: '4px' }}>
                 Texte enrichi (Markdown) — synchronisé avec le champ Airtable « Prestation Assemblage ».
-                Police et taille modifiables via la section dédiée dans <em>Mise en page</em> ci-dessus.
               </p>
             </div>
           )}
@@ -417,7 +416,7 @@ export default function ProjetEditor({ projet }: Props) {
               onChange={setRehabNeufValues}
               options={selectOptions.rehabNeuf}
               placeholder="Choisir…"
-              hint="Multi-select Airtable. Plusieurs valeurs autorisées."
+              hint="Réhabilitation, Neuf, ou les deux"
             />
             <MultiSelectField
               label="État avancement (statut)"
@@ -425,7 +424,7 @@ export default function ProjetEditor({ projet }: Props) {
               onChange={setStatutValues}
               options={selectOptions.etatAvancement}
               placeholder="Choisir un ou plusieurs statuts…"
-              hint="Multi-select Airtable. La première valeur reste le statut canonique pour le bandeau."
+              hint="Affiché en face des vignettes"
             />
             <MultiSelectField
               label="Programmes principaux"

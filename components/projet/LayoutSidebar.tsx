@@ -12,7 +12,7 @@ import type {
 import { MAX_MAIN_PORTRAIT_PHOTOS } from '@/lib/pdf/manualConfig';
 import type { BandeauConfig, BandeauStyle } from '@/lib/pdf/bandeauConfig';
 import { allPhotos } from '@/lib/pdf/templates/shared';
-import BandeauConfigPanel, { StyleRow } from '@/components/projet/BandeauConfigPanel';
+import BandeauConfigPanel, { StyleRow, EspacementsPanel } from '@/components/projet/BandeauConfigPanel';
 import {
   ASSEMBLAGE_DEFAULT_BANDEAU,
   ASSEMBLAGE_DEFAULT_MANUAL,
@@ -24,23 +24,52 @@ import { color } from '@/lib/ui/tokens';
 const STORAGE_KEY = 'portfolio_layout_section';
 const MAX_EXTRA_PHOTOS = 5;
 
-type SectionId = 'typo' | 'main' | 'text' | 'extra' | 'certifications' | 'prestation';
+type SectionId = 'typo' | 'spacing' | 'main' | 'text' | 'extra' | 'certifications' | 'prestation';
 
 interface SectionDef { id: SectionId; label: string; devOnly?: boolean; }
 
 // "Mots-clés" retiré du menu : depuis le passage à la position figée sous le
 // statut (cf. headerHtml dans shared.ts), la liste flottante n'est plus
 // configurable côté UI.
+//
+// Le menu est scindé en deux groupes déroulants : « Données » (édition des
+// champs + recadrage, rendus en dur dans la nav) et « Mise en page » (les
+// sections ci-dessous, dans l'ordre d'affichage souhaité).
 const SECTIONS: SectionDef[] = [
-  { id: 'typo',           label: 'Mise en page' },
+  { id: 'typo',           label: 'Bandeau' },
+  { id: 'spacing',        label: 'Espacements' },
   { id: 'main',           label: 'Photo principale' },
-  { id: 'text',           label: 'Texte description' },
+  { id: 'text',           label: 'Description Projet' },
+  { id: 'prestation',     label: 'Prestation Assemblage', devOnly: true },
   { id: 'extra',          label: 'Photos additionnelles' },
   { id: 'certifications', label: 'Certifications' },
-  { id: 'prestation',     label: 'Prestation Assemblage', devOnly: true },
 ];
 
 // ─── Styles partagés ─────────────────────────────────────────────────────────
+
+// En-tête des deux menus déroulants de la nav (« Données » / « Mise en page »).
+// Geomanist (var(--sans)), rouge, sans majuscules. Le chevron est rendu par
+// <Caret/> (fin + noir) ; le triangle natif est masqué via la classe .ls-group.
+const GROUP_SUMMARY: React.CSSProperties = {
+  cursor: 'pointer', userSelect: 'none',
+  display: 'flex', alignItems: 'center', gap: 8,
+  padding: '10px 14px', borderBottom: `1px solid ${color.gris}`,
+  fontFamily: 'var(--sans)', fontSize: '9pt', fontWeight: 700,
+  letterSpacing: '0.04em',
+  color: 'var(--ai-rouge)', background: '#FAFAFA',
+};
+
+// Chevron fin et noir des en-têtes de menu. Pivote de 90° à l'ouverture du
+// <details> via la règle .ls-group[open] > summary .ls-caret (globals.css).
+function Caret() {
+  return (
+    <span className="ls-caret" aria-hidden="true">
+      <svg width="9" height="9" viewBox="0 0 12 12" fill="none">
+        <path d="M4 2.5 L8 6 L4 9.5" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </span>
+  );
+}
 
 const ROW: React.CSSProperties = { display: 'flex', gap: 6, alignItems: 'center', fontSize: '9pt' };
 const SUBROW: React.CSSProperties = { ...ROW, paddingLeft: 8, borderLeft: `2px solid ${color.gris}` };
@@ -237,8 +266,10 @@ function MainPhotoSection({ projet, config, onChange }: MainPhotoProps) {
   return (
     <ContentPanel>
       <div style={{ display: 'flex', gap: 4 }}>
-        {(['paysage', 'portrait'] as PhotoFormat[]).map(f => (
-          <button key={f} onClick={() => setFormat(f)} style={radioBtn(config.mainPhotoFormat === f)}>{f}</button>
+        {/* Libellés UI uniquement : la valeur interne PhotoFormat reste
+            'paysage'/'portrait' (cf. mainPhotoFormat / rendu PDF). */}
+        {([['paysage', 'photo unique'], ['portrait', 'photos multiples']] as [PhotoFormat, string][]).map(([f, label]) => (
+          <button key={f} onClick={() => setFormat(f)} style={radioBtn(config.mainPhotoFormat === f)}>{label}</button>
         ))}
       </div>
       <div style={ROW}>
@@ -483,6 +514,8 @@ function CertificationsSection({ projet, config, onChange }: { projet: Projet; c
 // ─── Section : Prestation Assemblage (Dev only) ───────────────────────────────
 
 function PrestationSection({ projet, config, onChange }: { projet: Projet; config: ManualConfig; onChange: (next: ManualConfig) => void }) {
+  const { viewMode } = useViewMode();
+  const isAdminView = viewMode === 'admin';
   const pa: PrestationAssemblageConfig = config.prestationAssemblage ?? { show: true };
   const isActive = pa.show !== false;
   const hasValue = Boolean((projet.prestationAssemblage ?? '').trim());
@@ -520,18 +553,22 @@ function PrestationSection({ projet, config, onChange }: { projet: Projet; confi
           )}
           <Slider label="Horizontal" value={pa.offsetPercent ?? 50} onChange={v => update({ offsetPercent: v })} min={0} max={100} step={5} />
           <Slider label="Vertical" value={pa.offsetVerticalPercent ?? 50} onChange={v => update({ offsetVerticalPercent: v })} min={0} max={100} step={5} />
-          <div style={{ marginTop: 6 }}>
-            <label style={{ display: 'block', fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 6 }}>
-              Mise en page (police, taille, B/I/U, couleur texte, surlignage)
-            </label>
-            <StyleRow
-              style={(pa.style ?? {}) as BandeauStyle}
-              onChange={st => {
-                const isEmpty = !st.fontFamily && st.fontSize === undefined && !st.bold && !st.italic && !st.underline && !st.color && !st.background;
-                update({ style: isEmpty ? undefined : st });
-              }}
-            />
-          </div>
+          {/* Bloc typo (police, taille, B/I/U, couleur, surlignage) réservé à
+              la vue admin — masqué en vue user. */}
+          {isAdminView && (
+            <div style={{ marginTop: 6 }}>
+              <label style={{ display: 'block', fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 6 }}>
+                Mise en page (police, taille, B/I/U, couleur texte, surlignage)
+              </label>
+              <StyleRow
+                style={(pa.style ?? {}) as BandeauStyle}
+                onChange={st => {
+                  const isEmpty = !st.fontFamily && st.fontSize === undefined && !st.bold && !st.italic && !st.underline && !st.color && !st.background;
+                  update({ style: isEmpty ? undefined : st });
+                }}
+              />
+            </div>
+          )}
         </>
       )}
     </ContentPanel>
@@ -632,6 +669,12 @@ export default function LayoutSidebar({ projet, config, onChange, bandeauConfig,
             />
           </div>
         );
+      case 'spacing':
+        return (
+          <ContentPanel>
+            <EspacementsPanel value={bandeauConfig} onChange={onBandeauChange} />
+          </ContentPanel>
+        );
       case 'main':     return <MainPhotoSection projet={projet} config={config} onChange={onChange} />;
       case 'text':     return <TextSection config={config} onChange={onChange} />;
       case 'extra':    return <ExtraPhotosSection projet={projet} config={config} onChange={onChange} />;
@@ -684,60 +727,71 @@ export default function LayoutSidebar({ projet, config, onChange, bandeauConfig,
             </select>
           </div>
         )}
-        {/* Boutons d'édition (déplacés depuis la toolbar) */}
-        <Link
-          href={`/projet/${projet.slug}/edit`}
-          style={{
-            display: 'block', width: '100%', textAlign: 'left',
-            padding: '11px 14px', textDecoration: 'none',
-            border: 'none', borderBottom: `1px solid ${color.gris}`,
-            borderLeft: '3px solid transparent',
-            cursor: 'pointer',
-            fontFamily: 'var(--sans)', fontSize: '7.5pt', fontWeight: 700,
-            letterSpacing: '0.06em', textTransform: 'uppercase',
-            color: 'var(--ai-violet)', background: 'white',
-          }}
-        >
-          ✎ Éditer les champs
-        </Link>
-        {onCropEditModeChange && (
-          <button
-            onClick={() => onCropEditModeChange(!cropEditMode)}
+        {/* ─── Menu déroulant « Données » : édition des champs + recadrage ─── */}
+        <details className="ls-group" open>
+          <summary style={GROUP_SUMMARY}><Caret />Données</summary>
+          <Link
+            href={`/projet/${projet.slug}/edit`}
             style={{
               display: 'block', width: '100%', textAlign: 'left',
-              padding: '11px 14px',
+              padding: '11px 14px 11px 22px', textDecoration: 'none',
               border: 'none', borderBottom: `1px solid ${color.gris}`,
-              borderLeft: cropEditMode ? '3px solid var(--ai-rouge)' : '3px solid transparent',
+              borderLeft: '3px solid transparent',
               cursor: 'pointer',
-              fontFamily: 'var(--sans)', fontSize: '7.5pt', fontWeight: 700,
-              letterSpacing: '0.06em', textTransform: 'uppercase',
-              color: cropEditMode ? 'var(--ai-rouge)' : 'var(--ai-violet)',
-              background: cropEditMode ? '#FFF5F5' : 'white',
+              fontFamily: 'var(--sans)', fontSize: '8.5pt', fontWeight: 400,
+              letterSpacing: '0.02em',
+              color: 'var(--ai-noir)', background: 'white',
             }}
           >
-            {cropEditMode ? '✓ Terminer le recadrage' : '✂ Recadrer les photos'}
-          </button>
-        )}
-        {visibleSections.map(s => (
-          <button
-            key={s.id}
-            onClick={() => toggle(s.id)}
-            style={{
-              display: 'block', width: '100%', textAlign: 'left',
-              padding: '11px 14px',
-              border: 'none', borderBottom: `1px solid ${color.gris}`,
-              borderLeft: active === s.id ? '3px solid var(--ai-rouge)' : '3px solid transparent',
-              cursor: 'pointer',
-              fontFamily: 'var(--sans)', fontSize: '7.5pt', fontWeight: 700,
-              letterSpacing: '0.06em', textTransform: 'uppercase',
-              color: active === s.id ? 'var(--ai-rouge)' : 'var(--ai-noir70)',
-              background: active === s.id ? '#FFF5F5' : 'white',
-              transition: 'background 0.1s',
-            }}
-          >
-            {s.label}
-          </button>
-        ))}
+            ✎ Éditer les champs
+          </Link>
+          {onCropEditModeChange && (
+            <button
+              onClick={() => onCropEditModeChange(!cropEditMode)}
+              style={{
+                display: 'block', width: '100%', textAlign: 'left',
+                padding: '11px 14px 11px 22px',
+                border: 'none', borderBottom: `1px solid ${color.gris}`,
+                borderLeft: cropEditMode ? '3px solid var(--ai-rouge)' : '3px solid transparent',
+                cursor: 'pointer',
+                fontFamily: 'var(--sans)', fontSize: '8.5pt', fontWeight: 400,
+                letterSpacing: '0.02em',
+                color: cropEditMode ? 'var(--ai-rouge)' : 'var(--ai-noir)',
+                background: cropEditMode ? '#FFF5F5' : 'white',
+              }}
+            >
+              {cropEditMode ? 'Terminer le recadrage' : 'Recadrer les photos'}
+            </button>
+          )}
+        </details>
+
+        {/* ─── Menu déroulant « Mise en page » : sections accordion ─── */}
+        <details className="ls-group" open>
+          <summary style={GROUP_SUMMARY}><Caret />Mise en page</summary>
+          {/* Sections numérotées (1..N) pour guider l'utilisateur. N vaut 7
+              en template Dev (Prestation Assemblage incluse) et 6 en Str-Env
+              (devOnly filtré par visibleSections). */}
+          {visibleSections.map((s, i) => (
+            <button
+              key={s.id}
+              onClick={() => toggle(s.id)}
+              style={{
+                display: 'block', width: '100%', textAlign: 'left',
+                padding: '11px 14px 11px 22px',
+                border: 'none', borderBottom: `1px solid ${color.gris}`,
+                borderLeft: active === s.id ? '3px solid var(--ai-rouge)' : '3px solid transparent',
+                cursor: 'pointer',
+                fontFamily: 'var(--sans)', fontSize: '8.5pt', fontWeight: 400,
+                letterSpacing: '0.02em',
+                color: active === s.id ? 'var(--ai-rouge)' : 'var(--ai-noir)',
+                background: active === s.id ? '#FFF5F5' : 'white',
+                transition: 'background 0.1s',
+              }}
+            >
+              {i + 1}. {s.label}
+            </button>
+          ))}
+        </details>
       </nav>
 
       {/* Panneau de contenu + handle de resize */}

@@ -106,14 +106,20 @@ export async function POST(
     // 4. Ajout (non-bloquant) du projet sur sa/ses page(s) de pôle. Un échec
     //    galerie NE DOIT PAS faire échouer la promotion en production.
     let gallery: PoleGalleryResult[] | undefined;
-    try {
-      gallery = await addProjetToPoleGalleries(projet, {
-        link: updated.url,
-        imageId: draftContent.featured_media ?? 0,
-      });
-      console.log('[WP-UPDATE-PROD] gallery', gallery);
-    } catch (galErr) {
-      console.warn('Ajout galerie pôle échoué (non-fatal):', galErr);
+    if (!draftContent.featured_media) {
+      // Pas d'image à la une → ne pas pousser une tuile sans visuel (imageId 0)
+      // sur la galerie de pôle. On saute simplement l'ajout (non-bloquant).
+      console.warn('[WP-UPDATE-PROD] pas de featured_media — galerie pôle non mise à jour');
+    } else {
+      try {
+        gallery = await addProjetToPoleGalleries(projet, {
+          link: updated.url,
+          imageId: draftContent.featured_media,
+        });
+        console.log('[WP-UPDATE-PROD] gallery', gallery);
+      } catch (galErr) {
+        console.warn('Ajout galerie pôle échoué (non-fatal):', galErr);
+      }
     }
 
     return NextResponse.json({

@@ -30,6 +30,17 @@ export async function POST(
     return NextResponse.json({ error: 'Projet introuvable' }, { status: 404 });
   }
 
+  // Une photo de couverture est obligatoire : elle sert d'image à la une du
+  // post WP et de vignette sur les pages de pôle. Sans elle, on aurait un post
+  // sans featured_media et une tuile galerie cassée (cf. update-prod). On bloque
+  // donc l'export tôt avec un message actionnable.
+  if (!projet.photoCouverture?.url) {
+    return NextResponse.json(
+      { error: 'Photo de couverture manquante : ajoute au moins une image dans le champ « Photo couverture » de la fiche Airtable avant de publier.' },
+      { status: 422 }
+    );
+  }
+
   // Variante de mise en page : v1 (par défaut) ou v2
   let variant: 'v1' | 'v2' = 'v1';
   try {

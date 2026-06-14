@@ -67,5 +67,8 @@ export async function requireApprovedUser(req?: NextRequest) {
   return {
     user: { id: userId },
     profile: profile as { id: string; role: 'admin' | 'user'; is_approved: boolean },
+    // Client Supabase authentifié (Bearer ou cookie) : réutilisable pour des
+    // écritures sous RLS au nom de l'appelant (cf. /api/admin/users/[id]).
+    supabase,
   };
 }

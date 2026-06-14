@@ -1,0 +1,121 @@
+/* Écrans d'erreur brandés Assemblage ingénierie — partagés par error.tsx,
+   not-found.tsx et global-error.tsx. Police Geomanist (var(--sans)) + palette
+   de marque (var(--ai-*)). Mêmes codes visuels que la page de connexion. */
+
+.page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: var(--ai-gris-tres-clair, #f4f4f5);
+  font-family: var(--sans);
+}
+
+.card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 3rem 2.5rem;
+  width: 100%;
+  max-width: 440px;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, .08);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1.25rem;
+  text-align: left;
+}
+
+.logoImg {
+  height: 34px;
+  width: auto;
+  display: block;
+  margin-bottom: .25rem;
+}
+
+.code {
+  font-family: var(--sans);
+  font-size: .8rem;
+  font-weight: 550;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ai-rouge, #e30513);
+  margin: 0;
+}
+
+.title {
+  font-family: var(--sans);
+  font-size: 1.6rem;
+  font-weight: 400;
+  color: var(--ai-violet, #30323e);
+  margin: 0;
+  line-height: 1.25;
+}
+
+.message {
+  font-family: var(--sans);
+  font-size: .95rem;
+  font-weight: 300;
+  color: var(--ai-noir70, #4d4d4d);
+  margin: 0;
+  line-height: 1.55;
+}
+
+.digest {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: .72rem;
+  color: var(--ai-noir70, #6b6e7b);
+  opacity: .7;
+  margin: 0;
+  word-break: break-all;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .75rem;
+  margin-top: .5rem;
+  width: 100%;
+}
+
+.primaryBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: .7rem 1.4rem;
+  border: none;
+  border-radius: 8px;
+  background: var(--ai-rouge, #e30513);
+  color: #fff;
+  font-family: var(--sans);
+  font-size: .9rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  transition: filter .15s;
+}
+
+.primaryBtn:hover {
+  filter: brightness(.92);
+}
+
+.secondaryBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: .7rem 1.4rem;
+  border: 1.5px solid var(--ai-gris, #d4d4d8);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ai-violet, #30323e);
+  font-family: var(--sans);
+  font-size: .9rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-decoration: none;
+  transition: border-color .15s;
+}
+
+.secondaryBtn:hover {
+  border-color: var(--ai-violet, #30323e);
+}
