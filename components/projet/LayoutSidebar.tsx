@@ -514,6 +514,8 @@ function CertificationsSection({ projet, config, onChange }: { projet: Projet; c
 // ─── Section : Prestation Assemblage (Dev only) ───────────────────────────────
 
 function PrestationSection({ projet, config, onChange }: { projet: Projet; config: ManualConfig; onChange: (next: ManualConfig) => void }) {
+  const { viewMode } = useViewMode();
+  const isAdminView = viewMode === 'admin';
   const pa: PrestationAssemblageConfig = config.prestationAssemblage ?? { show: true };
   const isActive = pa.show !== false;
   const hasValue = Boolean((projet.prestationAssemblage ?? '').trim());
@@ -551,18 +553,22 @@ function PrestationSection({ projet, config, onChange }: { projet: Projet; confi
           )}
           <Slider label="Horizontal" value={pa.offsetPercent ?? 50} onChange={v => update({ offsetPercent: v })} min={0} max={100} step={5} />
           <Slider label="Vertical" value={pa.offsetVerticalPercent ?? 50} onChange={v => update({ offsetVerticalPercent: v })} min={0} max={100} step={5} />
-          <div style={{ marginTop: 6 }}>
-            <label style={{ display: 'block', fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 6 }}>
-              Mise en page (police, taille, B/I/U, couleur texte, surlignage)
-            </label>
-            <StyleRow
-              style={(pa.style ?? {}) as BandeauStyle}
-              onChange={st => {
-                const isEmpty = !st.fontFamily && st.fontSize === undefined && !st.bold && !st.italic && !st.underline && !st.color && !st.background;
-                update({ style: isEmpty ? undefined : st });
-              }}
-            />
-          </div>
+          {/* Bloc typo (police, taille, B/I/U, couleur, surlignage) réservé à
+              la vue admin — masqué en vue user. */}
+          {isAdminView && (
+            <div style={{ marginTop: 6 }}>
+              <label style={{ display: 'block', fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 6 }}>
+                Mise en page (police, taille, B/I/U, couleur texte, surlignage)
+              </label>
+              <StyleRow
+                style={(pa.style ?? {}) as BandeauStyle}
+                onChange={st => {
+                  const isEmpty = !st.fontFamily && st.fontSize === undefined && !st.bold && !st.italic && !st.underline && !st.color && !st.background;
+                  update({ style: isEmpty ? undefined : st });
+                }}
+              />
+            </div>
+          )}
         </>
       )}
     </ContentPanel>
