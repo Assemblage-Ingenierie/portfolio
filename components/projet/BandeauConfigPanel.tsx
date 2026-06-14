@@ -428,12 +428,6 @@ export default function BandeauConfigPanel({ value, onChange, projet, onResetAll
     else next.programme = p;
     onChange(next);
   };
-  const gapOnChange = (key: 'titleMetaGap' | 'photoTextGap' | 'bandeauPhotoGap') => (v: number | undefined) => {
-    const next = { ...value };
-    if (v === undefined || v === 50) delete next[key];
-    else next[key] = v;
-    onChange(next);
-  };
   const hiddenCellsOnChange = (h: MetaLabel[]) => {
     const next = { ...value };
     if (h.length === 0) delete next.hiddenCells;
@@ -496,12 +490,34 @@ export default function BandeauConfigPanel({ value, onChange, projet, onResetAll
           {!isUserView && (
             <LinesRow value={value.lines ?? {}} onChange={(l) => onChange({ ...value, lines: l })} />
           )}
-          <TitleMetaGapRow value={value.titleMetaGap} onChange={gapOnChange('titleMetaGap')} />
-          <PhotoTextGapRow value={value.photoTextGap} onChange={gapOnChange('photoTextGap')} />
-          <BandeauPhotoGapRow value={value.bandeauPhotoGap} onChange={gapOnChange('bandeauPhotoGap')} />
+          {/* Les 3 sliders d'espacement (titre↔bandeau, photo↔description,
+              photo↔bandeau) ont été déplacés dans la section « Espacements »
+              de la sidebar — cf. <EspacementsPanel/> ci-dessous. */}
           <FieldVisibilityRow hidden={value.hiddenCells ?? []} onChange={hiddenCellsOnChange} />
         </div>
       </details>
+    </div>
+  );
+}
+
+/**
+ * Panneau « Espacements » — regroupe les 3 sliders d'espacement extraits du
+ * sous-menu « Bandeau » : titre ↔ bandeau, photo ↔ description, photo ↔ bandeau.
+ * Opère directement sur le BandeauConfig (clés titleMetaGap / photoTextGap /
+ * bandeauPhotoGap). 50 = défaut → la clé est supprimée pour rester neutre.
+ */
+export function EspacementsPanel({ value, onChange }: { value: BandeauConfig; onChange: (next: BandeauConfig) => void }) {
+  const gapOnChange = (key: 'titleMetaGap' | 'photoTextGap' | 'bandeauPhotoGap') => (v: number | undefined) => {
+    const next = { ...value };
+    if (v === undefined || v === 50) delete next[key];
+    else next[key] = v;
+    onChange(next);
+  };
+  return (
+    <div>
+      <TitleMetaGapRow value={value.titleMetaGap} onChange={gapOnChange('titleMetaGap')} />
+      <PhotoTextGapRow value={value.photoTextGap} onChange={gapOnChange('photoTextGap')} />
+      <BandeauPhotoGapRow value={value.bandeauPhotoGap} onChange={gapOnChange('bandeauPhotoGap')} />
     </div>
   );
 }

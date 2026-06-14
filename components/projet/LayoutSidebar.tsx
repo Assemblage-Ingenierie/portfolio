@@ -12,7 +12,7 @@ import type {
 import { MAX_MAIN_PORTRAIT_PHOTOS } from '@/lib/pdf/manualConfig';
 import type { BandeauConfig, BandeauStyle } from '@/lib/pdf/bandeauConfig';
 import { allPhotos } from '@/lib/pdf/templates/shared';
-import BandeauConfigPanel, { StyleRow } from '@/components/projet/BandeauConfigPanel';
+import BandeauConfigPanel, { StyleRow, EspacementsPanel } from '@/components/projet/BandeauConfigPanel';
 import {
   ASSEMBLAGE_DEFAULT_BANDEAU,
   ASSEMBLAGE_DEFAULT_MANUAL,
@@ -24,23 +24,37 @@ import { color } from '@/lib/ui/tokens';
 const STORAGE_KEY = 'portfolio_layout_section';
 const MAX_EXTRA_PHOTOS = 5;
 
-type SectionId = 'typo' | 'main' | 'text' | 'extra' | 'certifications' | 'prestation';
+type SectionId = 'typo' | 'spacing' | 'main' | 'text' | 'extra' | 'certifications' | 'prestation';
 
 interface SectionDef { id: SectionId; label: string; devOnly?: boolean; }
 
 // "Mots-clés" retiré du menu : depuis le passage à la position figée sous le
 // statut (cf. headerHtml dans shared.ts), la liste flottante n'est plus
 // configurable côté UI.
+//
+// Le menu est scindé en deux groupes déroulants : « Données » (édition des
+// champs + recadrage, rendus en dur dans la nav) et « Mise en page » (les
+// sections ci-dessous, dans l'ordre d'affichage souhaité).
 const SECTIONS: SectionDef[] = [
-  { id: 'typo',           label: 'Mise en page' },
+  { id: 'typo',           label: 'Bandeau' },
+  { id: 'spacing',        label: 'Espacements' },
   { id: 'main',           label: 'Photo principale' },
-  { id: 'text',           label: 'Texte description' },
+  { id: 'text',           label: 'Description Projet' },
+  { id: 'prestation',     label: 'Prestation Assemblage', devOnly: true },
   { id: 'extra',          label: 'Photos additionnelles' },
   { id: 'certifications', label: 'Certifications' },
-  { id: 'prestation',     label: 'Prestation Assemblage', devOnly: true },
 ];
 
 // ─── Styles partagés ─────────────────────────────────────────────────────────
+
+// En-tête des deux menus déroulants de la nav (« Données » / « Mise en page »).
+const GROUP_SUMMARY: React.CSSProperties = {
+  cursor: 'pointer', userSelect: 'none',
+  padding: '10px 14px', borderBottom: `1px solid ${color.gris}`,
+  fontFamily: 'var(--sans)', fontSize: '8pt', fontWeight: 700,
+  letterSpacing: '0.08em', textTransform: 'uppercase',
+  color: 'var(--ai-violet)', background: '#FAFAFA',
+};
 
 const ROW: React.CSSProperties = { display: 'flex', gap: 6, alignItems: 'center', fontSize: '9pt' };
 const SUBROW: React.CSSProperties = { ...ROW, paddingLeft: 8, borderLeft: `2px solid ${color.gris}` };
@@ -237,8 +251,10 @@ function MainPhotoSection({ projet, config, onChange }: MainPhotoProps) {
   return (
     <ContentPanel>
       <div style={{ display: 'flex', gap: 4 }}>
-        {(['paysage', 'portrait'] as PhotoFormat[]).map(f => (
-          <button key={f} onClick={() => setFormat(f)} style={radioBtn(config.mainPhotoFormat === f)}>{f}</button>
+        {/* Libellés UI uniquement : la valeur interne PhotoFormat reste
+            'paysage'/'portrait' (cf. mainPhotoFormat / rendu PDF). */}
+        {([['paysage', 'photo unique'], ['portrait', 'photos multiples']] as [PhotoFormat, string][]).map(([f, label]) => (
+          <button key={f} onClick={() => setFormat(f)} style={radioBtn(config.mainPhotoFormat === f)}>{label}</button>
         ))}
       </div>
       <div style={ROW}>
@@ -632,6 +648,12 @@ export default function LayoutSidebar({ projet, config, onChange, bandeauConfig,
             />
           </div>
         );
+      case 'spacing':
+        return (
+          <ContentPanel>
+            <EspacementsPanel value={bandeauConfig} onChange={onBandeauChange} />
+          </ContentPanel>
+        );
       case 'main':     return <MainPhotoSection projet={projet} config={config} onChange={onChange} />;
       case 'text':     return <TextSection config={config} onChange={onChange} />;
       case 'extra':    return <ExtraPhotosSection projet={projet} config={config} onChange={onChange} />;
@@ -684,60 +706,68 @@ export default function LayoutSidebar({ projet, config, onChange, bandeauConfig,
             </select>
           </div>
         )}
-        {/* Boutons d'édition (déplacés depuis la toolbar) */}
-        <Link
-          href={`/projet/${projet.slug}/edit`}
-          style={{
-            display: 'block', width: '100%', textAlign: 'left',
-            padding: '11px 14px', textDecoration: 'none',
-            border: 'none', borderBottom: `1px solid ${color.gris}`,
-            borderLeft: '3px solid transparent',
-            cursor: 'pointer',
-            fontFamily: 'var(--sans)', fontSize: '7.5pt', fontWeight: 700,
-            letterSpacing: '0.06em', textTransform: 'uppercase',
-            color: 'var(--ai-violet)', background: 'white',
-          }}
-        >
-          ✎ Éditer les champs
-        </Link>
-        {onCropEditModeChange && (
-          <button
-            onClick={() => onCropEditModeChange(!cropEditMode)}
+        {/* ─── Menu déroulant « Données » : édition des champs + recadrage ─── */}
+        <details open>
+          <summary style={GROUP_SUMMARY}>Données</summary>
+          <Link
+            href={`/projet/${projet.slug}/edit`}
             style={{
               display: 'block', width: '100%', textAlign: 'left',
-              padding: '11px 14px',
+              padding: '11px 14px', textDecoration: 'none',
               border: 'none', borderBottom: `1px solid ${color.gris}`,
-              borderLeft: cropEditMode ? '3px solid var(--ai-rouge)' : '3px solid transparent',
+              borderLeft: '3px solid transparent',
               cursor: 'pointer',
               fontFamily: 'var(--sans)', fontSize: '7.5pt', fontWeight: 700,
               letterSpacing: '0.06em', textTransform: 'uppercase',
-              color: cropEditMode ? 'var(--ai-rouge)' : 'var(--ai-violet)',
-              background: cropEditMode ? '#FFF5F5' : 'white',
+              color: 'var(--ai-violet)', background: 'white',
             }}
           >
-            {cropEditMode ? '✓ Terminer le recadrage' : '✂ Recadrer les photos'}
-          </button>
-        )}
-        {visibleSections.map(s => (
-          <button
-            key={s.id}
-            onClick={() => toggle(s.id)}
-            style={{
-              display: 'block', width: '100%', textAlign: 'left',
-              padding: '11px 14px',
-              border: 'none', borderBottom: `1px solid ${color.gris}`,
-              borderLeft: active === s.id ? '3px solid var(--ai-rouge)' : '3px solid transparent',
-              cursor: 'pointer',
-              fontFamily: 'var(--sans)', fontSize: '7.5pt', fontWeight: 700,
-              letterSpacing: '0.06em', textTransform: 'uppercase',
-              color: active === s.id ? 'var(--ai-rouge)' : 'var(--ai-noir70)',
-              background: active === s.id ? '#FFF5F5' : 'white',
-              transition: 'background 0.1s',
-            }}
-          >
-            {s.label}
-          </button>
-        ))}
+            ✎ Éditer les champs
+          </Link>
+          {onCropEditModeChange && (
+            <button
+              onClick={() => onCropEditModeChange(!cropEditMode)}
+              style={{
+                display: 'block', width: '100%', textAlign: 'left',
+                padding: '11px 14px',
+                border: 'none', borderBottom: `1px solid ${color.gris}`,
+                borderLeft: cropEditMode ? '3px solid var(--ai-rouge)' : '3px solid transparent',
+                cursor: 'pointer',
+                fontFamily: 'var(--sans)', fontSize: '7.5pt', fontWeight: 700,
+                letterSpacing: '0.06em', textTransform: 'uppercase',
+                color: cropEditMode ? 'var(--ai-rouge)' : 'var(--ai-violet)',
+                background: cropEditMode ? '#FFF5F5' : 'white',
+              }}
+            >
+              {cropEditMode ? '✓ Terminer le recadrage' : '✂ Recadrer les photos'}
+            </button>
+          )}
+        </details>
+
+        {/* ─── Menu déroulant « Mise en page » : sections accordion ─── */}
+        <details open>
+          <summary style={GROUP_SUMMARY}>Mise en page</summary>
+          {visibleSections.map(s => (
+            <button
+              key={s.id}
+              onClick={() => toggle(s.id)}
+              style={{
+                display: 'block', width: '100%', textAlign: 'left',
+                padding: '11px 14px 11px 22px',
+                border: 'none', borderBottom: `1px solid ${color.gris}`,
+                borderLeft: active === s.id ? '3px solid var(--ai-rouge)' : '3px solid transparent',
+                cursor: 'pointer',
+                fontFamily: 'var(--sans)', fontSize: '7.5pt', fontWeight: 700,
+                letterSpacing: '0.06em', textTransform: 'uppercase',
+                color: active === s.id ? 'var(--ai-rouge)' : 'var(--ai-noir70)',
+                background: active === s.id ? '#FFF5F5' : 'white',
+                transition: 'background 0.1s',
+              }}
+            >
+              {s.label}
+            </button>
+          ))}
+        </details>
       </nav>
 
       {/* Panneau de contenu + handle de resize */}
