@@ -732,7 +732,7 @@ export default function LayoutSidebar({ projet, config, onChange, bandeauConfig,
               border: 'none', borderBottom: `1px solid ${color.gris}`,
               borderLeft: '3px solid transparent',
               cursor: 'pointer',
-              fontFamily: 'var(--sans)', fontSize: '8.5pt', fontWeight: 700,
+              fontFamily: 'var(--sans)', fontSize: '8.5pt', fontWeight: 250,
               letterSpacing: '0.02em',
               color: 'var(--ai-noir)', background: 'white',
             }}
@@ -748,7 +748,7 @@ export default function LayoutSidebar({ projet, config, onChange, bandeauConfig,
                 border: 'none', borderBottom: `1px solid ${color.gris}`,
                 borderLeft: cropEditMode ? '3px solid var(--ai-rouge)' : '3px solid transparent',
                 cursor: 'pointer',
-                fontFamily: 'var(--sans)', fontSize: '8.5pt', fontWeight: 700,
+                fontFamily: 'var(--sans)', fontSize: '8.5pt', fontWeight: 250,
                 letterSpacing: '0.02em',
                 color: cropEditMode ? 'var(--ai-rouge)' : 'var(--ai-noir)',
                 background: cropEditMode ? '#FFF5F5' : 'white',
@@ -762,7 +762,10 @@ export default function LayoutSidebar({ projet, config, onChange, bandeauConfig,
         {/* ─── Menu déroulant « Mise en page » : sections accordion ─── */}
         <details className="ls-group" open>
           <summary style={GROUP_SUMMARY}><Caret />Mise en page</summary>
-          {visibleSections.map(s => (
+          {/* Sections numérotées (1..N) pour guider l'utilisateur. N vaut 7
+              en template Dev (Prestation Assemblage incluse) et 6 en Str-Env
+              (devOnly filtré par visibleSections). */}
+          {visibleSections.map((s, i) => (
             <button
               key={s.id}
               onClick={() => toggle(s.id)}
@@ -772,14 +775,14 @@ export default function LayoutSidebar({ projet, config, onChange, bandeauConfig,
                 border: 'none', borderBottom: `1px solid ${color.gris}`,
                 borderLeft: active === s.id ? '3px solid var(--ai-rouge)' : '3px solid transparent',
                 cursor: 'pointer',
-                fontFamily: 'var(--sans)', fontSize: '8.5pt', fontWeight: 700,
+                fontFamily: 'var(--sans)', fontSize: '8.5pt', fontWeight: 250,
                 letterSpacing: '0.02em',
                 color: active === s.id ? 'var(--ai-rouge)' : 'var(--ai-noir)',
                 background: active === s.id ? '#FFF5F5' : 'white',
                 transition: 'background 0.1s',
               }}
             >
-              {s.label}
+              {i + 1}. {s.label}
             </button>
           ))}
         </details>
