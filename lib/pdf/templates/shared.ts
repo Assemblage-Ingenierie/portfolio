@@ -186,6 +186,15 @@ html, body { background: white; }
   color: var(--ai-noir70); letter-spacing: 0.06em;
   margin-left: auto; white-space: nowrap;
 }
+/* Séparateur point médian entre deux valeurs Mission AI. Le glyphe · est calé
+   sur la hauteur d'x de la police → trop haut face aux capitales/petites
+   capitales. On le descend au centre visuel des lettres et on l'entoure de
+   fines espaces pour aérer. */
+.t-mission-sep {
+  display: inline-block;
+  vertical-align: -0.12em;
+  padding: 0 0.25em;
+}
 .t-h1 {
   font-family: var(--serif); font-weight: 500;
   color: var(--ai-noir); letter-spacing: -0.015em;
@@ -458,7 +467,7 @@ export function titleBlockHtml(
     const missionStyle = styleToCss(projet.bandeauConfig?.missionAi);
     surtitre = `<div class="t-surtitre-row">
       <span class="t-surtitre">${projet.lieu ? esc(projet.lieu) : ''}</span>
-      <span class="t-surtitre-mission"${missionStyle ? ` style="${missionStyle}"` : ''}>${esc(missionAiVals.join(' · '))}</span>
+      <span class="t-surtitre-mission"${missionStyle ? ` style="${missionStyle}"` : ''}>${missionAiVals.map(esc).join('<span class="t-mission-sep">·</span>')}</span>
     </div>`;
   } else {
     surtitre = projet.lieu ? `<div class="t-surtitre">${esc(projet.lieu)}</div>` : '';
