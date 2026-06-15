@@ -772,6 +772,22 @@ function PreviewStep({
   // Nombre de `.page` actuellement rendues dans l'iframe — sert à ajuster la
   // hauteur du conteneur iframe quand l'auto-pagination produit plusieurs A4.
   const [pageCount, setPageCount] = useState(1);
+  // Largeur dispo pour l'aperçu (colonne 1fr de la grille) — mesurée pour
+  // scaler l'A4 à la largeur restante : le menu reste aligné à gauche sur le
+  // bandeau, la fin de l'A4 s'aligne sur la fin du bandeau, et tout reste
+  // visible à 100% de zoom quelle que soit la largeur d'écran.
+  const mainRef = useRef<HTMLDivElement>(null);
+  const [mainWidth, setMainWidth] = useState(0);
+
+  useEffect(() => {
+    const el = mainRef.current;
+    if (!el) return;
+    const update = () => setMainWidth(el.getBoundingClientRect().width);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   // Limite stricte sur le nombre d'itérations pour converger sur un
   // rowsPerPage qui rentre — évite toute boucle infinie en cas d'overflow
@@ -911,16 +927,22 @@ function PreviewStep({
   const paginated = orientation === 'paysage' && autoRowsPerPage !== null && pageCount > 1;
   const previewWidthMm = orientation === 'paysage' ? 297 : 210;
   const previewHeightMm = orientation === 'paysage' ? 210 : 297;
+  // mm → px (96 DPI) puis facteur d'échelle pour faire tenir l'A4 dans la
+  // largeur dispo (jamais d'agrandissement : scale ≤ 1).
+  const previewWidthPx = (previewWidthMm * 96) / 25.4;
+  const previewHeightPx = (previewHeightMm * 96) / 25.4;
+  const scale = mainWidth > 0 ? Math.min(1, mainWidth / previewWidthPx) : 1;
+  const scaledWidthPx = previewWidthPx * scale;
+  const scaledHeightPx = previewHeightPx * pageCount * scale;
 
   return (
-    // Layout aligné à droite : le bloc (menu + aperçu) colle au bord droit du
-    // conteneur — donc à la fin du bandeau d'action. En paysage l'aperçu A4
-    // (297mm) est plus large que le conteneur 1200px : le bloc déborde alors
-    // vers la GAUCHE (dans la marge grise) au lieu de dépasser à droite, ce qui
-    // aligne la fin de la page A4 sur la fin du bandeau.
-    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-start', gap: 20 }}>
+    // Grille menu (260px) + aperçu (1fr) : le menu reste collé au bord gauche
+    // du conteneur, aligné sur le début du bandeau. L'aperçu A4 est scalé pour
+    // tenir dans la colonne 1fr (cf. `scale`), donc sa fin s'aligne sur la fin
+    // du bandeau sans déborder.
+    <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 20 }}>
       {/* Sidebar config */}
-      <aside style={{ width: 260, flex: '0 0 260px', boxSizing: 'border-box', position: 'sticky', top: 16, alignSelf: 'flex-start', background: 'white', border: `1px solid ${color.gris}`, borderRadius: 12, padding: 16 }}>
+      <aside style={{ position: 'sticky', top: 16, alignSelf: 'start', background: 'white', border: `1px solid ${color.gris}`, borderRadius: 12, padding: 16 }}>
         <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 8 }}>Mode</div>
         <div style={{ display: 'flex', gap: 4, marginBottom: 18 }}>
           {(['Str-Env', 'Dev'] as const).map(m => (
@@ -987,12 +1009,13 @@ function PreviewStep({
           })}
         </div>
       </aside>
-      {/* Preview — flex:0 0 auto pour que la largeur colle à l'aperçu A4
-          (fin de l'iframe = bord droit du conteneur = fin du bandeau). */}
-      <main style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+      {/* Preview — minWidth:0 pour que la colonne 1fr puisse rétrécir ; l'A4
+          est aligné à gauche dans la colonne (sa fin = fin de colonne = fin
+          du bandeau quand scale<1). */}
+      <main ref={mainRef} style={{ minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
         {stillOverflowing && (
           <div role="alert" style={{
-            width: `${previewWidthMm}mm`, marginBottom: 12, padding: '10px 16px',
+            width: scaledWidthPx, marginBottom: 12, padding: '10px 16px', boxSizing: 'border-box',
             background: 'var(--ai-rouge)', color: 'white', fontFamily: 'var(--sans)',
             fontSize: '9pt', fontWeight: 600, borderRadius: 8,
           }}>
@@ -1001,28 +1024,37 @@ function PreviewStep({
         )}
         {paginated && (
           <div style={{
-            width: `${previewWidthMm}mm`, marginBottom: 12, padding: '8px 14px',
+            width: scaledWidthPx, marginBottom: 12, padding: '8px 14px', boxSizing: 'border-box',
             background: 'var(--ai-violet)', color: 'white', fontFamily: 'var(--sans)',
             fontSize: '9pt', fontWeight: 600, borderRadius: 8,
           }}>
             Tableau réparti automatiquement sur {pageCount} pages ({autoRowsPerPage} lignes par page).
           </div>
         )}
-        <iframe
-          ref={iframeRef}
-          title="Aperçu tableau"
-          srcDoc={html}
-          style={{
-            width: `${previewWidthMm}mm`,
-            // Hauteur dimensionnée selon le nb de pages auto-paginées. Les
-            // pages sont rendues flush (pas de gap) dans la preview iframe.
-            minHeight: `${previewHeightMm * pageCount}mm`,
-            border: 'none', background: 'white',
-            boxShadow: stillOverflowing
-              ? '0 4px 24px rgba(227,5,19,0.35), 0 0 0 2px var(--ai-rouge)'
-              : '0 4px 24px rgba(0,0,0,0.12)',
-          }}
-        />
+        {/* Wrapper dimensionné à la taille scalée ; l'iframe garde sa taille A4
+            réelle (px) et n'est réduite que visuellement via transform → la
+            mesure d'overflow/pagination lit toujours le vrai DOM A4. */}
+        <div style={{
+          width: scaledWidthPx, height: scaledHeightPx, background: 'white',
+          boxShadow: stillOverflowing
+            ? '0 4px 24px rgba(227,5,19,0.35), 0 0 0 2px var(--ai-rouge)'
+            : '0 4px 24px rgba(0,0,0,0.12)',
+        }}>
+          <iframe
+            ref={iframeRef}
+            title="Aperçu tableau"
+            srcDoc={html}
+            style={{
+              width: previewWidthPx,
+              // Hauteur dimensionnée selon le nb de pages auto-paginées. Les
+              // pages sont rendues flush (pas de gap) dans la preview iframe.
+              height: previewHeightPx * pageCount,
+              transform: `scale(${scale})`,
+              transformOrigin: 'top left',
+              border: 'none', background: 'white', display: 'block',
+            }}
+          />
+        </div>
       </main>
     </div>
   );
