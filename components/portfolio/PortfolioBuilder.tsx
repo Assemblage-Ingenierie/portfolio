@@ -298,15 +298,15 @@ export default function PortfolioBuilder({ projets }: Props) {
   });
 
   // Bandeau d'action inline (compteur + boutons d'étape). Repris du style des
-  // cartes de la page (arrondis 12px) sur fond violet pour rester visible.
+  // cartes de la page : fond blanc, bordure grise, arrondis 12px.
   const actionBar: React.CSSProperties = {
-    background: 'var(--ai-violet)', color: 'white',
+    background: 'white', color: 'var(--ai-noir70)',
+    border: `1px solid ${color.gris}`,
     padding: '12px 18px', borderRadius: '12px', marginBottom: 20,
     display: 'flex', alignItems: 'center', gap: 16,
-    boxShadow: '0 2px 8px rgba(0,0,0,0.10)',
   };
   const actionCount = (
-    <div style={{ fontFamily: 'var(--sans)', fontSize: '10pt' }}>
+    <div style={{ fontFamily: 'var(--sans)', fontSize: '10pt', color: 'var(--ai-noir70)' }}>
       <strong style={{ fontSize: '14pt', color: 'var(--ai-rouge)' }}>{selection.size}</strong> référence{selection.size > 1 ? 's' : ''} sélectionnée{selection.size > 1 ? 's' : ''}
     </div>
   );
@@ -530,8 +530,8 @@ export default function PortfolioBuilder({ projets }: Props) {
             onClick={() => setStep('select')}
             style={{
               padding: '10px 16px',
-              background: 'transparent',
-              color: 'white', border: '1px solid rgba(255,255,255,0.4)', borderRadius: 8,
+              background: 'white',
+              color: 'var(--ai-noir70)', border: `1px solid ${color.gris}`, borderRadius: 8,
               fontFamily: 'var(--sans)', fontSize: '10pt', fontWeight: 600,
               cursor: 'pointer',
             }}
