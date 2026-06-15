@@ -516,8 +516,8 @@ export function EspacementsPanel({ value, onChange }: { value: BandeauConfig; on
   return (
     <div>
       <TitleMetaGapRow value={value.titleMetaGap} onChange={gapOnChange('titleMetaGap')} />
-      <PhotoTextGapRow value={value.photoTextGap} onChange={gapOnChange('photoTextGap')} />
       <BandeauPhotoGapRow value={value.bandeauPhotoGap} onChange={gapOnChange('bandeauPhotoGap')} />
+      <PhotoTextGapRow value={value.photoTextGap} onChange={gapOnChange('photoTextGap')} />
     </div>
   );
 }
@@ -560,7 +560,7 @@ function BandeauPhotoGapRow({ value, onChange }: { value: number | undefined; on
   const v = value ?? 50;
   return (
     <div style={{ marginBottom: '14px', paddingBottom: '14px' }}>
-      <label style={LABEL_S}>Espacement photo ↔ bandeau</label>
+      <label style={LABEL_S}>Espacement bandeau ↔ photo</label>
       <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', margin: '0 0 6px' }}>
         Rapproche ou éloigne la photo principale du bandeau métadonnées.
       </p>
