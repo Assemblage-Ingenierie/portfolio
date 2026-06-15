@@ -362,8 +362,54 @@ export default function TableauBuilder({ projets }: Props) {
     color: active ? 'white' : 'var(--ai-noir70)',
   });
 
+  // Bandeau d'action inline (compteur + boutons d'étape). Même style que le
+  // bandeau de /portfolio/builder : fond blanc, bordure grise, arrondis 12px.
+  const actionBar: React.CSSProperties = {
+    background: 'white', color: 'var(--ai-noir70)',
+    border: `1px solid ${color.gris}`,
+    padding: '12px 18px', borderRadius: 12, marginBottom: 20,
+    display: 'flex', alignItems: 'center', gap: 16,
+  };
+  const count = step === 'select' ? selection.size : orderedSlugs.length;
+  const actionBanner = (
+    <div style={actionBar}>
+      {step !== 'select' && (
+        <button
+          onClick={() => setStep(step === 'order' ? 'select' : 'order')}
+          style={{
+            padding: '10px 16px', background: 'white',
+            color: 'var(--ai-noir70)', border: `1px solid ${color.gris}`, borderRadius: 8,
+            fontFamily: 'var(--sans)', fontSize: '10pt', fontWeight: 600, cursor: 'pointer',
+          }}
+        >
+          ← {step === 'order' ? 'Modifier la sélection' : 'Modifier l’ordre'}
+        </button>
+      )}
+      <div style={{ fontFamily: 'var(--sans)', fontSize: '10pt', color: 'var(--ai-noir70)' }}>
+        <strong style={{ fontSize: '14pt', color: 'var(--ai-rouge)' }}>{count}</strong>
+        {' '}référence{count > 1 ? 's' : ''}
+      </div>
+      <div style={{ flex: 1 }} />
+      {step === 'select' && (
+        <button onClick={goToOrderStep} disabled={selection.size === 0} style={primaryBtn(selection.size === 0)}>
+          Suivant : ordonner →
+        </button>
+      )}
+      {step === 'order' && (
+        <button onClick={() => setStep('preview')} disabled={orderedSlugs.length === 0} style={primaryBtn(orderedSlugs.length === 0)}>
+          Suivant : configurer →
+        </button>
+      )}
+      {step === 'preview' && (
+        <button onClick={handleExport} disabled={orderedSlugs.length === 0 || fields.length === 0} style={primaryBtn(orderedSlugs.length === 0 || fields.length === 0)}>
+          Exporter le PDF →
+        </button>
+      )}
+    </div>
+  );
+
   return (
-    <div style={{ paddingBottom: 140 }}>
+    <div>
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px', fontFamily: 'var(--sans)' }}>
         <header style={{ marginBottom: 20, borderBottom: '2px solid var(--ai-rouge)', paddingBottom: 16 }}>
           <Link href="/" style={{ fontSize: '9pt', color: 'var(--ai-noir70)', textDecoration: 'none', fontWeight: 600 }}>
@@ -386,6 +432,7 @@ export default function TableauBuilder({ projets }: Props) {
 
         {step === 'select' && (
           <SelectStep
+            actionBanner={actionBanner}
             filtered={filtered}
             selection={selection}
             toggleSelect={toggleSelect}
@@ -403,15 +450,20 @@ export default function TableauBuilder({ projets }: Props) {
         )}
 
         {step === 'order' && (
-          <OrderStep
-            orderedSlugs={orderedSlugs}
-            projetsBySlug={projetsBySlug}
-            moveItem={moveItem}
-            removeFromOrder={removeFromOrder}
-          />
+          <>
+            {actionBanner}
+            <OrderStep
+              orderedSlugs={orderedSlugs}
+              projetsBySlug={projetsBySlug}
+              moveItem={moveItem}
+              removeFromOrder={removeFromOrder}
+            />
+          </>
         )}
 
         {step === 'preview' && (
+          <>
+          {actionBanner}
           <PreviewStep
             html={previewHtml}
             orientation={orientation}
@@ -428,6 +480,7 @@ export default function TableauBuilder({ projets }: Props) {
             champLibreNom={champLibreConfigured ? champLibreNom : ''}
             openChampLibreModal={() => setShowChampLibreModal(true)}
           />
+          </>
         )}
 
         {showChampLibreModal && (
@@ -438,51 +491,6 @@ export default function TableauBuilder({ projets }: Props) {
             onCancel={() => setShowChampLibreModal(false)}
             onConfirm={confirmChampLibre}
           />
-        )}
-      </div>
-
-      {/* Barre sticky */}
-      <div style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0,
-        background: 'var(--ai-violet)', color: 'white',
-        padding: '14px 24px',
-        display: 'flex', alignItems: 'center', gap: 16,
-        boxShadow: '0 -4px 16px rgba(0,0,0,0.15)', zIndex: 100,
-      }}>
-        <div style={{ fontFamily: 'var(--sans)', fontSize: '10pt' }}>
-          <strong style={{ fontSize: '14pt', color: 'var(--ai-rouge)' }}>{step === 'select' ? selection.size : orderedSlugs.length}</strong>
-          {' '}référence{(step === 'select' ? selection.size : orderedSlugs.length) > 1 ? 's' : ''}
-        </div>
-        <div style={{ flex: 1 }} />
-        {step !== 'select' && (
-          <button
-            onClick={() => setStep(step === 'order' ? 'select' : 'order')}
-            style={{
-              padding: '10px 16px', background: 'transparent', color: 'white',
-              border: '1px solid rgba(255,255,255,0.4)', borderRadius: 8,
-              fontFamily: 'var(--sans)', fontSize: '10pt', fontWeight: 600, cursor: 'pointer',
-            }}
-          >
-            ← {step === 'order' ? 'Modifier la sélection' : 'Modifier l’ordre'}
-          </button>
-        )}
-        {step === 'select' && (
-          <button onClick={goToOrderStep} disabled={selection.size === 0}
-            style={primaryBtn(selection.size === 0)}>
-            Suivant : ordonner →
-          </button>
-        )}
-        {step === 'order' && (
-          <button onClick={() => setStep('preview')} disabled={orderedSlugs.length === 0}
-            style={primaryBtn(orderedSlugs.length === 0)}>
-            Suivant : configurer →
-          </button>
-        )}
-        {step === 'preview' && (
-          <button onClick={handleExport} disabled={orderedSlugs.length === 0 || fields.length === 0}
-            style={primaryBtn(orderedSlugs.length === 0 || fields.length === 0)}>
-            Exporter le PDF →
-          </button>
         )}
       </div>
     </div>
@@ -502,6 +510,7 @@ function primaryBtn(disabled: boolean): React.CSSProperties {
 
 // ─── Étape 1 : sélection ────────────────────────────────────────────────────
 interface SelectStepProps {
+  actionBanner: React.ReactNode;
   filtered: Projet[];
   selection: Set<string>;
   toggleSelect: (slug: string) => void;
@@ -623,6 +632,10 @@ function SelectStep(p: SelectStepProps) {
           </div>
         )}
       </div>
+
+      {/* Bandeau d'action — déplacé ici depuis le bas de page (accès instinctif). */}
+      {p.actionBanner}
+
       <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center', fontSize: '9pt', color: 'var(--ai-noir70)' }}>
         <button onClick={p.selectAllFiltered} style={p.btn(false)}>Tout sélectionner ({p.filtered.length})</button>
         <button onClick={p.clearSelection} style={p.btn(false)}>Tout désélectionner</button>
@@ -759,6 +772,22 @@ function PreviewStep({
   // Nombre de `.page` actuellement rendues dans l'iframe — sert à ajuster la
   // hauteur du conteneur iframe quand l'auto-pagination produit plusieurs A4.
   const [pageCount, setPageCount] = useState(1);
+  // Largeur dispo pour l'aperçu (colonne 1fr de la grille) — mesurée pour
+  // scaler l'A4 à la largeur restante : le menu reste aligné à gauche sur le
+  // bandeau, la fin de l'A4 s'aligne sur la fin du bandeau, et tout reste
+  // visible à 100% de zoom quelle que soit la largeur d'écran.
+  const mainRef = useRef<HTMLDivElement>(null);
+  const [mainWidth, setMainWidth] = useState(0);
+
+  useEffect(() => {
+    const el = mainRef.current;
+    if (!el) return;
+    const update = () => setMainWidth(el.getBoundingClientRect().width);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   // Limite stricte sur le nombre d'itérations pour converger sur un
   // rowsPerPage qui rentre — évite toute boucle infinie en cas d'overflow
@@ -898,8 +927,19 @@ function PreviewStep({
   const paginated = orientation === 'paysage' && autoRowsPerPage !== null && pageCount > 1;
   const previewWidthMm = orientation === 'paysage' ? 297 : 210;
   const previewHeightMm = orientation === 'paysage' ? 210 : 297;
+  // mm → px (96 DPI) puis facteur d'échelle pour faire tenir l'A4 dans la
+  // largeur dispo (jamais d'agrandissement : scale ≤ 1).
+  const previewWidthPx = (previewWidthMm * 96) / 25.4;
+  const previewHeightPx = (previewHeightMm * 96) / 25.4;
+  const scale = mainWidth > 0 ? Math.min(1, mainWidth / previewWidthPx) : 1;
+  const scaledWidthPx = previewWidthPx * scale;
+  const scaledHeightPx = previewHeightPx * pageCount * scale;
 
   return (
+    // Grille menu (260px) + aperçu (1fr) : le menu reste collé au bord gauche
+    // du conteneur, aligné sur le début du bandeau. L'aperçu A4 est scalé pour
+    // tenir dans la colonne 1fr (cf. `scale`), donc sa fin s'aligne sur la fin
+    // du bandeau sans déborder.
     <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 20 }}>
       {/* Sidebar config */}
       <aside style={{ position: 'sticky', top: 16, alignSelf: 'start', background: 'white', border: `1px solid ${color.gris}`, borderRadius: 12, padding: 16 }}>
@@ -969,11 +1009,13 @@ function PreviewStep({
           })}
         </div>
       </aside>
-      {/* Preview */}
-      <main style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 8px' }}>
+      {/* Preview — minWidth:0 pour que la colonne 1fr puisse rétrécir ; l'A4
+          est aligné à gauche dans la colonne (sa fin = fin de colonne = fin
+          du bandeau quand scale<1). */}
+      <main ref={mainRef} style={{ minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
         {stillOverflowing && (
           <div role="alert" style={{
-            width: `${previewWidthMm}mm`, marginBottom: 12, padding: '10px 16px',
+            width: scaledWidthPx, marginBottom: 12, padding: '10px 16px', boxSizing: 'border-box',
             background: 'var(--ai-rouge)', color: 'white', fontFamily: 'var(--sans)',
             fontSize: '9pt', fontWeight: 600, borderRadius: 8,
           }}>
@@ -982,28 +1024,37 @@ function PreviewStep({
         )}
         {paginated && (
           <div style={{
-            width: `${previewWidthMm}mm`, marginBottom: 12, padding: '8px 14px',
+            width: scaledWidthPx, marginBottom: 12, padding: '8px 14px', boxSizing: 'border-box',
             background: 'var(--ai-violet)', color: 'white', fontFamily: 'var(--sans)',
             fontSize: '9pt', fontWeight: 600, borderRadius: 8,
           }}>
             Tableau réparti automatiquement sur {pageCount} pages ({autoRowsPerPage} lignes par page).
           </div>
         )}
-        <iframe
-          ref={iframeRef}
-          title="Aperçu tableau"
-          srcDoc={html}
-          style={{
-            width: `${previewWidthMm}mm`,
-            // Hauteur dimensionnée selon le nb de pages auto-paginées. Les
-            // pages sont rendues flush (pas de gap) dans la preview iframe.
-            minHeight: `${previewHeightMm * pageCount}mm`,
-            border: 'none', background: 'white',
-            boxShadow: stillOverflowing
-              ? '0 4px 24px rgba(227,5,19,0.35), 0 0 0 2px var(--ai-rouge)'
-              : '0 4px 24px rgba(0,0,0,0.12)',
-          }}
-        />
+        {/* Wrapper dimensionné à la taille scalée ; l'iframe garde sa taille A4
+            réelle (px) et n'est réduite que visuellement via transform → la
+            mesure d'overflow/pagination lit toujours le vrai DOM A4. */}
+        <div style={{
+          width: scaledWidthPx, height: scaledHeightPx, background: 'white',
+          boxShadow: stillOverflowing
+            ? '0 4px 24px rgba(227,5,19,0.35), 0 0 0 2px var(--ai-rouge)'
+            : '0 4px 24px rgba(0,0,0,0.12)',
+        }}>
+          <iframe
+            ref={iframeRef}
+            title="Aperçu tableau"
+            srcDoc={html}
+            style={{
+              width: previewWidthPx,
+              // Hauteur dimensionnée selon le nb de pages auto-paginées. Les
+              // pages sont rendues flush (pas de gap) dans la preview iframe.
+              height: previewHeightPx * pageCount,
+              transform: `scale(${scale})`,
+              transformOrigin: 'top left',
+              border: 'none', background: 'white', display: 'block',
+            }}
+          />
+        </div>
       </main>
     </div>
   );
