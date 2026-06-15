@@ -313,7 +313,7 @@ function findSplitIndex(text: string, target: number): number {
 function paragraphsToHtml(text: string): string {
   if (!text) return '';
   // Rend le markdown (Airtable rich text). Le texte arrive ici après split
-  // sur '.' donc il peut être tronqué au milieu d'un span gras / italique :
+  // sur un espace donc il peut être tronqué au milieu d'un span gras / italique :
   // marked tolère les paires non-fermées en les laissant tel quel, ce qui
   // est acceptable pour le template Manuel (texte délibérément coupé).
   return injectSoftHyphensFr(renderMarkdown(text));
@@ -321,9 +321,9 @@ function paragraphsToHtml(text: string): string {
 
 /**
  * Sépare la description en deux moitiés HTML pour col 1 et col 2.
- * - col 1 contient les `col1Percent`% premiers caractères, calés sur '.'
+ * - col 1 contient les `col1Percent`% premiers caractères, calés sur un espace
  * - col 2 démarre à la fin de col 1 et contient `col2Percent`% du texte total,
- *   également calé sur '.' à la fin (le reste après est masqué).
+ *   également calé sur un espace à la fin (le reste après est masqué).
  */
 function splitDescription(
   description: string,
