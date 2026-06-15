@@ -156,7 +156,9 @@ export function renderTableau({
     const tbody = `<tbody>${pageProjets.map((p) =>
       `<tr>${fields.map((f) => {
         const v = f.getValue(p);
-        return `<td>${v ? esc(v) : '<span class="tab-empty">—</span>'}</td>`;
+        // Valeurs de la colonne Mission AI rendues en petites capitales.
+        const cls = f.key === 'mission' ? ' class="tab-mission"' : '';
+        return `<td${cls}>${v ? esc(v) : '<span class="tab-empty">—</span>'}</td>`;
       }).join('')}</tr>`
     ).join('')}</tbody>`;
 
@@ -242,6 +244,10 @@ export function renderTableau({
     }
     .tab-grid tbody tr:nth-child(even) td {
       background: var(--ai-gris-tres-clair);
+    }
+    /* Colonne Mission AI : valeurs en petites capitales. */
+    .tab-grid tbody td.tab-mission {
+      font-variant: small-caps;
     }
     /* Spacer flex pour pousser le footer en bas de la page A4 sans étirer
        les lignes du tableau. */
