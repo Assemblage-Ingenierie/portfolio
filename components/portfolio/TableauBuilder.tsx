@@ -913,9 +913,14 @@ function PreviewStep({
   const previewHeightMm = orientation === 'paysage' ? 210 : 297;
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 20 }}>
+    // Layout aligné à droite : le bloc (menu + aperçu) colle au bord droit du
+    // conteneur — donc à la fin du bandeau d'action. En paysage l'aperçu A4
+    // (297mm) est plus large que le conteneur 1200px : le bloc déborde alors
+    // vers la GAUCHE (dans la marge grise) au lieu de dépasser à droite, ce qui
+    // aligne la fin de la page A4 sur la fin du bandeau.
+    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-start', gap: 20 }}>
       {/* Sidebar config */}
-      <aside style={{ position: 'sticky', top: 16, alignSelf: 'start', background: 'white', border: `1px solid ${color.gris}`, borderRadius: 12, padding: 16 }}>
+      <aside style={{ width: 260, flex: '0 0 260px', boxSizing: 'border-box', position: 'sticky', top: 16, alignSelf: 'flex-start', background: 'white', border: `1px solid ${color.gris}`, borderRadius: 12, padding: 16 }}>
         <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 8 }}>Mode</div>
         <div style={{ display: 'flex', gap: 4, marginBottom: 18 }}>
           {(['Str-Env', 'Dev'] as const).map(m => (
@@ -982,8 +987,9 @@ function PreviewStep({
           })}
         </div>
       </aside>
-      {/* Preview */}
-      <main style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 8px' }}>
+      {/* Preview — flex:0 0 auto pour que la largeur colle à l'aperçu A4
+          (fin de l'iframe = bord droit du conteneur = fin du bandeau). */}
+      <main style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
         {stillOverflowing && (
           <div role="alert" style={{
             width: `${previewWidthMm}mm`, marginBottom: 12, padding: '10px 16px',
