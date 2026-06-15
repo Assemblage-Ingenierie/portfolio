@@ -362,8 +362,54 @@ export default function TableauBuilder({ projets }: Props) {
     color: active ? 'white' : 'var(--ai-noir70)',
   });
 
+  // Bandeau d'action inline (compteur + boutons d'étape). Même style que le
+  // bandeau de /portfolio/builder : fond blanc, bordure grise, arrondis 12px.
+  const actionBar: React.CSSProperties = {
+    background: 'white', color: 'var(--ai-noir70)',
+    border: `1px solid ${color.gris}`,
+    padding: '12px 18px', borderRadius: 12, marginBottom: 20,
+    display: 'flex', alignItems: 'center', gap: 16,
+  };
+  const count = step === 'select' ? selection.size : orderedSlugs.length;
+  const actionBanner = (
+    <div style={actionBar}>
+      {step !== 'select' && (
+        <button
+          onClick={() => setStep(step === 'order' ? 'select' : 'order')}
+          style={{
+            padding: '10px 16px', background: 'white',
+            color: 'var(--ai-noir70)', border: `1px solid ${color.gris}`, borderRadius: 8,
+            fontFamily: 'var(--sans)', fontSize: '10pt', fontWeight: 600, cursor: 'pointer',
+          }}
+        >
+          ← {step === 'order' ? 'Modifier la sélection' : 'Modifier l’ordre'}
+        </button>
+      )}
+      <div style={{ fontFamily: 'var(--sans)', fontSize: '10pt', color: 'var(--ai-noir70)' }}>
+        <strong style={{ fontSize: '14pt', color: 'var(--ai-rouge)' }}>{count}</strong>
+        {' '}référence{count > 1 ? 's' : ''}
+      </div>
+      <div style={{ flex: 1 }} />
+      {step === 'select' && (
+        <button onClick={goToOrderStep} disabled={selection.size === 0} style={primaryBtn(selection.size === 0)}>
+          Suivant : ordonner →
+        </button>
+      )}
+      {step === 'order' && (
+        <button onClick={() => setStep('preview')} disabled={orderedSlugs.length === 0} style={primaryBtn(orderedSlugs.length === 0)}>
+          Suivant : configurer →
+        </button>
+      )}
+      {step === 'preview' && (
+        <button onClick={handleExport} disabled={orderedSlugs.length === 0 || fields.length === 0} style={primaryBtn(orderedSlugs.length === 0 || fields.length === 0)}>
+          Exporter le PDF →
+        </button>
+      )}
+    </div>
+  );
+
   return (
-    <div style={{ paddingBottom: 140 }}>
+    <div>
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '32px 24px', fontFamily: 'var(--sans)' }}>
         <header style={{ marginBottom: 20, borderBottom: '2px solid var(--ai-rouge)', paddingBottom: 16 }}>
           <Link href="/" style={{ fontSize: '9pt', color: 'var(--ai-noir70)', textDecoration: 'none', fontWeight: 600 }}>
@@ -386,6 +432,7 @@ export default function TableauBuilder({ projets }: Props) {
 
         {step === 'select' && (
           <SelectStep
+            actionBanner={actionBanner}
             filtered={filtered}
             selection={selection}
             toggleSelect={toggleSelect}
@@ -403,15 +450,20 @@ export default function TableauBuilder({ projets }: Props) {
         )}
 
         {step === 'order' && (
-          <OrderStep
-            orderedSlugs={orderedSlugs}
-            projetsBySlug={projetsBySlug}
-            moveItem={moveItem}
-            removeFromOrder={removeFromOrder}
-          />
+          <>
+            {actionBanner}
+            <OrderStep
+              orderedSlugs={orderedSlugs}
+              projetsBySlug={projetsBySlug}
+              moveItem={moveItem}
+              removeFromOrder={removeFromOrder}
+            />
+          </>
         )}
 
         {step === 'preview' && (
+          <>
+          {actionBanner}
           <PreviewStep
             html={previewHtml}
             orientation={orientation}
@@ -428,6 +480,7 @@ export default function TableauBuilder({ projets }: Props) {
             champLibreNom={champLibreConfigured ? champLibreNom : ''}
             openChampLibreModal={() => setShowChampLibreModal(true)}
           />
+          </>
         )}
 
         {showChampLibreModal && (
@@ -438,51 +491,6 @@ export default function TableauBuilder({ projets }: Props) {
             onCancel={() => setShowChampLibreModal(false)}
             onConfirm={confirmChampLibre}
           />
-        )}
-      </div>
-
-      {/* Barre sticky */}
-      <div style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0,
-        background: 'var(--ai-violet)', color: 'white',
-        padding: '14px 24px',
-        display: 'flex', alignItems: 'center', gap: 16,
-        boxShadow: '0 -4px 16px rgba(0,0,0,0.15)', zIndex: 100,
-      }}>
-        <div style={{ fontFamily: 'var(--sans)', fontSize: '10pt' }}>
-          <strong style={{ fontSize: '14pt', color: 'var(--ai-rouge)' }}>{step === 'select' ? selection.size : orderedSlugs.length}</strong>
-          {' '}référence{(step === 'select' ? selection.size : orderedSlugs.length) > 1 ? 's' : ''}
-        </div>
-        <div style={{ flex: 1 }} />
-        {step !== 'select' && (
-          <button
-            onClick={() => setStep(step === 'order' ? 'select' : 'order')}
-            style={{
-              padding: '10px 16px', background: 'transparent', color: 'white',
-              border: '1px solid rgba(255,255,255,0.4)', borderRadius: 8,
-              fontFamily: 'var(--sans)', fontSize: '10pt', fontWeight: 600, cursor: 'pointer',
-            }}
-          >
-            ← {step === 'order' ? 'Modifier la sélection' : 'Modifier l’ordre'}
-          </button>
-        )}
-        {step === 'select' && (
-          <button onClick={goToOrderStep} disabled={selection.size === 0}
-            style={primaryBtn(selection.size === 0)}>
-            Suivant : ordonner →
-          </button>
-        )}
-        {step === 'order' && (
-          <button onClick={() => setStep('preview')} disabled={orderedSlugs.length === 0}
-            style={primaryBtn(orderedSlugs.length === 0)}>
-            Suivant : configurer →
-          </button>
-        )}
-        {step === 'preview' && (
-          <button onClick={handleExport} disabled={orderedSlugs.length === 0 || fields.length === 0}
-            style={primaryBtn(orderedSlugs.length === 0 || fields.length === 0)}>
-            Exporter le PDF →
-          </button>
         )}
       </div>
     </div>
@@ -502,6 +510,7 @@ function primaryBtn(disabled: boolean): React.CSSProperties {
 
 // ─── Étape 1 : sélection ────────────────────────────────────────────────────
 interface SelectStepProps {
+  actionBanner: React.ReactNode;
   filtered: Projet[];
   selection: Set<string>;
   toggleSelect: (slug: string) => void;
@@ -623,6 +632,10 @@ function SelectStep(p: SelectStepProps) {
           </div>
         )}
       </div>
+
+      {/* Bandeau d'action — déplacé ici depuis le bas de page (accès instinctif). */}
+      {p.actionBanner}
+
       <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center', fontSize: '9pt', color: 'var(--ai-noir70)' }}>
         <button onClick={p.selectAllFiltered} style={p.btn(false)}>Tout sélectionner ({p.filtered.length})</button>
         <button onClick={p.clearSelection} style={p.btn(false)}>Tout désélectionner</button>
