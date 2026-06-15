@@ -102,7 +102,7 @@ export default function LoginContent() {
         <div className={styles.divider}><span>ou</span></div>
 
         <a href="/public/portfolio" className={styles.publicBtn}>
-          Page publique →
+          Page publique
         </a>
       </div>
     </div>

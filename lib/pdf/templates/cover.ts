@@ -44,9 +44,11 @@ const CSS = `
    gauche dans son viewBox (glyphe à x=30.6 sur 566.9) → ≈3.95mm à cette
    taille. La marge négative compense ce blanc pour que le bord gauche VISIBLE
    du logo s'aligne sur la marge 6mm (padding head). */
-.pdg-logo { height: 26mm; width: auto; display: block; margin-left: -3.95mm; }
+/* Logo + vignettes : SVG sources rouges, rendus en noir via filter:brightness(0)
+   (silhouette pleine, transparence et qualité vectorielle préservées). */
+.pdg-logo { height: 26mm; width: auto; display: block; margin-left: -3.95mm; filter: brightness(0); }
 .pdg-vignettes { display: flex; align-items: center; gap: 4mm; }
-.pdg-vignette { height: 15mm; width: auto; display: block; }
+.pdg-vignette { height: 15mm; width: auto; display: block; filter: brightness(0); }
 
 /* Accroche + lignes Portfolio / Date. */
 .pdg-intro {

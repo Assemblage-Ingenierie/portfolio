@@ -297,8 +297,22 @@ export default function PortfolioBuilder({ projets }: Props) {
     color: active ? 'white' : 'var(--ai-noir70)',
   });
 
+  // Bandeau d'action inline (compteur + boutons d'étape). Repris du style des
+  // cartes de la page : fond blanc, bordure grise, arrondis 12px.
+  const actionBar: React.CSSProperties = {
+    background: 'white', color: 'var(--ai-noir70)',
+    border: `1px solid ${color.gris}`,
+    padding: '12px 18px', borderRadius: '12px', marginBottom: 20,
+    display: 'flex', alignItems: 'center', gap: 16,
+  };
+  const actionCount = (
+    <div style={{ fontFamily: 'var(--sans)', fontSize: '10pt', color: 'var(--ai-noir70)' }}>
+      <strong style={{ fontSize: '14pt', color: 'var(--ai-rouge)' }}>{selection.size}</strong> référence{selection.size > 1 ? 's' : ''} sélectionnée{selection.size > 1 ? 's' : ''}
+    </div>
+  );
+
   return (
-    <div style={{ paddingBottom: '120px' /* place pour la barre d'export sticky */ }}>
+    <div>
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '32px 24px', fontFamily: 'var(--sans)' }}>
 
         {/* Header */}
@@ -418,6 +432,27 @@ export default function PortfolioBuilder({ projets }: Props) {
 
         </div>
 
+        {/* Bandeau d'action — compteur + passage à l'étape 2 (déplacé ici depuis
+            le bas de page pour un accès plus instinctif). */}
+        <div style={actionBar}>
+          {actionCount}
+          <div style={{ flex: 1 }} />
+          <button
+            onClick={goToOrderStep}
+            disabled={selection.size === 0}
+            style={{
+              padding: '10px 20px',
+              background: selection.size === 0 ? '#666' : 'var(--ai-rouge)',
+              color: 'white', border: 'none', borderRadius: 8,
+              fontFamily: 'var(--sans)', fontSize: '10pt', fontWeight: 700,
+              cursor: selection.size === 0 ? 'not-allowed' : 'pointer',
+              letterSpacing: '0.05em',
+            }}
+          >
+            Suivant : ordonner →
+          </button>
+        </div>
+
         {/* Actions sélection groupée */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 12, alignItems: 'center', fontSize: '9pt', color: 'var(--ai-noir70)' }}>
           <button onClick={selectAllFiltered} style={btn(false)}>Tout sélectionner ({filtered.length})</button>
@@ -487,6 +522,40 @@ export default function PortfolioBuilder({ projets }: Props) {
         )}
 
         {step === 'order' && (
+        <>
+        {/* Bandeau d'action — retour à la sélection + export (déplacé ici depuis
+            le bas de page pour un accès plus instinctif). */}
+        <div style={actionBar}>
+          <button
+            onClick={() => setStep('select')}
+            style={{
+              padding: '10px 16px',
+              background: 'white',
+              color: 'var(--ai-noir70)', border: `1px solid ${color.gris}`, borderRadius: 8,
+              fontFamily: 'var(--sans)', fontSize: '10pt', fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            ← Modifier la sélection
+          </button>
+          {actionCount}
+          <div style={{ flex: 1 }} />
+          <button
+            onClick={openExportModal}
+            disabled={orderedSlugs.length === 0}
+            style={{
+              padding: '10px 20px',
+              background: orderedSlugs.length === 0 ? '#666' : 'var(--ai-rouge)',
+              color: 'white', border: 'none', borderRadius: 8,
+              fontFamily: 'var(--sans)', fontSize: '10pt', fontWeight: 700,
+              cursor: orderedSlugs.length === 0 ? 'not-allowed' : 'pointer',
+              letterSpacing: '0.05em',
+            }}
+          >
+            Exporter le PDF →
+          </button>
+        </div>
+
           <div style={{ background: 'white', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
             {orderedSlugs.map((slug, i) => {
               const projet = projetsBySlug.get(slug);
@@ -571,66 +640,7 @@ export default function PortfolioBuilder({ projets }: Props) {
               </div>
             )}
           </div>
-        )}
-      </div>
-
-      {/* Barre d'export sticky */}
-      <div style={{
-        position: 'fixed', bottom: 0, left: 0, right: 0,
-        background: 'var(--ai-violet)', color: 'white',
-        padding: '14px 24px',
-        display: 'flex', alignItems: 'center', gap: 16,
-        boxShadow: '0 -4px 16px rgba(0,0,0,0.15)',
-        zIndex: 100,
-      }}>
-        <div style={{ fontFamily: 'var(--sans)', fontSize: '10pt' }}>
-          <strong style={{ fontSize: '14pt', color: 'var(--ai-rouge)' }}>{selection.size}</strong> référence{selection.size > 1 ? 's' : ''} sélectionnée{selection.size > 1 ? 's' : ''}
-        </div>
-        <div style={{ flex: 1 }} />
-        {step === 'order' && (
-          <button
-            onClick={() => setStep('select')}
-            style={{
-              padding: '10px 16px',
-              background: 'transparent',
-              color: 'white', border: '1px solid rgba(255,255,255,0.4)', borderRadius: 8,
-              fontFamily: 'var(--sans)', fontSize: '10pt', fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
-            ← Modifier la sélection
-          </button>
-        )}
-        {step === 'select' ? (
-          <button
-            onClick={goToOrderStep}
-            disabled={selection.size === 0}
-            style={{
-              padding: '10px 20px',
-              background: selection.size === 0 ? '#666' : 'var(--ai-rouge)',
-              color: 'white', border: 'none', borderRadius: 8,
-              fontFamily: 'var(--sans)', fontSize: '10pt', fontWeight: 700,
-              cursor: selection.size === 0 ? 'not-allowed' : 'pointer',
-              letterSpacing: '0.05em',
-            }}
-          >
-            Suivant : ordonner →
-          </button>
-        ) : (
-          <button
-            onClick={openExportModal}
-            disabled={orderedSlugs.length === 0}
-            style={{
-              padding: '10px 20px',
-              background: orderedSlugs.length === 0 ? '#666' : 'var(--ai-rouge)',
-              color: 'white', border: 'none', borderRadius: 8,
-              fontFamily: 'var(--sans)', fontSize: '10pt', fontWeight: 700,
-              cursor: orderedSlugs.length === 0 ? 'not-allowed' : 'pointer',
-              letterSpacing: '0.05em',
-            }}
-          >
-            Exporter le PDF →
-          </button>
+        </>
         )}
       </div>
 
