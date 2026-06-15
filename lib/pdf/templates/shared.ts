@@ -458,7 +458,7 @@ export function titleBlockHtml(
     const missionStyle = styleToCss(projet.bandeauConfig?.missionAi);
     surtitre = `<div class="t-surtitre-row">
       <span class="t-surtitre">${projet.lieu ? esc(projet.lieu) : ''}</span>
-      <span class="t-surtitre-mission"${missionStyle ? ` style="${missionStyle}"` : ''}>${esc(missionAiVals.join(', '))}</span>
+      <span class="t-surtitre-mission"${missionStyle ? ` style="${missionStyle}"` : ''}>${esc(missionAiVals.join(' · '))}</span>
     </div>`;
   } else {
     surtitre = projet.lieu ? `<div class="t-surtitre">${esc(projet.lieu)}</div>` : '';
