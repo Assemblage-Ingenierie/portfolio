@@ -74,18 +74,24 @@ Deux mises en page sont proposées (sélecteur **Template**, visible pour les ad
 
 > Le template est en général choisi automatiquement selon le pôle du projet. Vous n'avez à y toucher que dans des cas particuliers.
 
-### La barre latérale de mise en page (templates Str-Env et Dev)
+### La barre latérale (templates Str-Env et Dev)
 
-Pour ces deux templates, une **barre latérale gauche** donne accès à tous les réglages de mise en page, organisés en sections dépliables :
+Pour ces deux templates, une **barre latérale gauche** regroupe tous les réglages, organisés en **deux menus déroulants** :
 
-- **Mise en page typographique** — tailles de police du titre, du statut, de la description ; réglages du **bandeau** (les libellés et valeurs : MOA, Architecte, Budget…), espacements, sauts de ligne dans les cellules, activation / désactivation de certains champs.
-- **Photo principale** — taille et position.
-- **Texte de description** — répartition du texte.
-- **Photos additionnelles** — ajout, taille, recadrage de photos secondaires.
-- **Certifications**.
-- **Prestation Assemblage** (template Dev uniquement).
+**Menu « Données »** — pour agir sur le contenu de la fiche :
 
-Le bouton **Recadrer les photos** active un mode où vous repositionnez le cadrage de chaque image directement à la souris.
+- **Éditer les champs** — ouvre le formulaire d'édition des données du projet (cf. point 4).
+- **Recadrer les photos** — active un mode où vous repositionnez le cadrage de chaque image directement à la souris.
+
+**Menu « Mise en page »** — les réglages de présentation, dans cet ordre :
+
+1. **Bandeau** — typographie du titre / statut / description et réglages du bandeau (libellés et valeurs : MOA, Architecte, Budget… ; sauts de ligne dans les cellules ; activation / désactivation de certains champs).
+2. **Espacements** — espaces entre titre, bandeau, photo et description.
+3. **Photo principale** — choix, taille, cadrage (photo unique ou photos multiples).
+4. **Description Projet** — répartition du texte sur 1 ou 2 colonnes.
+5. **Prestation Assemblage** — *template Dev uniquement*.
+6. **Photos additionnelles** — ajout, taille, recadrage de photos secondaires.
+7. **Certifications** — affichage et mise en forme de la liste.
 
 ### Sauvegarder
 
@@ -111,6 +117,8 @@ C'est ici que vous modifiez :
 - la **Prestation Assemblage**.
 
 > ⚠ Certains champs sont **calculés automatiquement** par Airtable (le *Pitch*, les *Chiffres clefs*, le *Slug*). Ils sont affichés en lecture seule : pour les changer, il faut modifier les champs source.
+
+> ⚠ **Champs liés au CRM.** Certains champs — **maître d'ouvrage, architecte, mandataire, entreprise, BET associés, bailleur** — sont reliés à notre **base de données CRM dans Airtable**. Ils ne sont **pas modifiables directement depuis le Portfolio** : il faut les corriger dans le CRM, et la mise à jour se répercute ensuite automatiquement dans la fiche. Cela garantit qu'un même intervenant porte exactement le même nom partout (cf. point 1).
 
 Toute modification enregistrée ici met à jour la **donnée unique** — et donc se répercute partout (cf. point 1).
 
@@ -147,6 +155,11 @@ Le principe en trois temps :
 1. **Sélection** — vous filtrez et cochez les références à inclure (mêmes filtres que la page d'accueil).
 2. **Ordre** — vous classez les fiches dans l'ordre voulu.
 3. **Aperçu & export** — vous générez un **PDF unique** regroupant toutes les fiches sélectionnées, prêt à être joint à une candidature.
+
+Au moment de l'export, une fenêtre vous laisse le choix entre :
+
+- **Page de garde + sommaire** — le PDF démarre par une **page de couverture et un sommaire**, suivis des fiches. La couverture est **adaptée au pôle** (STR / ENV / DEV) : vous choisissez la variante, qui change la photo de couverture.
+- **Sans page de garde ni sommaire** — uniquement les fiches de références, à la suite.
 
 C'est l'outil à utiliser pour répondre à un appel d'offres : on assemble en quelques minutes un portfolio sur mesure à partir des références existantes.
 
