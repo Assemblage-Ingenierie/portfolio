@@ -393,7 +393,21 @@ export default function PortfolioGrid({ projets }: Props) {
           Sidebar sticky alignée avec le haut du bandeau de filtres. */}
       <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
 
-      <aside style={{ flex: '0 0 220px', position: 'sticky', top: 24, alignSelf: 'flex-start' }}>
+      <aside style={{ flex: '0 0 220px', position: 'sticky', top: 24, alignSelf: 'flex-start', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {/* Guide d'utilisation — placé au-dessus du panneau « État de publication » */}
+        <Link
+          href="/guide"
+          prefetch={false}
+          style={{
+            display: 'block', width: '100%', padding: '10px 12px', textAlign: 'center',
+            background: 'white', color: 'var(--ai-violet)', border: `1px solid var(--ai-violet)`,
+            borderRadius: 12, textDecoration: 'none',
+            fontFamily: 'var(--sans)', fontSize: '8pt', fontWeight: 700,
+            letterSpacing: '0.1em', textTransform: 'uppercase',
+          }}
+        >
+          📖 Guide d'utilisation
+        </Link>
         <div style={{ background: 'white', border: `1px solid ${color.gris}`, borderRadius: 12, overflow: 'hidden' }}>
           <button
             onClick={() => setWorkflowOpen((v) => !v)}
