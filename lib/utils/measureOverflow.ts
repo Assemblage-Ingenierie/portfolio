@@ -26,6 +26,15 @@ export interface OverflowMeasure {
   rightPx?: number;
   /** Identifie quel(s) bord(s) débordent — utile pour le message UI. */
   edges?: Array<'haut' | 'bas' | 'gauche' | 'droite'>;
+  /**
+   * Dépassement de la MARGE intérieure (zone de contenu délimitée par le
+   * padding de `.page`), en mm, alors que le contenu reste DANS la feuille
+   * A4 (pas de coupe à l'export). Sert au message orange « Le contenu dépasse
+   * de la marge ». 0 = contenu dans la marge.
+   */
+  marginMm: number;
+  /** Bords où le contenu dépasse la marge (sans sortir de la feuille). */
+  marginEdges?: Array<'haut' | 'bas' | 'gauche' | 'droite'>;
 }
 
 function isVisible(el: HTMLElement, win: Window): boolean {
@@ -111,21 +120,27 @@ export function measureOverflow(doc: Document | null | undefined): OverflowMeasu
 
   const win = doc.defaultView ?? window;
 
-  // 1) Débordement par scroll* (contenu dans le flux). Tolérance 1px pour
-  //    absorber le sub-pixel rounding du navigateur.
+  // 1) Débordement « flux ». Les deux mesures globales scroll* sont
+  //    désormais NEUTRALISÉES (= 0) ; tous les bords sont mesurés via le
+  //    bounding rect rendu de chaque enfant (boucle ci-dessous).
   //
-  // ⚠ flowOverflowH (page.scrollWidth) est volontairement IGNORÉ pour le
-  //   bord droit/gauche : les <svg class="photo-cropped"> letterboxés via
-  //   preserveAspectRatio=meet ont une box CSS plus large que leur contenu
-  //   visible (les bandes de letterbox étant transparentes). scrollWidth
-  //   mesure la box CSS, pas le contenu visible → faux positif systématique
-  //   dès qu'une photo recadrée a un ratio différent de son slot.
-  //   La boucle élément-par-élément ci-dessous utilise getRenderedSvgRect /
-  //   getRenderedImgRect qui calcule le rendu visuel réel — c'est cette
-  //   mesure-là qui fait foi pour l'overflow horizontal.
-  //   (Le flowOverflowV vertical reste utile : scrollHeight reflète le
-  //   contenu réel dans le flux, sans souci de letterboxing.)
-  const flowOverflowV = Math.max(0, page.scrollHeight - pagePx - 1);
+  // ⚠ flowOverflowH (page.scrollWidth) : ignoré car les <svg class="photo-
+  //   cropped"> letterboxés (preserveAspectRatio=meet) ont une box CSS plus
+  //   large que leur contenu visible → scrollWidth = faux positif. Ce sont
+  //   getRenderedSvgRect / getRenderedImgRect qui font foi à l'horizontale.
+  //
+  // ⚠ flowOverflowV (page.scrollHeight) : ignoré car scrollHeight est
+  //   AVEUGLE AUX TRANSFORMS CSS. Plusieurs blocs in-flow sont déplacés
+  //   visuellement par `transform: translate(...)` piloté par les sliders de
+  //   position — notamment le bloc « Prestation Assemblage » du template Dev
+  //   (`.dev-presta`, flex item translaté), mais aussi les photos. Quand un
+  //   tel bloc déborde puis qu'on le remonte, scrollHeight continue de
+  //   compter son emplacement de FLUX d'origine (+ le padding bas de la
+  //   .page) : la mesure du bord bas restait alors figée (~11mm) malgré le
+  //   repositionnement. Le bounding rect, lui, reflète la translation — et
+  //   correspond au plan de coupe réel à l'export (.page overflow:hidden à
+  //   pageRect.bottom), donc à l'overflow physiquement exact.
+  const flowOverflowV = 0;
   const flowOverflowH = 0;
 
   // 2) Débordement par enfants positionnés / translatés.
@@ -134,6 +149,33 @@ export function measureOverflow(doc: Document | null | undefined): OverflowMeasu
   let topOverflow = 0;
   let rightOverflow = 0;
   let leftOverflow = 0;
+
+  // Conversion px ↔ mm via la hauteur du cadre. Lue depuis l'attribut
+  // `data-height-mm` du .page (A4 portrait 297mm / paysage 210mm pour les
+  // exports tableau). Fallback A4 portrait.
+  const pageMm = Number(page.dataset.heightMm);
+  const heightMm = Number.isFinite(pageMm) && pageMm > 0 ? pageMm : 297;
+  const mmToPx = (mm: number) => (mm / heightMm) * pagePx;
+
+  // 2bis) Dépassement de la MARGE intérieure (zone de contenu). Sert au
+  //   message orange : contenu qui sort de la marge mais reste DANS la
+  //   feuille. Haut / gauche / droite suivent le padding de .page (lu en
+  //   computed style — dev/manuel : 14mm / 18mm / 18mm). La marge BASSE est
+  //   fixée à 6mm (indépendante du padding CSS), pour alerter au plus près du
+  //   bord inférieur.
+  const BOTTOM_MARGIN_MM = 6;
+  const cs = win.getComputedStyle(page);
+  const padTop = parseFloat(cs.paddingTop) || 0;
+  const padRight = parseFloat(cs.paddingRight) || 0;
+  const padLeft = parseFloat(cs.paddingLeft) || 0;
+  const marginTopY = pageRect.top + padTop;
+  const marginBottomY = pageRect.bottom - mmToPx(BOTTOM_MARGIN_MM);
+  const marginLeftX = pageRect.left + padLeft;
+  const marginRightX = pageRect.right - padRight;
+  let mBottom = 0;
+  let mTop = 0;
+  let mRight = 0;
+  let mLeft = 0;
 
   const SVG_NS = 'http://www.w3.org/2000/svg';
   const all = page.querySelectorAll<HTMLElement>('*');
@@ -196,6 +238,16 @@ export function measureOverflow(doc: Document | null | undefined): OverflowMeasu
     if (topDelta > topOverflow) topOverflow = topDelta;
     if (rightDelta > rightOverflow) rightOverflow = rightDelta;
     if (leftDelta > leftOverflow) leftOverflow = leftDelta;
+
+    // Mêmes deltas mais contre la marge intérieure (pour le message orange).
+    const mBottomDelta = r.bottom - marginBottomY;
+    const mTopDelta = marginTopY - r.top;
+    const mRightDelta = r.right - marginRightX;
+    const mLeftDelta = marginLeftX - r.left;
+    if (mBottomDelta > mBottom) mBottom = mBottomDelta;
+    if (mTopDelta > mTop) mTop = mTopDelta;
+    if (mRightDelta > mRight) mRight = mRightDelta;
+    if (mLeftDelta > mLeft) mLeft = mLeftDelta;
   });
 
   // Tolérance : 1px en vertical, 3px en horizontal (le letterboxing
@@ -209,11 +261,6 @@ export function measureOverflow(doc: Document | null | undefined): OverflowMeasu
   const leftPx = Math.max(0, Math.round(leftOverflow - H_TOL));
 
   const overflowPx = Math.max(bottomPx, topPx, rightPx, leftPx);
-  // Conversion px → mm via la hauteur du cadre. Lue depuis l'attribut
-  // `data-height-mm` du .page (permet de supporter A4 portrait 297mm comme
-  // paysage 210mm pour les exports tableau). Fallback A4 portrait.
-  const pageMm = Number(page.dataset.heightMm);
-  const heightMm = Number.isFinite(pageMm) && pageMm > 0 ? pageMm : 297;
   const rawMm = Math.floor((overflowPx / pagePx) * heightMm);
 
   // Seuil de signalement : en dessous de MIN_REPORTABLE_MM, on considere le
@@ -233,5 +280,23 @@ export function measureOverflow(doc: Document | null | undefined): OverflowMeasu
     if (rightPx > 0) edges.push('droite');
   }
 
-  return { overflowPx, overflowMm, pagePx, bottomPx, topPx, leftPx, rightPx, edges };
+  // Dépassement de marge (message orange). Mêmes tolérances que la page,
+  // mais PAS de seuil de signalement : tout dépassement (≥ 1mm après
+  // tolérance) est rapporté.
+  const mBottomPx = Math.max(0, Math.round(mBottom - V_TOL));
+  const mTopPx = Math.max(0, Math.round(mTop - V_TOL));
+  const mRightPx = Math.max(0, Math.round(mRight - H_TOL));
+  const mLeftPx = Math.max(0, Math.round(mLeft - H_TOL));
+  const marginOverflowPx = Math.max(mBottomPx, mTopPx, mRightPx, mLeftPx);
+  const marginMm = Math.floor((marginOverflowPx / pagePx) * heightMm);
+
+  const marginEdges: Array<'haut' | 'bas' | 'gauche' | 'droite'> = [];
+  if (marginMm > 0) {
+    if (mTopPx > 0) marginEdges.push('haut');
+    if (mBottomPx > 0) marginEdges.push('bas');
+    if (mLeftPx > 0) marginEdges.push('gauche');
+    if (mRightPx > 0) marginEdges.push('droite');
+  }
+
+  return { overflowPx, overflowMm, pagePx, bottomPx, topPx, leftPx, rightPx, edges, marginMm, marginEdges };
 }

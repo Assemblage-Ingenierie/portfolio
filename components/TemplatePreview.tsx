@@ -95,7 +95,12 @@ export default function TemplatePreview({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [html, measureTrigger]);
 
+  // Deux niveaux d'alerte :
+  // - ROUGE (overflowing) : le contenu sort de la feuille A4 → coupé à l'export.
+  // - ORANGE (marginWarning) : le contenu reste dans la feuille mais déborde
+  //   de la marge intérieure (trop près du bord). Le rouge prime sur l'orange.
   const overflowing = overflow !== null && overflow.overflowMm > 0;
+  const marginWarning = overflow !== null && overflow.overflowMm === 0 && overflow.marginMm > 0;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '24px 16px 48px', background: ui.fondPage, minHeight: 'calc(100vh - 48px)' }}>
@@ -127,6 +132,33 @@ export default function TemplatePreview({
           </span>
         </div>
       )}
+      {marginWarning && (
+        <div
+          role="alert"
+          style={{
+            width: '210mm',
+            marginBottom: '12px',
+            padding: '10px 16px',
+            background: '#E8821E',
+            color: 'white',
+            fontFamily: 'var(--sans)',
+            fontSize: '9pt',
+            fontWeight: 600,
+            borderRadius: '2px',
+            boxShadow: '0 2px 8px rgba(232,130,30,0.3)',
+            display: 'flex',
+            gap: '10px',
+            alignItems: 'baseline',
+          }}
+        >
+          <span style={{ fontSize: '11pt', lineHeight: 1 }}>⚠</span>
+          <span>
+            Le contenu dépasse de la marge de <strong>{overflow!.marginMm}&nbsp;mm</strong>
+            {overflow!.marginEdges && overflow!.marginEdges.length > 0 ? <> (bord{overflow!.marginEdges.length > 1 ? 's' : ''} {overflow!.marginEdges.join(', ')})</> : null}.
+            Le contenu reste dans la feuille (pas de coupe à l&apos;export) mais se rapproche du bord.
+          </span>
+        </div>
+      )}
       <iframe
         key={iframeKey}
         ref={iframeRef}
@@ -139,6 +171,8 @@ export default function TemplatePreview({
           background: 'white',
           boxShadow: overflowing
             ? '0 4px 24px rgba(227,5,19,0.35), 0 0 0 2px var(--ai-rouge)'
+            : marginWarning
+            ? '0 4px 24px rgba(232,130,30,0.35), 0 0 0 2px #E8821E'
             : '0 4px 24px rgba(0,0,0,0.12)',
         }}
       />
