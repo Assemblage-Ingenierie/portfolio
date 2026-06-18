@@ -26,6 +26,15 @@ export interface OverflowMeasure {
   rightPx?: number;
   /** Identifie quel(s) bord(s) débordent — utile pour le message UI. */
   edges?: Array<'haut' | 'bas' | 'gauche' | 'droite'>;
+  /**
+   * Dépassement de la MARGE intérieure (zone de contenu délimitée par le
+   * padding de `.page`), en mm, alors que le contenu reste DANS la feuille
+   * A4 (pas de coupe à l'export). Sert au message orange « Le contenu dépasse
+   * de la marge ». 0 = contenu dans la marge.
+   */
+  marginMm: number;
+  /** Bords où le contenu dépasse la marge (sans sortir de la feuille). */
+  marginEdges?: Array<'haut' | 'bas' | 'gauche' | 'droite'>;
 }
 
 function isVisible(el: HTMLElement, win: Window): boolean {
@@ -141,6 +150,24 @@ export function measureOverflow(doc: Document | null | undefined): OverflowMeasu
   let rightOverflow = 0;
   let leftOverflow = 0;
 
+  // 2bis) Dépassement de la MARGE intérieure (zone de contenu = pageRect
+  //   moins le padding de .page). Sert au message orange : contenu qui sort
+  //   de la marge mais reste DANS la feuille. Le padding est lu en px sur le
+  //   computed style (chaque template définit le sien — dev/manuel : 14/18/12/18mm).
+  const cs = win.getComputedStyle(page);
+  const padTop = parseFloat(cs.paddingTop) || 0;
+  const padRight = parseFloat(cs.paddingRight) || 0;
+  const padBottom = parseFloat(cs.paddingBottom) || 0;
+  const padLeft = parseFloat(cs.paddingLeft) || 0;
+  const marginTopY = pageRect.top + padTop;
+  const marginBottomY = pageRect.bottom - padBottom;
+  const marginLeftX = pageRect.left + padLeft;
+  const marginRightX = pageRect.right - padRight;
+  let mBottom = 0;
+  let mTop = 0;
+  let mRight = 0;
+  let mLeft = 0;
+
   const SVG_NS = 'http://www.w3.org/2000/svg';
   const all = page.querySelectorAll<HTMLElement>('*');
   all.forEach((el) => {
@@ -202,6 +229,16 @@ export function measureOverflow(doc: Document | null | undefined): OverflowMeasu
     if (topDelta > topOverflow) topOverflow = topDelta;
     if (rightDelta > rightOverflow) rightOverflow = rightDelta;
     if (leftDelta > leftOverflow) leftOverflow = leftDelta;
+
+    // Mêmes deltas mais contre la marge intérieure (pour le message orange).
+    const mBottomDelta = r.bottom - marginBottomY;
+    const mTopDelta = marginTopY - r.top;
+    const mRightDelta = r.right - marginRightX;
+    const mLeftDelta = marginLeftX - r.left;
+    if (mBottomDelta > mBottom) mBottom = mBottomDelta;
+    if (mTopDelta > mTop) mTop = mTopDelta;
+    if (mRightDelta > mRight) mRight = mRightDelta;
+    if (mLeftDelta > mLeft) mLeft = mLeftDelta;
   });
 
   // Tolérance : 1px en vertical, 3px en horizontal (le letterboxing
@@ -239,5 +276,25 @@ export function measureOverflow(doc: Document | null | undefined): OverflowMeasu
     if (rightPx > 0) edges.push('droite');
   }
 
-  return { overflowPx, overflowMm, pagePx, bottomPx, topPx, leftPx, rightPx, edges };
+  // Dépassement de marge (message orange). Mêmes tolérances que la page.
+  // Seuil de signalement plus bas (2mm) : on veut alerter dès que le contenu
+  // mord franchement dans la marge, avant même qu'il ne sorte de la feuille.
+  const mBottomPx = Math.max(0, Math.round(mBottom - V_TOL));
+  const mTopPx = Math.max(0, Math.round(mTop - V_TOL));
+  const mRightPx = Math.max(0, Math.round(mRight - H_TOL));
+  const mLeftPx = Math.max(0, Math.round(mLeft - H_TOL));
+  const marginOverflowPx = Math.max(mBottomPx, mTopPx, mRightPx, mLeftPx);
+  const rawMarginMm = Math.floor((marginOverflowPx / pagePx) * heightMm);
+  const MIN_REPORTABLE_MARGIN_MM = 2;
+  const marginMm = rawMarginMm >= MIN_REPORTABLE_MARGIN_MM ? rawMarginMm : 0;
+
+  const marginEdges: Array<'haut' | 'bas' | 'gauche' | 'droite'> = [];
+  if (marginMm > 0) {
+    if (mTopPx > 0) marginEdges.push('haut');
+    if (mBottomPx > 0) marginEdges.push('bas');
+    if (mLeftPx > 0) marginEdges.push('gauche');
+    if (mRightPx > 0) marginEdges.push('droite');
+  }
+
+  return { overflowPx, overflowMm, pagePx, bottomPx, topPx, leftPx, rightPx, edges, marginMm, marginEdges };
 }
