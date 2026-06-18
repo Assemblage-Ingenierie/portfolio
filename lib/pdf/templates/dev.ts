@@ -4,7 +4,7 @@ import { styleToCss, photoTextGapCss, bandeauPhotoGapCss } from '@/lib/pdf/bande
 import {
   TemplateBundle,
   headerHtml, footerHtml, titleBlockHtml, metaGridHtml,
-  photoImg, allPhotos,
+  photoImg, allPhotos, findSplitIndex, nudgeWordBoundary,
 } from './shared';
 import { ManualConfig, DEFAULT_MANUAL_CONFIG, PhotoConfig } from '../manualConfig';
 
@@ -284,31 +284,8 @@ function clampPercent(v: number): number {
   return Math.max(0, Math.min(100, Math.round(v)));
 }
 
-/**
- * Trouve l'index de coupure le plus proche d'une cible donnée, en se calant
- * sur un caractère espace (séparation de mot) pour ne jamais couper au milieu
- * d'un mot.
- *
- * Algorithme :
- * - Deux pointeurs partent de `target` (un vers la droite, un vers la gauche)
- * - Le premier qui tombe sur un espace gagne, on coupe juste après (p + 1)
- * - Fallback si aucun espace : `target`
- * - Index est clampé dans [0, text.length]
- */
-function findSplitIndex(text: string, target: number): number {
-  const T = text.length;
-  const X = Math.max(0, Math.min(T, Math.floor(target)));
-  if (T < 40 || X >= T) return T;
-  let r = X;
-  let l = X;
-  while (r < T || l > 0) {
-    if (r < T && /\s/.test(text[r])) return Math.min(T, r + 1);
-    if (l > 0 && /\s/.test(text[l])) return Math.min(T, l + 1);
-    r++;
-    l--;
-  }
-  return X;
-}
+// `findSplitIndex` + `nudgeWordBoundary` (méthode de coupure partagée avec
+// le template Str-Env) sont importés depuis shared.ts.
 
 function paragraphsToHtml(text: string): string {
   if (!text) return '';
@@ -328,16 +305,23 @@ function paragraphsToHtml(text: string): string {
 function splitDescription(
   description: string,
   col1Percent: number,
-  col2Percent: number
+  col2Percent: number,
+  col1Nudge = 0,
+  col2Nudge = 0
 ): [string, string] {
   const T = description.length;
   if (T === 0) return ['', ''];
 
   const target1 = (col1Percent / 100) * T;
-  const splitStart = findSplitIndex(description, target1);
+  const splitStart = nudgeWordBoundary(description, findSplitIndex(description, target1), col1Nudge);
 
   const target2 = splitStart + (col2Percent / 100) * T;
-  const splitEnd = findSplitIndex(description, target2);
+  // Le réglage fin de col 2 ne peut pas faire repasser la coupure avant le
+  // début de col 2 (sinon col 2 deviendrait négative).
+  const splitEnd = Math.max(
+    splitStart,
+    nudgeWordBoundary(description, findSplitIndex(description, target2), col2Nudge)
+  );
 
   const leftRaw = description.slice(0, splitStart).trim();
   const rightRaw = description.slice(splitStart, splitEnd).trim();
@@ -416,11 +400,11 @@ export function renderDev(projet: Projet, configIn?: ManualConfig): TemplateBund
     if (cfg.textColumns === 1) {
       // En 1-col, col1Percent contrôle la quantité de texte affiché.
       const target = (col1Pct / 100) * description.length;
-      const cutoff = findSplitIndex(description, target);
+      const cutoff = nudgeWordBoundary(description, findSplitIndex(description, target), cfg.textCol1Nudge ?? 0);
       const ps = paragraphsToHtml(description.slice(0, cutoff).trim());
       textHtml = `<div class="dev-text dev-text--1col"${descAttr}>${ps}</div>`;
     } else {
-      const [leftHtml, rightHtml] = splitDescription(description, col1Pct, col2Pct);
+      const [leftHtml, rightHtml] = splitDescription(description, col1Pct, col2Pct, cfg.textCol1Nudge ?? 0, cfg.textCol2Nudge ?? 0);
       textHtml = `<div class="dev-text dev-text--2col"${descAttr}>
         <div class="dev-col-1">${leftHtml}</div>
         <div class="dev-col-2">${rightHtml}</div>
@@ -501,7 +485,7 @@ export function renderDev(projet: Projet, configIn?: ManualConfig): TemplateBund
       // col 2 vide). Même mécanique que la description (cf. splitDescription).
       const c1 = clampPercent(presta.col1Percent ?? 50);
       const c2 = clampPercent(presta.col2Percent ?? 50);
-      const [leftHtml, rightHtml] = splitDescription(prestaText, c1, c2);
+      const [leftHtml, rightHtml] = splitDescription(prestaText, c1, c2, presta.col1Nudge ?? 0, presta.col2Nudge ?? 0);
       prestaHtml = `<section class="dev-presta dev-presta--2col-split" style="${styleAttr}">
         <div class="dev-presta-title">Prestation Assemblage</div>
         <div class="dev-presta-body">
