@@ -111,21 +111,27 @@ export function measureOverflow(doc: Document | null | undefined): OverflowMeasu
 
   const win = doc.defaultView ?? window;
 
-  // 1) Débordement par scroll* (contenu dans le flux). Tolérance 1px pour
-  //    absorber le sub-pixel rounding du navigateur.
+  // 1) Débordement « flux ». Les deux mesures globales scroll* sont
+  //    désormais NEUTRALISÉES (= 0) ; tous les bords sont mesurés via le
+  //    bounding rect rendu de chaque enfant (boucle ci-dessous).
   //
-  // ⚠ flowOverflowH (page.scrollWidth) est volontairement IGNORÉ pour le
-  //   bord droit/gauche : les <svg class="photo-cropped"> letterboxés via
-  //   preserveAspectRatio=meet ont une box CSS plus large que leur contenu
-  //   visible (les bandes de letterbox étant transparentes). scrollWidth
-  //   mesure la box CSS, pas le contenu visible → faux positif systématique
-  //   dès qu'une photo recadrée a un ratio différent de son slot.
-  //   La boucle élément-par-élément ci-dessous utilise getRenderedSvgRect /
-  //   getRenderedImgRect qui calcule le rendu visuel réel — c'est cette
-  //   mesure-là qui fait foi pour l'overflow horizontal.
-  //   (Le flowOverflowV vertical reste utile : scrollHeight reflète le
-  //   contenu réel dans le flux, sans souci de letterboxing.)
-  const flowOverflowV = Math.max(0, page.scrollHeight - pagePx - 1);
+  // ⚠ flowOverflowH (page.scrollWidth) : ignoré car les <svg class="photo-
+  //   cropped"> letterboxés (preserveAspectRatio=meet) ont une box CSS plus
+  //   large que leur contenu visible → scrollWidth = faux positif. Ce sont
+  //   getRenderedSvgRect / getRenderedImgRect qui font foi à l'horizontale.
+  //
+  // ⚠ flowOverflowV (page.scrollHeight) : ignoré car scrollHeight est
+  //   AVEUGLE AUX TRANSFORMS CSS. Plusieurs blocs in-flow sont déplacés
+  //   visuellement par `transform: translate(...)` piloté par les sliders de
+  //   position — notamment le bloc « Prestation Assemblage » du template Dev
+  //   (`.dev-presta`, flex item translaté), mais aussi les photos. Quand un
+  //   tel bloc déborde puis qu'on le remonte, scrollHeight continue de
+  //   compter son emplacement de FLUX d'origine (+ le padding bas de la
+  //   .page) : la mesure du bord bas restait alors figée (~11mm) malgré le
+  //   repositionnement. Le bounding rect, lui, reflète la translation — et
+  //   correspond au plan de coupe réel à l'export (.page overflow:hidden à
+  //   pageRect.bottom), donc à l'overflow physiquement exact.
+  const flowOverflowV = 0;
   const flowOverflowH = 0;
 
   // 2) Débordement par enfants positionnés / translatés.
