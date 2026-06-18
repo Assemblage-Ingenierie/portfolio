@@ -150,17 +150,26 @@ export function measureOverflow(doc: Document | null | undefined): OverflowMeasu
   let rightOverflow = 0;
   let leftOverflow = 0;
 
-  // 2bis) Dépassement de la MARGE intérieure (zone de contenu = pageRect
-  //   moins le padding de .page). Sert au message orange : contenu qui sort
-  //   de la marge mais reste DANS la feuille. Le padding est lu en px sur le
-  //   computed style (chaque template définit le sien — dev/manuel : 14/18/12/18mm).
+  // Conversion px ↔ mm via la hauteur du cadre. Lue depuis l'attribut
+  // `data-height-mm` du .page (A4 portrait 297mm / paysage 210mm pour les
+  // exports tableau). Fallback A4 portrait.
+  const pageMm = Number(page.dataset.heightMm);
+  const heightMm = Number.isFinite(pageMm) && pageMm > 0 ? pageMm : 297;
+  const mmToPx = (mm: number) => (mm / heightMm) * pagePx;
+
+  // 2bis) Dépassement de la MARGE intérieure (zone de contenu). Sert au
+  //   message orange : contenu qui sort de la marge mais reste DANS la
+  //   feuille. Haut / gauche / droite suivent le padding de .page (lu en
+  //   computed style — dev/manuel : 14mm / 18mm / 18mm). La marge BASSE est
+  //   fixée à 8mm (indépendante du padding CSS), pour alerter au plus près du
+  //   bord inférieur.
+  const BOTTOM_MARGIN_MM = 8;
   const cs = win.getComputedStyle(page);
   const padTop = parseFloat(cs.paddingTop) || 0;
   const padRight = parseFloat(cs.paddingRight) || 0;
-  const padBottom = parseFloat(cs.paddingBottom) || 0;
   const padLeft = parseFloat(cs.paddingLeft) || 0;
   const marginTopY = pageRect.top + padTop;
-  const marginBottomY = pageRect.bottom - padBottom;
+  const marginBottomY = pageRect.bottom - mmToPx(BOTTOM_MARGIN_MM);
   const marginLeftX = pageRect.left + padLeft;
   const marginRightX = pageRect.right - padRight;
   let mBottom = 0;
@@ -252,11 +261,6 @@ export function measureOverflow(doc: Document | null | undefined): OverflowMeasu
   const leftPx = Math.max(0, Math.round(leftOverflow - H_TOL));
 
   const overflowPx = Math.max(bottomPx, topPx, rightPx, leftPx);
-  // Conversion px → mm via la hauteur du cadre. Lue depuis l'attribut
-  // `data-height-mm` du .page (permet de supporter A4 portrait 297mm comme
-  // paysage 210mm pour les exports tableau). Fallback A4 portrait.
-  const pageMm = Number(page.dataset.heightMm);
-  const heightMm = Number.isFinite(pageMm) && pageMm > 0 ? pageMm : 297;
   const rawMm = Math.floor((overflowPx / pagePx) * heightMm);
 
   // Seuil de signalement : en dessous de MIN_REPORTABLE_MM, on considere le
@@ -276,17 +280,15 @@ export function measureOverflow(doc: Document | null | undefined): OverflowMeasu
     if (rightPx > 0) edges.push('droite');
   }
 
-  // Dépassement de marge (message orange). Mêmes tolérances que la page.
-  // Seuil de signalement plus bas (2mm) : on veut alerter dès que le contenu
-  // mord franchement dans la marge, avant même qu'il ne sorte de la feuille.
+  // Dépassement de marge (message orange). Mêmes tolérances que la page,
+  // mais PAS de seuil de signalement : tout dépassement (≥ 1mm après
+  // tolérance) est rapporté.
   const mBottomPx = Math.max(0, Math.round(mBottom - V_TOL));
   const mTopPx = Math.max(0, Math.round(mTop - V_TOL));
   const mRightPx = Math.max(0, Math.round(mRight - H_TOL));
   const mLeftPx = Math.max(0, Math.round(mLeft - H_TOL));
   const marginOverflowPx = Math.max(mBottomPx, mTopPx, mRightPx, mLeftPx);
-  const rawMarginMm = Math.floor((marginOverflowPx / pagePx) * heightMm);
-  const MIN_REPORTABLE_MARGIN_MM = 2;
-  const marginMm = rawMarginMm >= MIN_REPORTABLE_MARGIN_MM ? rawMarginMm : 0;
+  const marginMm = Math.floor((marginOverflowPx / pagePx) * heightMm);
 
   const marginEdges: Array<'haut' | 'bas' | 'gauche' | 'droite'> = [];
   if (marginMm > 0) {
