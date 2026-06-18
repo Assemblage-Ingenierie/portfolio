@@ -161,9 +161,9 @@ export function measureOverflow(doc: Document | null | undefined): OverflowMeasu
   //   message orange : contenu qui sort de la marge mais reste DANS la
   //   feuille. Haut / gauche / droite suivent le padding de .page (lu en
   //   computed style — dev/manuel : 14mm / 18mm / 18mm). La marge BASSE est
-  //   fixée à 8mm (indépendante du padding CSS), pour alerter au plus près du
+  //   fixée à 6mm (indépendante du padding CSS), pour alerter au plus près du
   //   bord inférieur.
-  const BOTTOM_MARGIN_MM = 8;
+  const BOTTOM_MARGIN_MM = 6;
   const cs = win.getComputedStyle(page);
   const padTop = parseFloat(cs.paddingTop) || 0;
   const padRight = parseFloat(cs.paddingRight) || 0;
