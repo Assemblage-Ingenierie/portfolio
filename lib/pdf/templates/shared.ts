@@ -715,6 +715,66 @@ export function descriptionHtml(projet: Projet, columns: 1 | 2 = 1, singleParagr
   return `<div class="${cls}"${styleAttr}>${injectSoftHyphensFr(renderMarkdown(text))}</div>`;
 }
 
+/**
+ * Méthode de coupure du texte PARTAGÉE entre les champs « Description projet »
+ * (templates Str-Env / Dev) et « Prestation Assemblage » (Dev).
+ *
+ * `findSplitIndex` trouve l'index de coupure le plus proche d'une cible donnée,
+ * en se calant sur un caractère espace (séparation de mot) pour ne jamais
+ * couper au milieu d'un mot.
+ *
+ * Algorithme :
+ * - Deux pointeurs partent de `target` (un vers la droite, un vers la gauche)
+ * - Le premier qui tombe sur un espace gagne, on coupe juste après (p + 1)
+ * - Fallback si aucun espace : `target`
+ * - Index est clampé dans [0, text.length]
+ */
+export function findSplitIndex(text: string, target: number): number {
+  const T = text.length;
+  const X = Math.max(0, Math.min(T, Math.floor(target)));
+  if (T < 40 || X >= T) return T;
+  let r = X;
+  let l = X;
+  while (r < T || l > 0) {
+    if (r < T && /\s/.test(text[r])) return Math.min(T, r + 1);
+    if (l > 0 && /\s/.test(text[l])) return Math.min(T, l + 1);
+    r++;
+    l--;
+  }
+  return X;
+}
+
+/**
+ * Réglage fin du point de coupure : déplace un index (calé sur un début de mot
+ * par `findSplitIndex`) de `steps` frontières de mot.
+ *
+ * - `steps > 0` → vers la droite (espace suivant, début du mot suivant)
+ * - `steps < 0` → vers la gauche (début du mot précédent)
+ * - `steps === 0` → inchangé (comportement historique)
+ *
+ * L'index reste toujours calé sur un début de mot et clampé dans
+ * [0, text.length]. C'est ce qui permet à l'UI d'offrir des boutons
+ * « ◄ mot / mot ► » par-dessus le curseur % existant.
+ */
+export function nudgeWordBoundary(text: string, index: number, steps: number): number {
+  const T = text.length;
+  let i = Math.max(0, Math.min(T, index));
+  const isSpace = (c: string) => /\s/.test(c);
+  if (steps > 0) {
+    for (let k = 0; k < steps && i < T; k++) {
+      while (i < T && !isSpace(text[i])) i++; // sauter la fin du mot courant
+      while (i < T && isSpace(text[i])) i++;  // sauter les espaces → mot suivant
+    }
+  } else if (steps < 0) {
+    for (let k = 0; k < -steps && i > 0; k++) {
+      i--;                                       // entrer dans l'espace précédent
+      while (i > 0 && isSpace(text[i])) i--;     // remonter les espaces
+      while (i > 0 && !isSpace(text[i - 1])) i--; // remonter au début du mot
+    }
+  }
+  return Math.max(0, Math.min(T, i));
+}
+
 export function photoImg(
   photo: { url: string; filename?: string; width?: number; height?: number },
   alt = '',

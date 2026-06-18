@@ -82,6 +82,11 @@ export interface PrestationAssemblageConfig {
   /** Pourcentage de caractères dans la colonne 2 (mode 2-col uniquement).
    *  Default = 50. Si 0, la col 2 est vide. */
   col2Percent?: number;
+  /** Réglage fin (mots) du point de coupure de col 1, par-dessus `col1Percent`.
+   *  Négatif = vers la gauche, positif = vers la droite. Default = 0. */
+  col1Nudge?: number;
+  /** Réglage fin (mots) du point de coupure de col 2. Default = 0. */
+  col2Nudge?: number;
 }
 
 /** Nombre max de photos principales en mode portrait (mainPhoto + mainPhoto2 + mainPhotosExtra). */
@@ -115,6 +120,12 @@ export interface ManualConfig {
   /** % du texte total à afficher en col 2 (0..100), démarrant après la fin de col 1.
    *  Si col1% + col2% < 100, le reste du texte est masqué. */
   textCol2Percent: number;
+  /** Réglage fin (mots) du point de coupure de col 1, par-dessus `textCol1Percent`.
+   *  Négatif = décale d'un mot vers la gauche, positif = vers la droite. Default = 0.
+   *  Permet d'ajuster le spacer mot par mot une fois posé grossièrement au %. */
+  textCol1Nudge?: number;
+  /** Réglage fin (mots) du point de coupure de col 2 (mode 2-col). Default = 0. */
+  textCol2Nudge?: number;
   /**
    * Photos additionnelles arrangées en grille (largeur de page / N) sous le texte.
    * Quel que soit le mode texte (1 ou 2 colonnes), les photos vont après le bloc texte.

@@ -157,6 +157,36 @@ function Slider({ label, value, onChange, min = 25, max = 100, step = 5, unit = 
   );
 }
 
+// ─── Réglage fin du spacer (décalage mot par mot) ────────────────────────────
+
+const nudgeBtn: React.CSSProperties = {
+  padding: '2px 8px', cursor: 'pointer',
+  fontFamily: 'var(--sans)', fontSize: '8pt', fontWeight: 700,
+  color: 'var(--ai-noir70)', background: 'white',
+  border: `1px solid ${color.gris}`, borderRadius: 2,
+};
+
+/**
+ * Boutons de réglage fin du point de coupure : une fois le spacer posé
+ * grossièrement au % (Slider), ces boutons le décalent à l'espace suivant à
+ * gauche / à droite (mot par mot). `value` = offset en mots (0 = position % brute).
+ */
+function NudgeRow({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+  return (
+    <div style={{ ...ROW, paddingLeft: 8, fontSize: '8pt' }}>
+      <span style={{ minWidth: 60, color: 'var(--ai-noir70)' }}>{label}</span>
+      <button onClick={() => onChange(value - 1)} style={nudgeBtn} title="Décaler la coupure d'un mot vers la gauche">◄ mot</button>
+      <button onClick={() => onChange(value + 1)} style={nudgeBtn} title="Décaler la coupure d'un mot vers la droite">mot ►</button>
+      <span style={{ minWidth: 28, textAlign: 'center', color: value !== 0 ? 'var(--ai-rouge)' : 'var(--ai-noir70)', fontWeight: 700 }}>
+        {value > 0 ? `+${value}` : value}
+      </span>
+      {value !== 0 && (
+        <button onClick={() => onChange(0)} style={{ ...nudgeBtn, color: 'var(--ai-rouge)' }} title="Réinitialiser le décalage">↺</button>
+      )}
+    </div>
+  );
+}
+
 /**
  * Mesure les dimensions naturelles d'une image. Renvoie null tant que l'image
  * n'est pas chargée (utilisé pour la détection de saturation des sliders Taille).
@@ -342,16 +372,29 @@ function TextSection({ config, onChange }: { config: ManualConfig; onChange: (ne
       <Slider
         label={config.textColumns === 1 ? '% texte' : '% col 1'}
         value={config.textCol1Percent}
-        onChange={v => onChange({ ...config, textCol1Percent: v })}
+        // Repositionner au % réinitialise le réglage fin (le spacer est reposé).
+        onChange={v => onChange({ ...config, textCol1Percent: v, textCol1Nudge: 0 })}
         min={0} max={100} step={5}
       />
+      <NudgeRow
+        label="Ajuster"
+        value={config.textCol1Nudge ?? 0}
+        onChange={n => onChange({ ...config, textCol1Nudge: n })}
+      />
       {config.textColumns === 2 && (
-        <Slider
-          label="% col 2"
-          value={config.textCol2Percent}
-          onChange={v => onChange({ ...config, textCol2Percent: v })}
-          min={0} max={100} step={5}
-        />
+        <>
+          <Slider
+            label="% col 2"
+            value={config.textCol2Percent}
+            onChange={v => onChange({ ...config, textCol2Percent: v, textCol2Nudge: 0 })}
+            min={0} max={100} step={5}
+          />
+          <NudgeRow
+            label="Ajuster"
+            value={config.textCol2Nudge ?? 0}
+            onChange={n => onChange({ ...config, textCol2Nudge: n })}
+          />
+        </>
       )}
     </ContentPanel>
   );
@@ -546,9 +589,12 @@ function PrestationSection({ projet, config, onChange }: { projet: Projet; confi
           {pa.columns === 2 && (
             <>
               {/* Sliders de répartition du texte entre col 1 et col 2. col1=100
-                  + col2=0 → tout le texte en col 1 (largeur = moitié de page). */}
-              <Slider label="% col 1" value={pa.col1Percent ?? 50} onChange={v => update({ col1Percent: v })} min={0} max={100} step={5} />
-              <Slider label="% col 2" value={pa.col2Percent ?? 50} onChange={v => update({ col2Percent: v })} min={0} max={100} step={5} />
+                  + col2=0 → tout le texte en col 1 (largeur = moitié de page).
+                  NudgeRow = réglage fin mot par mot (cf. Description projet). */}
+              <Slider label="% col 1" value={pa.col1Percent ?? 50} onChange={v => update({ col1Percent: v, col1Nudge: 0 })} min={0} max={100} step={5} />
+              <NudgeRow label="Ajuster" value={pa.col1Nudge ?? 0} onChange={n => update({ col1Nudge: n })} />
+              <Slider label="% col 2" value={pa.col2Percent ?? 50} onChange={v => update({ col2Percent: v, col2Nudge: 0 })} min={0} max={100} step={5} />
+              <NudgeRow label="Ajuster" value={pa.col2Nudge ?? 0} onChange={n => update({ col2Nudge: n })} />
             </>
           )}
           <Slider label="Horizontal" value={pa.offsetPercent ?? 50} onChange={v => update({ offsetPercent: v })} min={0} max={100} step={5} />
