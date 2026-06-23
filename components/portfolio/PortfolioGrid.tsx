@@ -124,6 +124,12 @@ export default function PortfolioGrid({ projets }: Props) {
       return next;
     });
   };
+  // Pagination des listes déroulantes de fiches par statut : 5 fiches/page.
+  const FICHE_LIST_PAGE_SIZE = 5;
+  const [statusPage, setStatusPage] = useState<Partial<Record<FicheStatus, number>>>({});
+  const setStatusPageFor = (s: FicheStatus, next: number) => {
+    setStatusPage((prev) => ({ ...prev, [s]: next }));
+  };
   // Filtre par état de publication (set vide = tous).
   const [selectedFicheStatuses, setSelectedFicheStatuses] = useState<Set<FicheStatus>>(new Set());
   const toggleFicheStatus = (s: FicheStatus) => {
@@ -477,28 +483,76 @@ export default function PortfolioGrid({ projets }: Props) {
                         </button>
                       )}
                     </div>
-                    {canExpand && isOpen && (
-                      <ul style={{
-                        listStyle: 'none', padding: '2px 0 8px 14px', margin: 0,
-                        display: 'flex', flexDirection: 'column', gap: 3,
-                      }}>
-                        {list.map((p) => (
-                          <li key={p.slug}>
-                            <Link
-                              href={`/projet/${p.slug}`}
-                              prefetch={false}
-                              style={{
-                                display: 'block', fontSize: '8.5pt', color: 'var(--ai-violet)',
-                                textDecoration: 'none', lineHeight: 1.3,
-                              }}
-                              title={p.nom}
-                            >
-                              → {p.nom}
-                            </Link>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
+                    {canExpand && isOpen && (() => {
+                      const pageCount = Math.max(1, Math.ceil(list.length / FICHE_LIST_PAGE_SIZE));
+                      // Page courante clampée (la liste peut rétrécir si les
+                      // données changent → on évite une page hors limites).
+                      const page = Math.min(statusPage[s] ?? 0, pageCount - 1);
+                      const start = page * FICHE_LIST_PAGE_SIZE;
+                      const pageItems = list.slice(start, start + FICHE_LIST_PAGE_SIZE);
+                      return (
+                        <div style={{ padding: '2px 0 8px 14px' }}>
+                          <ul style={{
+                            listStyle: 'none', padding: 0, margin: 0,
+                            display: 'flex', flexDirection: 'column', gap: 3,
+                          }}>
+                            {pageItems.map((p) => (
+                              <li key={p.slug}>
+                                <Link
+                                  href={`/projet/${p.slug}`}
+                                  prefetch={false}
+                                  style={{
+                                    display: 'block', fontSize: '8.5pt', color: 'var(--ai-violet)',
+                                    textDecoration: 'none', lineHeight: 1.3,
+                                  }}
+                                  title={p.nom}
+                                >
+                                  → {p.nom}
+                                </Link>
+                              </li>
+                            ))}
+                          </ul>
+                          {pageCount > 1 && (
+                            <div style={{
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              gap: 10, marginTop: 6,
+                            }}>
+                              <button
+                                onClick={() => setStatusPageFor(s, page - 1)}
+                                disabled={page === 0}
+                                title="Page précédente"
+                                style={{
+                                  background: 'transparent', border: 'none',
+                                  cursor: page === 0 ? 'default' : 'pointer',
+                                  padding: '2px 4px', fontSize: '10pt', lineHeight: 1,
+                                  color: page === 0 ? 'var(--ai-gris)' : 'var(--ai-noir70)',
+                                  opacity: page === 0 ? 0.4 : 1,
+                                }}
+                              >
+                                ‹
+                              </button>
+                              <span style={{ fontSize: '7.5pt', color: 'var(--ai-noir70)', userSelect: 'none' }}>
+                                {page + 1} / {pageCount}
+                              </span>
+                              <button
+                                onClick={() => setStatusPageFor(s, page + 1)}
+                                disabled={page >= pageCount - 1}
+                                title="Page suivante"
+                                style={{
+                                  background: 'transparent', border: 'none',
+                                  cursor: page >= pageCount - 1 ? 'default' : 'pointer',
+                                  padding: '2px 4px', fontSize: '10pt', lineHeight: 1,
+                                  color: page >= pageCount - 1 ? 'var(--ai-gris)' : 'var(--ai-noir70)',
+                                  opacity: page >= pageCount - 1 ? 0.4 : 1,
+                                }}
+                              >
+                                ›
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })}
