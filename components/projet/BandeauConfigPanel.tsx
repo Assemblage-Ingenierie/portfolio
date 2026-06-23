@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import type {
   BandeauConfig, BandeauStyle, BandeauLinesStyle, ProgrammeCellOptions,
   BandeauCellsConfig, CellsLayout, MetaLabel,
@@ -664,6 +665,13 @@ function CellsLayoutRow({
   const breaks: Partial<Record<MetaLabel, number[]>> = value?.breaks ?? {};
   const wordBreaks: Partial<Record<MetaLabel, number[]>> = value?.wordBreaks ?? {};
 
+  // État d'ouverture local des sous-menus de sauts de ligne. On NE dérive PAS
+  // `open` du contenu (`Object.keys(...).length > 0`) : sinon décocher le
+  // dernier saut viderait le store et refermerait le menu tout seul. Init :
+  // ouvert si des sauts existent déjà au montage, puis piloté par l'utilisateur.
+  const [breaksOpen, setBreaksOpen] = useState(() => Object.keys(value?.breaks ?? {}).length > 0);
+  const [wordBreaksOpen, setWordBreaksOpen] = useState(() => Object.keys(value?.wordBreaks ?? {}).length > 0);
+
   const setLayout = (next: CellsLayout) => {
     // Pas la peine de persister 'content' (= défaut) si rien d'autre n'est défini.
     const out: BandeauCellsConfig = { ...(value ?? {}) };
@@ -807,7 +815,8 @@ function CellsLayoutRow({
 
       {multiValueCells.size > 0 && (
         <details
-          open={Object.keys(breaks).length > 0}
+          open={breaksOpen}
+          onToggle={(e) => setBreaksOpen(e.currentTarget.open)}
           style={{ marginTop: '8px' }}
         >
           <summary
@@ -884,7 +893,8 @@ function CellsLayoutRow({
 
       {wordBreakCells.size > 0 && (
         <details
-          open={Object.keys(wordBreaks).length > 0}
+          open={wordBreaksOpen}
+          onToggle={(e) => setWordBreaksOpen(e.currentTarget.open)}
           style={{ marginTop: '8px' }}
         >
           <summary
