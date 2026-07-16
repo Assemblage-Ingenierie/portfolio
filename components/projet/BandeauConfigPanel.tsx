@@ -2,12 +2,11 @@
 
 import { useState } from 'react';
 import type {
-  BandeauConfig, BandeauStyle, BandeauLinesStyle, ProgrammeCellOptions,
+  BandeauConfig, BandeauStyle, ProgrammeCellOptions,
   BandeauCellsConfig, CellsLayout, MetaLabel,
   FontFamilyChoice, TextAlignChoice, TextTransformChoice,
 } from '@/lib/pdf/bandeauConfig';
 import { CANONICAL_META_LABELS } from '@/lib/pdf/bandeauConfig';
-import { useViewMode } from '@/lib/auth/useViewMode';
 import ColorSelector from './ColorSelector';
 import type { Projet } from '@/types/projet';
 import { color } from '@/lib/ui/tokens';
@@ -18,10 +17,6 @@ interface Props {
   /** Projet courant — utilisé uniquement par la section "Sauts de ligne"
    *  pour montrer les valeurs réelles de chaque cellule multi-valeurs. */
   projet?: Projet;
-  /** Si fourni, le bouton "Réinitialiser" appelle ce callback (qui doit
-   *  appliquer les préréglages Assemblage AUSSI au ManualConfig). Sinon
-   *  le bouton fait le comportement legacy : vide juste BandeauConfig. */
-  onResetAll?: () => void;
 }
 
 /** Valeurs par cellule du bandeau (miroir de la logique de `metaGridHtml`
@@ -114,28 +109,6 @@ function wordBreakCellsFromProjet(projet: Projet | undefined): Map<MetaLabel, Wo
   }
   return result;
 }
-
-type StyleSectionKey = Exclude<keyof BandeauConfig, 'lines' | 'titleMetaGap' | 'photoTextGap' | 'bandeauPhotoGap' | 'programme' | 'cells' | 'hiddenCells'>;
-
-const SECTIONS: { key: StyleSectionKey; label: string; help: string }[] = [
-  { key: 'titre',       label: 'Titre de la fiche',           help: 'Le nom du projet (titre principal h1).' },
-  { key: 'status',      label: 'Statut (en haut à droite)',   help: '"● Livré · 2025"' },
-  { key: 'missionAi',   label: 'Mission AI (face au lieu)',   help: 'La ligne Mission AI affichée en face du lieu, au-dessus du titre. Templates Str-Env et Dev uniquement.' },
-  { key: 'labels',      label: 'Libellés du bandeau',         help: '"Architecte", "Budget", "Surface"…' },
-  { key: 'values',      label: 'Valeurs du bandeau',          help: '"Encore Heureux", "8,2 M€ HT", "4 242 m²"…' },
-  { key: 'metaSub',     label: 'Sous-titre du Programme',     help: 'La ligne discrète sous "Programme" — affiche le Programme secondaire quand un Programme principal est aussi rempli.' },
-  { key: 'description', label: 'Description projet',          help: 'Le texte courant de la fiche (paragraphes Markdown). Appliqué sur tous les templates.' },
-  { key: 'prestationAssemblage', label: 'Prestation Assemblage', help: 'Bloc rich text dédié, rendu uniquement par le template Dev (titre + valeur).' },
-];
-
-/** Sections typographiques HORS du sous-menu « Bandeau » (titre, statut,
- *  description, prestation). Affichées au premier niveau, admin uniquement. */
-const TOP_SECTION_KEYS: StyleSectionKey[] = ['titre', 'status', 'missionAi', 'description', 'prestationAssemblage'];
-/** Sections typographiques regroupées DANS le sous-menu « Bandeau » (admin). */
-const BANDEAU_SECTION_KEYS: StyleSectionKey[] = ['labels', 'values', 'metaSub'];
-
-const TOP_SECTIONS = SECTIONS.filter((s) => TOP_SECTION_KEYS.includes(s.key));
-const BANDEAU_SECTIONS = SECTIONS.filter((s) => BANDEAU_SECTION_KEYS.includes(s.key));
 
 const LABEL_S: React.CSSProperties = {
   display: 'block', fontFamily: 'var(--sans)', fontSize: '7pt', fontWeight: 700,
@@ -348,47 +321,9 @@ function AdvancedStyleSection({
 
 export { StyleRow };
 
-export default function BandeauConfigPanel({ value, onChange, projet, onResetAll }: Props) {
+export default function BandeauConfigPanel({ value, onChange, projet }: Props) {
   const multiValueCells = multiValueCellsFromProjet(projet);
   const wordBreakCells = wordBreakCellsFromProjet(projet);
-  // Mode de vue (admin = full UI, user = restreint à Cellules du bandeau +
-  // Cellule Programme). Géré dans `lib/auth/useViewMode.ts` ; le toggle est
-  // dans la toolbar (visible uniquement pour les profils Supabase admin).
-  const { viewMode } = useViewMode();
-  const isUserView = viewMode === 'user';
-  function updateSection(key: StyleSectionKey, style: BandeauStyle) {
-    // Si toutes les propriétés sont vides, on retire la section pour garder
-    // la config minimale et utiliser les défauts CSS du template.
-    const isEmpty =
-      !style.fontFamily &&
-      style.fontSize === undefined &&
-      !style.bold && !style.italic && !style.underline && !style.smallCaps &&
-      !style.color && !style.background &&
-      style.lineHeight === undefined &&
-      style.letterSpacing === undefined &&
-      style.wordSpacing === undefined &&
-      !style.textAlign && !style.textTransform &&
-      style.marginTop === undefined &&
-      style.marginBottom === undefined &&
-      style.paddingX === undefined &&
-      style.paddingY === undefined;
-    const next = { ...value };
-    if (isEmpty) {
-      delete next[key];
-    } else {
-      next[key] = style;
-    }
-    onChange(next);
-  }
-
-  function resetAll() {
-    // Si le parent fournit un callback complet, on lui delegue : il
-    // appliquera les preregages Assemblage au BandeauConfig ET au
-    // ManualConfig (cf. lib/pdf/assemblageDefaults.ts). Sinon, comportement
-    // historique : on vide juste le BandeauConfig.
-    if (onResetAll) onResetAll();
-    else onChange({});
-  }
 
   // Handlers extraits (réutilisés dans le sous-menu « Bandeau »).
   const cellsOnChange = (c: BandeauCellsConfig | undefined) => {
@@ -421,14 +356,6 @@ export default function BandeauConfigPanel({ value, onChange, projet, onResetAll
     onChange(next);
   };
 
-  const renderStyleSection = (s: { key: StyleSectionKey; label: string; help: string }) => (
-    <div key={s.key} style={{ marginBottom: '14px', paddingBottom: '14px', borderBottom: `1px dotted ${color.gris}` }}>
-      <label style={LABEL_S}>{s.label}</label>
-      <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', margin: '0 0 6px' }}>{s.help}</p>
-      <StyleRow style={value[s.key] ?? {}} onChange={(st) => updateSection(s.key, st)} />
-    </div>
-  );
-
   const bandeauSummaryStyle: React.CSSProperties = {
     cursor: 'pointer',
     fontFamily: 'var(--sans)', fontSize: '8.5pt', fontWeight: 700,
@@ -436,36 +363,15 @@ export default function BandeauConfigPanel({ value, onChange, projet, onResetAll
     color: color.violet, padding: '8px 0',
   };
 
+  // Rendu unique (identique en vue admin et user) : le sous-menu « Bandeau »
+  // n'expose que les réglages de cellules, la cellule Programme et la
+  // visibilité des champs. Les anciens réglages typographiques et le bouton
+  // « Réinitialiser » réservés à l'admin ont été retirés.
   return (
     <div>
-      {!isUserView && (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '12px' }}>
-          <p style={{ fontSize: '8pt', color: 'var(--ai-noir70)', margin: 0 }}>
-            Surcharges optionnelles. Laisser vide pour utiliser les valeurs par défaut du template.
-          </p>
-          <button
-            type="button"
-            onClick={resetAll}
-            style={{ ...TOGGLE, fontSize: '8pt' }}
-            title={onResetAll
-              ? 'Applique les préréglages Assemblage : typographie + bandeau + photo principale + texte + mots-clés + certifications. Écrase la configuration actuelle.'
-              : 'Vide la configuration du bandeau.'}
-          >
-            Réinitialiser
-          </button>
-        </div>
-      )}
-
-      {/* Sections typographiques hors bandeau (titre, statut, description,
-          prestation) — admin uniquement, au premier niveau. */}
-      {!isUserView && TOP_SECTIONS.map(renderStyleSection)}
-
-      {/* Sous-menu déroulant « Bandeau ». Admin : typo + cellules + lignes +
-          espacements + visibilité. User : cellules + espacements + visibilité. */}
       <details open style={{ marginTop: '4px', borderTop: `1px solid ${color.gris}` }}>
         <summary style={bandeauSummaryStyle}>Bandeau</summary>
         <div style={{ paddingTop: '8px' }}>
-          {!isUserView && BANDEAU_SECTIONS.map(renderStyleSection)}
           <CellsLayoutRow
             value={value.cells}
             multiValueCells={multiValueCells}
@@ -473,12 +379,6 @@ export default function BandeauConfigPanel({ value, onChange, projet, onResetAll
             onChange={cellsOnChange}
           />
           <ProgrammeOptionsRow value={value.programme} onChange={programmeOnChange} />
-          {!isUserView && (
-            <LinesRow value={value.lines ?? {}} onChange={(l) => onChange({ ...value, lines: l })} />
-          )}
-          {/* Les 3 sliders d'espacement (titre↔bandeau, photo↔description,
-              photo↔bandeau) ont été déplacés dans la section « Espacements »
-              de la sidebar — cf. <EspacementsPanel/> ci-dessous. */}
           <FieldVisibilityRow hidden={value.hiddenCells ?? []} onChange={hiddenCellsOnChange} />
         </div>
       </details>
@@ -999,50 +899,6 @@ function ProgrammeOptionsRow({
         />
         Afficher le programme secondaire
       </label>
-    </div>
-  );
-}
-
-function LinesRow({ value, onChange }: { value: BandeauLinesStyle; onChange: (v: BandeauLinesStyle) => void }) {
-  // Convention : `show` non défini = visible par défaut. Le toggle bascule
-  // explicitement vers false / true (jamais undefined) pour que l'intention
-  // de l'utilisateur soit persistée.
-  const visible = value.show !== false;
-  return (
-    <div style={{ marginBottom: '14px', paddingBottom: '14px' }}>
-      <label style={LABEL_S}>Lignes horizontales du bandeau</label>
-      <p style={{ fontSize: '7pt', color: 'var(--ai-noir70)', margin: '0 0 6px' }}>
-        Les deux traits qui encadrent le bandeau métadonnées (au-dessus de Maître d&apos;ouvrage et sous le bandeau).
-      </p>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
-        <button
-          type="button"
-          onClick={() => onChange({ ...value, show: !visible })}
-          style={visible ? TOGGLE_ON : TOGGLE}
-          title={visible ? 'Masquer les lignes' : 'Afficher les lignes'}
-        >
-          {visible ? '✓ Affichées' : '✕ Masquées'}
-        </button>
-        <input
-          type="number"
-          step="0.5"
-          min="0.25"
-          max="6"
-          value={value.width ?? ''}
-          onChange={(e) => onChange({ ...value, width: e.target.value === '' ? undefined : Number(e.target.value) })}
-          placeholder="Épaisseur (pt)"
-          disabled={!visible}
-          style={{ ...INPUT_S, width: '110px', flex: '0 0 110px', opacity: visible ? 1 : 0.4 }}
-        />
-        <div style={{ flex: '1 1 100%' }}>
-          <ColorSelector
-            value={value.color}
-            onChange={(c) => onChange({ ...value, color: c })}
-            disabled={!visible}
-            customTitle="Couleur de ligne personnalisée"
-          />
-        </div>
-      </div>
     </div>
   );
 }

@@ -13,10 +13,6 @@ import { MAX_MAIN_PORTRAIT_PHOTOS } from '@/lib/pdf/manualConfig';
 import type { BandeauConfig, BandeauStyle } from '@/lib/pdf/bandeauConfig';
 import { allPhotos } from '@/lib/pdf/templates/shared';
 import BandeauConfigPanel, { StyleRow, EspacementsPanel } from '@/components/projet/BandeauConfigPanel';
-import {
-  ASSEMBLAGE_DEFAULT_BANDEAU,
-  ASSEMBLAGE_DEFAULT_MANUAL,
-} from '@/lib/pdf/assemblageDefaults';
 import { color } from '@/lib/ui/tokens';
 
 // ─── Constantes ──────────────────────────────────────────────────────────────
@@ -696,22 +692,6 @@ export default function LayoutSidebar({ projet, config, onChange, bandeauConfig,
               value={bandeauConfig}
               onChange={onBandeauChange}
               projet={projet}
-              onResetAll={() => {
-                // Applique les preregages Assemblage UNIQUEMENT en memoire
-                // (state React). Aucune ecriture Airtable a ce stade —
-                // l'utilisateur doit cliquer sur "Sauvegarder la mise en
-                // page" pour persister. La confirmation previent seulement
-                // l'ecrasement accidentel des reglages courants.
-                const confirmed = window.confirm(
-                  'Appliquer les préréglages Assemblage ?\n\n'
-                  + 'Le bandeau et la mise en page seront remplacés '
-                  + 'en aperçu. Rien n’est encore sauvegardé : '
-                  + 'clique sur « Sauvegarder la mise en page » pour valider.'
-                );
-                if (!confirmed) return;
-                onBandeauChange(ASSEMBLAGE_DEFAULT_BANDEAU);
-                onChange(ASSEMBLAGE_DEFAULT_MANUAL);
-              }}
             />
           </div>
         );
