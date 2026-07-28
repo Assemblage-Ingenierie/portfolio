@@ -28,6 +28,7 @@ import {
   FIELD_POLE,
   FIELD_TAGS_EXPORT_WP,
   FIELD_META_DESCRIPTION,
+  FIELD_ANNEE_LIVRAISON,
 } from './mappers';
 
 export interface ProjetEditableFields {
@@ -99,7 +100,7 @@ export async function updateProjetFields(slug: string, fields: ProjetEditableFie
   if (fields.programmesSecondaires !== undefined) update[FIELD_PROGRAMME_SECONDAIRE] = fields.programmesSecondaires;
   if (fields.surface !== undefined)        update['Surface(m²)']        = fields.surface;
   if (fields.budgetRaw !== undefined)      update['Budget HT']          = fields.budgetRaw;
-  if (fields.anneeLivraison !== undefined) update['Année livraison']    = fields.anneeLivraison;
+  if (fields.anneeLivraison !== undefined) update[FIELD_ANNEE_LIVRAISON] = fields.anneeLivraison;
   // Le champ "Programme" texte libre est deprecated depuis 2026 : remplace
   // par "Programmes principaux" + "Programmes secondaires" (multi-selects).
   if (fields.pole !== undefined)           update[FIELD_POLE]           = fields.pole;

@@ -43,6 +43,13 @@ export const FIELD_TAGS_EXPORT_WP = 'fld2y9rIk9DVEf9eo';
 // « Description projet ») — envoyé à Yoast (_yoast_wpseo_metadesc) à l'export.
 // Lu par field ID via fetchAuxByFieldId (STRING_FORMAT → texte généré).
 export const FIELD_META_DESCRIPTION = 'fldQmXMJpDY7TrbfL';
+// Année de livraison (champ "Numéro") — lu ET écrit par field ID. Historiquement
+// référencé par nom ('Année livraison') en lecture, écriture et tri : le
+// renommage de la colonne côté Airtable (→ « Année de livraison ou année
+// actuelle ») faisait alors throw `getProjets()` sur le tri (UNKNOWN_FIELD_NAME),
+// donc renvoyer une liste VIDE pour la home, le builder, le tableau et l'API
+// publique. Le field ID rend la colonne librement renommable.
+export const FIELD_ANNEE_LIVRAISON = 'fldTYnGzVW4wwPSAC';
 
 /**
  * Valeurs auxiliaires injectées dans le mapper.
@@ -70,6 +77,8 @@ export interface AuxValues {
   tagsExportWp?: string[];
   /** Méta description SEO générée par l'IA Airtable (aiText). */
   metaDescription?: string;
+  /** Année de livraison (champ "Numéro" fldTYnGzVW4wwPSAC), lue par field ID. */
+  anneeLivraison?: number;
   /** Map<recordId → { nom, url }> des entités CRM (table « Sync CRM »). */
   crmNames?: Map<string, CrmEntity>;
 }
@@ -261,7 +270,9 @@ export function recordToProjet(record: any, aux?: AuxValues): Projet {
 
     surface: f['Surface(m²)'] ?? undefined,
     budgetHT,
-    anneeLivraison: f['Année livraison'] ?? undefined,
+    // Lue par field ID via l'aux query (cf. FIELD_ANNEE_LIVRAISON) — plus
+    // aucune référence au nom de colonne, qui est renommable côté Airtable.
+    anneeLivraison: aux?.anneeLivraison,
     // Mission AI (multi-select fldgkpweXw9BypQfX) : Airtable retourne soit
     // un array (cellFormat json par défaut), soit une string CSV selon le
     // mode. On normalise dans les deux cas vers un array, et on garde
