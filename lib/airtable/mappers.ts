@@ -50,6 +50,19 @@ export const FIELD_META_DESCRIPTION = 'fldQmXMJpDY7TrbfL';
 // donc renvoyer une liste VIDE pour la home, le builder, le tableau et l'API
 // publique. Le field ID rend la colonne librement renommable.
 export const FIELD_ANNEE_LIVRAISON = 'fldTYnGzVW4wwPSAC';
+// Champs éditables écrits par field ID depuis `updateProjetFields`. Écrire par
+// NOM expose à un `UNKNOWN_FIELD_NAME` qui fait échouer TOUTE la mutation (donc
+// la sauvegarde entière de la fiche) au moindre renommage de colonne côté
+// Airtable — la coche « Visible portfolio » et le formulaire d'édition n'ont
+// aucun garde-fou là-dessus.
+export const FIELD_NOM_PROJET = 'fld88F75R2ooVfH7p';
+export const FIELD_ADRESSE = 'fldp5UtSsWF65ZgZ9';
+export const FIELD_SURFACE = 'fld9HmFcoH2XYpm6y';
+export const FIELD_BUDGET_HT = 'fldc9yGvzPAdhG6JR';
+export const FIELD_TEMPLATE = 'fldzO9v9qwt1EudsS';
+export const FIELD_MOTS_CLES = 'fldOZ3nr5uAmMvS5H';
+export const FIELD_REFERENT_AI = 'fldilikNKyjuPi2k4';
+export const FIELD_DESCRIPTION_PROJET = 'fldnHsTl71jffSW8h';
 
 /**
  * Valeurs auxiliaires injectées dans le mapper.
