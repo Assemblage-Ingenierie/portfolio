@@ -64,7 +64,7 @@ export default function WordpressView({ projet }: { projet: Projet }) {
   const [wpConfig, setWpConfig] = useState<WpConfig>(projet.wpConfig ?? DEFAULT_WP_CONFIG);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [publishing, setPublishing] = useState(false);
-  const [result, setResult] = useState<{ url?: string; error?: string; id?: number; categoryNames?: string[]; categoryCount?: number; hasMetaDescription?: boolean } | null>(null);
+  const [result, setResult] = useState<{ url?: string; error?: string; id?: number; categoryNames?: string[]; categoryCount?: number; hasMetaDescription?: boolean; warning?: string } | null>(null);
   const [promoting, setPromoting] = useState(false);
   const [promoteResult, setPromoteResult] = useState<{ prodUrl?: string; prodId?: number; draftUrl?: string; error?: string; gallery?: PoleResult[] } | null>(null);
   const [addingPole, setAddingPole] = useState(false);
@@ -126,7 +126,7 @@ export default function WordpressView({ projet }: { projet: Projet }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Erreur inconnue');
-      setResult({ url: data.url, id: data.id, categoryNames: data.categoryNames, categoryCount: data.categoryCount, hasMetaDescription: data.hasMetaDescription });
+      setResult({ url: data.url, id: data.id, categoryNames: data.categoryNames, categoryCount: data.categoryCount, hasMetaDescription: data.hasMetaDescription, warning: data.warning });
     } catch (e) {
       setResult({ error: e instanceof Error ? e.message : 'Erreur' });
     } finally {
@@ -306,6 +306,9 @@ export default function WordpressView({ projet }: { projet: Projet }) {
               · SEO : keyphrase ✓{result.hasMetaDescription ? ' · méta description ✓' : ' · méta description vide (champ Airtable non généré ?)'}
             </span>
           </span>
+        )}
+        {result?.warning && (
+          <span style={{ color: '#ffdd88', fontWeight: 600 }}>⚠ {result.warning}</span>
         )}
         {result?.error && <span style={{ color: feedback.erreurClair, fontWeight: 600 }}>✗ {result.error}</span>}
         {promoteResult?.prodUrl && (

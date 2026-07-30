@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getProjet } from '@/lib/airtable';
 import {
-  findPublishedPostBySlug,
+  findProductionPost,
   getPostContent,
   addProjetToPoleGalleries,
   pfgGalleriesForPoles,
@@ -47,7 +47,9 @@ export async function POST(
   }
 
   try {
-    const prod = await findPublishedPostBySlug(slug);
+    // Lookup par slug canonique, avec repli sur le post tracké dans Airtable
+    // (cas d'un brouillon au slug suffixé publié à la main depuis wp-admin).
+    const prod = await findProductionPost(slug, projet.urlWordpress);
     if (!prod) {
       return NextResponse.json(
         { error: "Aucune version publiée trouvée pour cette fiche. Publie d'abord l'article en production, puis réessaie." },

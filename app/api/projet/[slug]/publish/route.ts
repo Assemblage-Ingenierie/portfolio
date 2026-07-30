@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getProjet, updateProjetUrl } from '@/lib/airtable';
-import { uploadMedia, createOrUpdatePost, ensureCategoryIds } from '@/lib/wordpress';
+import { uploadMedia, createOrUpdatePost, ensureCategoryIds, releaseCanonicalSlug } from '@/lib/wordpress';
 import { buildWpContent } from '@/lib/wordpress/builders';
 import { buildWpContentV2 } from '@/lib/wordpress/buildersV2';
 import { requireApprovedUser } from '@/lib/supabase/requireApprovedUser';
@@ -96,8 +96,13 @@ export async function POST(
     //      se fait via la route dédiée /update-prod, sur action explicite)
     //    Le code n'envoie JAMAIS status: 'trash' ni DELETE → impossibilité
     //    par construction de mettre un post existant à la corbeille.
-    //    WP gère automatiquement les collisions de slug en suffixant
-    //    -2, -3, etc. — chaque draft est donc unique et visible.
+    //
+    //    4bis. On libère d'abord le slug canonique, sinon WP suffixe le
+    //    nouveau brouillon en -2 / -3 / -4 (un brouillon d'export précédent
+    //    détient déjà `post_name`). Un slug suffixé casse ensuite le lookup
+    //    par slug de /update-prod et /pole-gallery. Les brouillons squatteurs
+    //    sont renommés `<slug>-brouillon-<id>` ; un post PUBLIÉ n'est jamais
+    //    touché (son permalien est l'URL SEO de production).
     // Catégories WordPress (panneau « Catégories ») depuis le champ Airtable
     // « Tags export WP ». Résolues en IDs (créées si manquantes). Non bloquant.
     let categories: number[] | undefined;
@@ -120,8 +125,23 @@ export async function POST(
     if (projet.metaDescription) seoMeta._yoast_wpseo_metadesc = projet.metaDescription;
     console.log('[WP-PUBLISH] yoast meta', { focuskw: projet.nom, hasMetadesc: !!projet.metaDescription });
 
+    let slugWarning: string | undefined;
+    try {
+      const { freed, publishedHolder } = await releaseCanonicalSlug(projet.slug);
+      console.log('[WP-PUBLISH] slug', { canonical: projet.slug, freed, holder: publishedHolder?.id });
+      if (publishedHolder) {
+        slugWarning =
+          `Le slug « ${projet.slug} » est déjà pris par l'article publié #${publishedHolder.id} : ` +
+          `ce brouillon recevra un suffixe. Utilise « Mettre à jour la production » pour pousser ` +
+          `le contenu sur cet article plutôt que de republier le brouillon.`;
+      }
+    } catch (slugErr) {
+      // Non bloquant : au pire WP suffixe le slug comme avant.
+      console.warn('Libération du slug canonique échouée (non-fatal):', slugErr);
+    }
+
     const previousUrl = projet.urlWordpress;
-    const { id, url, status, type, author } = await createOrUpdatePost({
+    const { id, url, slug: wpSlug, status, type, author } = await createOrUpdatePost({
       title: projet.nom,
       slug: projet.slug,
       content,
@@ -131,7 +151,13 @@ export async function POST(
       categories,
       meta: seoMeta,
     });
-    console.log('[WP-PUBLISH]', { id, status, type, author, url, previousUrl });
+    console.log('[WP-PUBLISH]', { id, status, type, author, url, wpSlug, previousUrl });
+
+    // Filet : si WP a quand même suffixé (course, brouillon non libérable…),
+    // on le remonte à l'UI plutôt que de le découvrir au moment du lookup.
+    if (!slugWarning && wpSlug && wpSlug !== projet.slug) {
+      slugWarning = `WordPress a attribué le slug « ${wpSlug} » au lieu de « ${projet.slug} ».`;
+    }
 
     // 5. Write back URL to Airtable (non-blocking). urlWordpress reflète
     //    désormais le DERNIER draft créé — utile à /update-prod pour
@@ -145,7 +171,10 @@ export async function POST(
     }
 
     return NextResponse.json({
-      id, url, status, type, author, previousUrl, warning: airtableWarning,
+      id, url, status, type, author, previousUrl,
+      warning: [airtableWarning, slugWarning].filter(Boolean).join(' — ') || undefined,
+      // Slug réellement attribué par WP (doit être égal au slug Airtable).
+      wpSlug, slugSuffixed: !!wpSlug && wpSlug !== projet.slug,
       // Diagnostic catégories : noms demandés (Airtable) + nb d'IDs WP assignés.
       categoryNames: projet.tagsExportWp,
       categoryCount: categoryIds.length,

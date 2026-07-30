@@ -3,7 +3,7 @@ import { getProjet } from '@/lib/airtable';
 import {
   createOrUpdatePost,
   extractWpPostId,
-  findPublishedPostBySlug,
+  findProductionPost,
   getPostContent,
   addProjetToPoleGalleries,
   type PoleGalleryResult,
@@ -63,8 +63,10 @@ export async function POST(
   }
 
   try {
-    // 1. Récupère le post de production via lookup slug + status=publish
-    const prod = await findPublishedPostBySlug(slug);
+    // 1. Récupère le post de production : lookup par slug canonique, avec
+    //    repli sur le post tracké dans Airtable s'il est passé en publish
+    //    (brouillon au slug suffixé publié à la main depuis wp-admin).
+    const prod = await findProductionPost(slug, draftUrlFromAirtable);
     if (!prod) {
       return NextResponse.json(
         {
@@ -75,13 +77,27 @@ export async function POST(
       );
     }
 
+    // 1bis. Le brouillon tracké EST l'article publié (l'utilisateur l'a publié
+    //       à la main depuis wp-admin) : il n'y a rien à promouvoir.
+    if (draftId === prod.id) {
+      return NextResponse.json(
+        {
+          error:
+            "Le brouillon tracké est déjà l'article publié — rien à promouvoir. " +
+            'Relance « Export WP » pour créer un nouveau brouillon, puis reviens ici.',
+        },
+        { status: 409 }
+      );
+    }
+
     // 2. Récupère le contenu du brouillon validé (context=edit pour avoir le raw HTML)
     const draftContent = await getPostContent(draftId);
 
-    // 3. PATCH le post de production avec ce contenu. On ne touche pas au
-    //    status (reste 'publish'), on ne touche pas au slug (préserve l'URL
-    //    SEO de la production). Title / content / excerpt / featured_media
-    //    sont remplacés par ceux du draft.
+    // 3. PATCH le post de production avec ce contenu. Le status reste 'publish'.
+    //    Le slug envoyé est le slug canonique Airtable : si la prod porte encore
+    //    un suffixe hérité (`-2`, `-3`…) et que le canonique est libre, WP
+    //    répare le permalien ; sinon il le conserve tel quel.
+    //    Title / content / excerpt / featured_media sont remplacés par ceux du draft.
     const updated = await createOrUpdatePost(
       {
         title: draftContent.title,
