@@ -28,6 +28,15 @@ import {
   FIELD_POLE,
   FIELD_TAGS_EXPORT_WP,
   FIELD_META_DESCRIPTION,
+  FIELD_ANNEE_LIVRAISON,
+  FIELD_NOM_PROJET,
+  FIELD_ADRESSE,
+  FIELD_SURFACE,
+  FIELD_BUDGET_HT,
+  FIELD_TEMPLATE,
+  FIELD_MOTS_CLES,
+  FIELD_REFERENT_AI,
+  FIELD_DESCRIPTION_PROJET,
 } from './mappers';
 
 export interface ProjetEditableFields {
@@ -84,12 +93,12 @@ export async function updateProjetFields(slug: string, fields: ProjetEditableFie
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const update: Record<string, any> = {};
-  if (fields.nom !== undefined)            update['Nom du projet']      = fields.nom;
-  if (fields.adresse !== undefined)        update['Adresse']            = fields.adresse;
-  if (fields.description !== undefined)    update['Description projet'] = fields.description;
+  if (fields.nom !== undefined)            update[FIELD_NOM_PROJET]     = fields.nom;
+  if (fields.adresse !== undefined)        update[FIELD_ADRESSE]        = fields.adresse;
+  if (fields.description !== undefined)    update[FIELD_DESCRIPTION_PROJET] = fields.description;
   // Pas d'écriture sur les champs CRM (MOA / Mandataire / BET associés /
   // Entreprise / Bailleur / Architecte) : ils sont gérés depuis la base CRM.
-  if (fields.referentAi !== undefined)     update['Référent AI']        = fields.referentAi;
+  if (fields.referentAi !== undefined)     update[FIELD_REFERENT_AI]    = fields.referentAi;
   // Multi-selects : on écrit des arrays. Airtable typecast:true convertit
   // gracieusement les nouvelles valeurs en options (création automatique).
   // Multi-selects et champs renommables : écrits par FIELD ID (les noms de
@@ -97,13 +106,27 @@ export async function updateProjetFields(slug: string, fields: ProjetEditableFie
   if (fields.missionAiValues !== undefined)       update[FIELD_MISSION_AI]          = fields.missionAiValues;
   if (fields.programmesPrincipaux !== undefined)  update[FIELD_PROGRAMME_PRINCIPAL] = fields.programmesPrincipaux;
   if (fields.programmesSecondaires !== undefined) update[FIELD_PROGRAMME_SECONDAIRE] = fields.programmesSecondaires;
-  if (fields.surface !== undefined)        update['Surface(m²)']        = fields.surface;
-  if (fields.budgetRaw !== undefined)      update['Budget HT']          = fields.budgetRaw;
-  if (fields.anneeLivraison !== undefined) update['Année livraison']    = fields.anneeLivraison;
+  if (fields.surface !== undefined)        update[FIELD_SURFACE]        = fields.surface;
+  if (fields.budgetRaw !== undefined)      update[FIELD_BUDGET_HT]      = fields.budgetRaw;
+  if (fields.anneeLivraison !== undefined) update[FIELD_ANNEE_LIVRAISON] = fields.anneeLivraison;
   // Le champ "Programme" texte libre est deprecated depuis 2026 : remplace
   // par "Programmes principaux" + "Programmes secondaires" (multi-selects).
   if (fields.pole !== undefined)           update[FIELD_POLE]           = fields.pole;
-  if (fields.departement !== undefined)    update['Département']        = fields.departement;
+  // ⚠ `Département` N'EXISTE PLUS dans la table Airtable (vérifié via l'API
+  // Metadata : ni field ID, ni colonne de ce nom — le champ géographique
+  // restant est « Lieu », déjà mappé sur `Projet.lieu`). L'écriture par nom
+  // faisait donc échouer TOUTE la sauvegarde de la fiche avec
+  // UNKNOWN_FIELD_NAME dès que l'utilisateur saisissait quelque chose dans
+  // l'input « Département » de l'éditeur (input vide → `undefined` → non
+  // envoyé → save OK, ce qui rendait le bug intermittent et déroutant).
+  // On ignore la valeur : elle ne pouvait de toute façon JAMAIS être
+  // persistée ni relue, donc rien n'est perdu — mais un save réussit à
+  // nouveau. À trancher côté produit : recréer la colonne dans Airtable, ou
+  // retirer l'input de `ProjetEditor` (cf. aussi `mappers.ts` qui lit
+  // `f['Département']`, toujours undefined).
+  if (fields.departement !== undefined) {
+    console.warn('[airtable] Champ « Département » ignoré : la colonne n\'existe plus dans la table Airtable.');
+  }
   if (fields.rehabNeufValues !== undefined) update[FIELD_REHAB_NEUF]    = fields.rehabNeufValues;
   // `fldxXNdE0uNaomeby` (FIELD_STATUT) est en réalité un **single-select**
   // ("État avancement") côté Airtable, malgré son usage multi-valeur côté
@@ -112,9 +135,9 @@ export async function updateProjetFields(slug: string, fields: ProjetEditableFie
   // déclenche `INVALID_VALUE_FOR_COLUMN: Cannot parse value`.
   if (fields.statutValues !== undefined)    update[FIELD_STATUT]        = fields.statutValues[0] ?? null;
   if (fields.materiaux !== undefined)       update[FIELD_MATERIAUX]     = fields.materiaux;
-  if (fields.template !== undefined)       update['Template']           = fields.template;
+  if (fields.template !== undefined)       update[FIELD_TEMPLATE]       = fields.template;
   if (fields.certifications !== undefined) update[FIELD_CERTIFICATION]  = fields.certifications.join('\n');
-  if (fields.motsCles !== undefined)       update['Mots-clés']          = fields.motsCles.join(', ');
+  if (fields.motsCles !== undefined)       update[FIELD_MOTS_CLES]      = fields.motsCles.join(', ');
   if (fields.prestationAssemblage !== undefined) update[FIELD_PRESTATION_ASSEMBLAGE] = fields.prestationAssemblage;
   // Multi-select WP + override de la méta description SEO. Écrits par FIELD ID
   // (renommables). La méta description est un champ aiText : Airtable accepte un

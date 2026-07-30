@@ -1,7 +1,7 @@
 import type { Projet } from '@/types/projet';
 import { cacheTag, cacheLife } from 'next/cache';
 import { base, TABLE } from './client';
-import { recordToProjet, type AuxValues, FIELD_PROGRAMME_PRINCIPAL, FIELD_PROGRAMME_SECONDAIRE, FIELD_POLE, FIELD_VIGNETTE_POLE, FIELD_PRESTATION_ASSEMBLAGE, FIELD_REHAB_NEUF, FIELD_MATERIAUX, FIELD_STATUT, FIELD_TAGS_EXPORT_WP, FIELD_META_DESCRIPTION } from './mappers';
+import { recordToProjet, type AuxValues, FIELD_PROGRAMME_PRINCIPAL, FIELD_PROGRAMME_SECONDAIRE, FIELD_POLE, FIELD_VIGNETTE_POLE, FIELD_PRESTATION_ASSEMBLAGE, FIELD_REHAB_NEUF, FIELD_MATERIAUX, FIELD_STATUT, FIELD_TAGS_EXPORT_WP, FIELD_META_DESCRIPTION, FIELD_ANNEE_LIVRAISON } from './mappers';
 import { fetchCrmNames } from './crm';
 
 /** Tag de la liste complète (`getProjets`) — invalidé seulement quand un
@@ -73,6 +73,8 @@ interface AuxByFieldId {
   statut?: string[];
   tagsExportWp?: string[];
   metaDescription?: string;
+  /** Année de livraison (champ "Numéro" fldTYnGzVW4wwPSAC). */
+  anneeLivraison?: number;
 }
 
 // Multi-select avec cellFormat: 'string' → CSV. Renvoie l'array complet
@@ -91,6 +93,22 @@ function allValues(v: any): string[] | undefined {
   return undefined;
 }
 
+/**
+ * Année de livraison (champ Airtable "Numéro") lue en `cellFormat: 'string'` :
+ * elle revient donc en TEXTE, et la locale fr-FR peut y insérer un séparateur
+ * de milliers ("2 024", avec espace insécable). On ne garde que les chiffres
+ * avant de repasser en number. Tolère aussi un number brut au cas où le
+ * cellFormat de la requête changerait.
+ */
+function yearValue(v: unknown): number | undefined {
+  if (typeof v === 'number') return Number.isFinite(v) ? v : undefined;
+  if (typeof v !== 'string') return undefined;
+  const digits = v.replace(/\D/g, '');
+  if (!digits) return undefined;
+  const n = Number(digits);
+  return Number.isFinite(n) ? n : undefined;
+}
+
 async function fetchAuxByFieldId(
   filterFormula?: string,
 ): Promise<Map<string, AuxByFieldId>> {
@@ -99,7 +117,7 @@ async function fetchAuxByFieldId(
     const records = await base(TABLE)
       .select({
         ...STRING_FORMAT,
-        fields: [FIELD_PROGRAMME_PRINCIPAL, FIELD_PROGRAMME_SECONDAIRE, FIELD_POLE, FIELD_VIGNETTE_POLE, FIELD_PRESTATION_ASSEMBLAGE, FIELD_REHAB_NEUF, FIELD_MATERIAUX, FIELD_STATUT, FIELD_TAGS_EXPORT_WP, FIELD_META_DESCRIPTION],
+        fields: [FIELD_PROGRAMME_PRINCIPAL, FIELD_PROGRAMME_SECONDAIRE, FIELD_POLE, FIELD_VIGNETTE_POLE, FIELD_PRESTATION_ASSEMBLAGE, FIELD_REHAB_NEUF, FIELD_MATERIAUX, FIELD_STATUT, FIELD_TAGS_EXPORT_WP, FIELD_META_DESCRIPTION, FIELD_ANNEE_LIVRAISON],
         returnFieldsByFieldId: true,
         ...(filterFormula ? { filterByFormula: filterFormula } : {}),
       })
@@ -141,6 +159,7 @@ async function fetchAuxByFieldId(
           const raw = r.fields[FIELD_META_DESCRIPTION];
           return typeof raw === 'string' && raw.trim() ? raw.trim() : undefined;
         })(),
+        anneeLivraison: yearValue(r.fields[FIELD_ANNEE_LIVRAISON]),
       });
     });
   } catch (err) {
@@ -169,14 +188,14 @@ export async function getProjets(): Promise<Projet[]> {
 
     // 1. Requête principale (cellFormat=json → attachments OK) + programmes en parallèle
     const [records, programmes] = await Promise.all([
+      // Pas de `sort` côté API : le paramètre `sort` d'Airtable n'accepte que
+      // des NOMS de colonnes, et c'est exactement ce qui a mis toute la liste
+      // par terre au renommage de « Année livraison » (UNKNOWN_FIELD_NAME →
+      // requête en erreur → catch → []). Le tri est fait en mémoire après
+      // mapping (cf. étape 5), ce qui supprime la dépendance au nom pour
+      // l'année ET pour « Affaire ».
       base(TABLE)
-        .select({
-          filterByFormula: filter,
-          sort: [
-            { field: 'Année livraison', direction: 'desc' },
-            { field: 'Affaire', direction: 'asc' },
-          ],
-        })
+        .select({ filterByFormula: filter })
         .all(),
       fetchAuxByFieldId(filter),
     ]);
@@ -198,7 +217,7 @@ export async function getProjets(): Promise<Projet[]> {
     const crmNames = await fetchCrmNames(crmIds);
 
     // 4. Mapping final
-    return records.map((r) => {
+    const projets = records.map((r) => {
       const prog = programmes.get(r.id);
       const aux: AuxValues = {
         programmePrincipal: prog?.principal,
@@ -213,10 +232,22 @@ export async function getProjets(): Promise<Projet[]> {
         statutValues: prog?.statut,
         tagsExportWp: prog?.tagsExportWp,
         metaDescription: prog?.metaDescription,
+        anneeLivraison: prog?.anneeLivraison,
         crmNames,
       };
       return recordToProjet(r, aux);
     });
+
+    // 5. Tri en mémoire : année décroissante, puis affaire croissante.
+    //    `-Infinity` pour les années absentes → elles finissent en fin de
+    //    liste, ce qui reproduit le comportement d'Airtable en tri desc.
+    projets.sort((a, b) => {
+      const ya = a.anneeLivraison ?? -Infinity;
+      const yb = b.anneeLivraison ?? -Infinity;
+      if (ya !== yb) return yb - ya;
+      return a.affaire.localeCompare(b.affaire, 'fr');
+    });
+    return projets;
   } catch (err) {
     console.error('[airtable] getProjets failed:', err);
     return [];
@@ -270,6 +301,7 @@ export async function getProjet(slug: string): Promise<Projet | null> {
       statutValues: p?.statut,
       tagsExportWp: p?.tagsExportWp,
       metaDescription: p?.metaDescription,
+      anneeLivraison: p?.anneeLivraison,
       crmNames,
     };
     return recordToProjet(r, aux);

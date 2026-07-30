@@ -124,10 +124,82 @@ export async function ensureCategoryIds(names: string[]): Promise<number[]> {
   return ids;
 }
 
+/** Statuts interrogeables en une requête (tous sauf `trash`, dont WP suffixe
+ *  déjà le post_name en `__trashed` — il ne bloque donc aucun slug). */
+const WP_LIVE_STATUSES = 'publish,future,draft,pending,private';
+
+export interface WpPostRef {
+  id: number;
+  slug: string;
+  status: string;
+  url: string;
+}
+
+/**
+ * Liste les posts (tous statuts vivants) qui portent EXACTEMENT ce slug.
+ *
+ * WordPress n'a pas de « compteur de versions » : à chaque insertion,
+ * `wp_unique_post_slug()` teste `post_name` contre les autres posts du même
+ * post_type et incrémente `-2`, `-3`… jusqu'à trouver un libre. Un seul post
+ * vivant suffit donc à décaler le slug — d'où cette vérification préalable.
+ */
+export async function findPostsBySlug(slug: string): Promise<WpPostRef[]> {
+  const url =
+    `${wpApi()}/posts?slug=${encodeURIComponent(slug)}` +
+    `&status=${WP_LIVE_STATUSES}&per_page=100&context=edit&_fields=id,slug,status,link`;
+  const res = await fetch(url, { headers: authHeaders() });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`WP findPostsBySlug ${res.status}: ${err.slice(0, 200)}`);
+  }
+  const arr = await res.json();
+  if (!Array.isArray(arr)) return [];
+  return arr
+    .filter((p) => typeof p?.id === 'number' && typeof p?.slug === 'string')
+    .map((p) => ({ id: p.id, slug: p.slug, status: p.status ?? 'unknown', url: p.link ?? '' }));
+}
+
+/**
+ * Libère le slug canonique d'une fiche AVANT de créer un nouveau brouillon,
+ * pour que WordPress n'ait pas à le suffixer en `-2` / `-3` / `-4`.
+ *
+ * Les brouillons d'export précédents (qui squattent le slug) sont renommés en
+ * `<slug>-brouillon-<id>`. On ne touche JAMAIS à un post publié : son
+ * permalien est l'URL SEO de production, et c'est lui que le lookup doit
+ * continuer de trouver.
+ *
+ * @returns `freed` = ids des brouillons renommés ; `publishedHolder` = le post
+ *          publié qui détient le slug canonique, s'il existe (dans ce cas le
+ *          nouveau brouillon recevra fatalement un suffixe).
+ */
+export async function releaseCanonicalSlug(
+  slug: string
+): Promise<{ freed: number[]; publishedHolder?: WpPostRef }> {
+  const holders = await findPostsBySlug(slug);
+  const freed: number[] = [];
+  let publishedHolder: WpPostRef | undefined;
+
+  for (const holder of holders) {
+    if (holder.status === 'publish' || holder.status === 'future' || holder.status === 'private') {
+      publishedHolder = holder;
+      continue;
+    }
+    const res = await fetch(`${wpApi()}/posts/${holder.id}`, {
+      method: 'POST',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug: `${slug}-brouillon-${holder.id}` }),
+    });
+    if (res.ok) freed.push(holder.id);
+    else console.warn('[WP] slug non libéré pour le post', holder.id, (await res.text()).slice(0, 200));
+  }
+
+  return { freed, publishedHolder };
+}
+
 export async function createOrUpdatePost(
   payload: WpPostPayload,
   existingPostId?: number
-): Promise<{ id: number; url: string; status: string; type: string; author: number }> {
+): Promise<{ id: number; url: string; slug: string; status: string; type: string; author: number }> {
   const endpoint = existingPostId
     ? `${wpApi()}/posts/${existingPostId}`
     : `${wpApi()}/posts`;
@@ -148,7 +220,7 @@ export async function createOrUpdatePost(
   }
   // Si WP renvoie du HTML (mauvaise URL, intercepteur), on attrape ici plutôt
   // que de laisser un SyntaxError silencieux remonter.
-  let data: { id?: number; link?: string; status?: string; type?: string; author?: number };
+  let data: { id?: number; link?: string; slug?: string; status?: string; type?: string; author?: number };
   try {
     data = JSON.parse(raw);
   } catch {
@@ -160,6 +232,7 @@ export async function createOrUpdatePost(
   return {
     id: data.id,
     url: data.link,
+    slug: data.slug ?? '',
     status: data.status ?? 'unknown',
     type: data.type ?? 'unknown',
     author: data.author ?? 0,
@@ -229,6 +302,41 @@ export async function findPublishedPostBySlug(
   const first = arr[0];
   if (typeof first?.id !== 'number' || typeof first?.link !== 'string') return undefined;
   return { id: first.id, url: first.link };
+}
+
+/**
+ * Trouve le post WP de PRODUCTION d'une fiche, en deux passes :
+ *
+ *  1. lookup par slug canonique (`status=publish`) — le cas nominal ;
+ *  2. sinon, le post tracké dans Airtable (`urlWordpress` → `?p=<id>`), s'il
+ *     est passé en `publish`.
+ *
+ * La passe 2 couvre le cas réel où l'utilisateur publie un brouillon à la main
+ * depuis wp-admin : le brouillon avait hérité d'un slug suffixé (`-2`, `-3`…),
+ * donc son permalien de production ne correspond plus au slug Airtable. On
+ * s'appuie sur l'ID exact plutôt que sur un match `-\d+` approximatif, qui
+ * confondrait deux fiches homonymes (`mon-projet` vs `mon-projet-2`).
+ */
+export async function findProductionPost(
+  slug: string,
+  trackedUrl?: string
+): Promise<{ id: number; url: string } | undefined> {
+  const bySlug = await findPublishedPostBySlug(slug);
+  if (bySlug) return bySlug;
+
+  const trackedId = trackedUrl ? extractWpPostId(trackedUrl) : undefined;
+  if (!trackedId) return undefined;
+
+  const res = await fetch(
+    `${wpApi()}/posts/${trackedId}?context=edit&_fields=id,status,link`,
+    { headers: authHeaders() }
+  );
+  if (!res.ok) return undefined;
+  const data = await res.json().catch(() => null);
+  if (data?.status !== 'publish' || typeof data?.id !== 'number' || typeof data?.link !== 'string') {
+    return undefined;
+  }
+  return { id: data.id, url: data.link };
 }
 
 /**

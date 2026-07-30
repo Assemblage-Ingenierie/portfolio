@@ -43,6 +43,26 @@ export const FIELD_TAGS_EXPORT_WP = 'fld2y9rIk9DVEf9eo';
 // « Description projet ») — envoyé à Yoast (_yoast_wpseo_metadesc) à l'export.
 // Lu par field ID via fetchAuxByFieldId (STRING_FORMAT → texte généré).
 export const FIELD_META_DESCRIPTION = 'fldQmXMJpDY7TrbfL';
+// Année de livraison (champ "Numéro") — lu ET écrit par field ID. Historiquement
+// référencé par nom ('Année livraison') en lecture, écriture et tri : le
+// renommage de la colonne côté Airtable (→ « Année de livraison ou année
+// actuelle ») faisait alors throw `getProjets()` sur le tri (UNKNOWN_FIELD_NAME),
+// donc renvoyer une liste VIDE pour la home, le builder, le tableau et l'API
+// publique. Le field ID rend la colonne librement renommable.
+export const FIELD_ANNEE_LIVRAISON = 'fldTYnGzVW4wwPSAC';
+// Champs éditables écrits par field ID depuis `updateProjetFields`. Écrire par
+// NOM expose à un `UNKNOWN_FIELD_NAME` qui fait échouer TOUTE la mutation (donc
+// la sauvegarde entière de la fiche) au moindre renommage de colonne côté
+// Airtable — la coche « Visible portfolio » et le formulaire d'édition n'ont
+// aucun garde-fou là-dessus.
+export const FIELD_NOM_PROJET = 'fld88F75R2ooVfH7p';
+export const FIELD_ADRESSE = 'fldp5UtSsWF65ZgZ9';
+export const FIELD_SURFACE = 'fld9HmFcoH2XYpm6y';
+export const FIELD_BUDGET_HT = 'fldc9yGvzPAdhG6JR';
+export const FIELD_TEMPLATE = 'fldzO9v9qwt1EudsS';
+export const FIELD_MOTS_CLES = 'fldOZ3nr5uAmMvS5H';
+export const FIELD_REFERENT_AI = 'fldilikNKyjuPi2k4';
+export const FIELD_DESCRIPTION_PROJET = 'fldnHsTl71jffSW8h';
 
 /**
  * Valeurs auxiliaires injectées dans le mapper.
@@ -70,6 +90,8 @@ export interface AuxValues {
   tagsExportWp?: string[];
   /** Méta description SEO générée par l'IA Airtable (aiText). */
   metaDescription?: string;
+  /** Année de livraison (champ "Numéro" fldTYnGzVW4wwPSAC), lue par field ID. */
+  anneeLivraison?: number;
   /** Map<recordId → { nom, url }> des entités CRM (table « Sync CRM »). */
   crmNames?: Map<string, CrmEntity>;
 }
@@ -261,7 +283,9 @@ export function recordToProjet(record: any, aux?: AuxValues): Projet {
 
     surface: f['Surface(m²)'] ?? undefined,
     budgetHT,
-    anneeLivraison: f['Année livraison'] ?? undefined,
+    // Lue par field ID via l'aux query (cf. FIELD_ANNEE_LIVRAISON) — plus
+    // aucune référence au nom de colonne, qui est renommable côté Airtable.
+    anneeLivraison: aux?.anneeLivraison,
     // Mission AI (multi-select fldgkpweXw9BypQfX) : Airtable retourne soit
     // un array (cellFormat json par défaut), soit une string CSV selon le
     // mode. On normalise dans les deux cas vers un array, et on garde

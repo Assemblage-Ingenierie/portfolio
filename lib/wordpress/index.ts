@@ -4,8 +4,12 @@ export {
   ensureCategoryIds,
   extractWpPostId,
   findPublishedPostBySlug,
+  findProductionPost,
+  findPostsBySlug,
+  releaseCanonicalSlug,
   getPostContent,
   appendToPoleGallery,
+  type WpPostRef,
 } from './client';
 export {
   pfgGalleriesForPoles,
