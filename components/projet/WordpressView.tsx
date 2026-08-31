@@ -18,8 +18,12 @@ import WordpressPreview from './WordpressPreview';
  *
  * - Le state `wpConfig` pilote la typo + la disposition des photos de l'aperçu.
  * - « Sauvegarder le style WP » persiste `wpConfig` dans Airtable (route /fields).
- * - « Export WP 1 » lance la publication réelle (route /publish), qui relit la
- *   config persistée — donc sauvegarder AVANT d'exporter.
+ * - « Export WP » PUBLIE directement l'article en ligne (route /publish) puis
+ *   l'ajoute a sa/ses page(s) de pole, en une seule action. La route relit la
+ *   config persistee — donc sauvegarder AVANT d'exporter.
+ * - Il n'y a plus d'etape brouillon : l'apercu de cette page en tient lieu.
+ *   « Ajouter a la page pole » reste disponible pour reessayer si l'ajout
+ *   automatique a echoue (l'article, lui, est deja publie).
  */
 /** Résultat d'ajout d'une tuile sur une galerie de pôle (miroir de
  *  PoleGalleryResult côté serveur — typé localement pour éviter d'embarquer le
@@ -64,7 +68,7 @@ export default function WordpressView({ projet }: { projet: Projet }) {
   const [wpConfig, setWpConfig] = useState<WpConfig>(projet.wpConfig ?? DEFAULT_WP_CONFIG);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [publishing, setPublishing] = useState(false);
-  const [result, setResult] = useState<{ url?: string; error?: string; id?: number; categoryNames?: string[]; categoryCount?: number; hasMetaDescription?: boolean; warning?: string } | null>(null);
+  const [result, setResult] = useState<{ url?: string; error?: string; id?: number; categoryNames?: string[]; categoryCount?: number; hasMetaDescription?: boolean; warning?: string; gallery?: PoleResult[] } | null>(null);
   const [addingPole, setAddingPole] = useState(false);
   const [poleResult, setPoleResult] = useState<{ results?: PoleResult[]; error?: string } | null>(null);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
@@ -113,7 +117,16 @@ export default function WordpressView({ projet }: { projet: Projet }) {
     }
 
     if (isDirty && !confirm('Le style n’est pas sauvegardé : l’export utilisera la dernière version enregistrée. Continuer ?')) return;
-    if (!confirm('Publier cette fiche sur WordPress (Export WP 1) en brouillon ?')) return;
+    // La publication est desormais immediate et PUBLIQUE (plus de brouillon
+    // intermediaire) et enchaine l'ajout aux pages pole : la confirmation doit
+    // le dire sans ambiguite.
+    const msg = [
+      'Publier cette fiche EN LIGNE sur assemblage.net maintenant ?',
+      '',
+      "L'article sera visible immediatement et ajoute a sa/ses page(s) de pole.",
+      "Il n'y a plus d'etape brouillon : verifiez l'apercu avant de continuer.",
+    ].join('\n');
+    if (!confirm(msg)) return;
     setPublishing(true);
     setResult(null);
     try {
@@ -124,7 +137,7 @@ export default function WordpressView({ projet }: { projet: Projet }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Erreur inconnue');
-      setResult({ url: data.url, id: data.id, categoryNames: data.categoryNames, categoryCount: data.categoryCount, hasMetaDescription: data.hasMetaDescription, warning: data.warning });
+      setResult({ url: data.url, id: data.id, categoryNames: data.categoryNames, categoryCount: data.categoryCount, hasMetaDescription: data.hasMetaDescription, warning: data.warning, gallery: data.gallery });
     } catch (e) {
       setResult({ error: e instanceof Error ? e.message : 'Erreur' });
     } finally {
@@ -267,7 +280,10 @@ export default function WordpressView({ projet }: { projet: Projet }) {
         {result?.url && (
           <span style={{ color: feedback.succesClair, fontWeight: 600 }}>
             ✓ Publié #{result.id} —{' '}
-            <a href={result.url} target="_blank" rel="noopener noreferrer" style={{ color: feedback.succesClair }}>voir le brouillon</a>
+            <a href={result.url} target="_blank" rel="noopener noreferrer" style={{ color: feedback.succesClair }}>voir l&apos;article</a>
+            {result.gallery && result.gallery.length > 0 && (
+              <span style={{ marginLeft: 8, fontWeight: 400 }}>· page pôle : {poleResultsSummary(result.gallery)}</span>
+            )}
             {result.categoryNames && result.categoryNames.length > 0 && (
               <span style={{ color: result.categoryCount ? feedback.succesClair : '#ffdd88', marginLeft: 8, fontWeight: 400 }}>
                 · catégories : {result.categoryCount}/{result.categoryNames.length} assignées ({result.categoryNames.join(', ')})

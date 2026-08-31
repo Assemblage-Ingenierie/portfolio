@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getProjet, updateProjetUrl } from '@/lib/airtable';
 import { uploadMedia, createOrUpdatePost, ensureCategoryIds, releaseCanonicalSlug } from '@/lib/wordpress';
+import { addProjetToPoleGalleries, pfgGalleriesForPoles } from '@/lib/wordpress/poleGallery';
 import { buildWpContent } from '@/lib/wordpress/builders';
 import { buildWpContentV2 } from '@/lib/wordpress/buildersV2';
 import { requireApprovedUser } from '@/lib/supabase/requireApprovedUser';
@@ -146,7 +147,13 @@ export async function POST(
       slug: projet.slug,
       content,
       excerpt: projet.pitch,
-      status: 'draft',
+      // Publication DIRECTE (choix 31/08/26). L'ancien flux creait un brouillon
+      // qu'il fallait publier a la main dans wp-admin ; l'apercu de la fiche
+      // (/projet/[slug]/wordpress) remplace desormais le brouillon comme etape
+      // de relecture. Pour remplacer un article existant, le workflow retenu est
+      // de SUPPRIMER l'ancien dans wp-admin avant de reexporter (sinon WordPress
+      // suffixe le slug en -2 et le slugWarning ci-dessous le signale).
+      status: 'publish',
       featured_media: coverId,
       categories,
       meta: seoMeta,
@@ -170,9 +177,48 @@ export async function POST(
       airtableWarning = 'URL non sauvegardée dans Airtable';
     }
 
+    // 6. Ajout aux galeries de pole, dans la continuite de la publication.
+    //    NON BLOQUANT (choix 31/08/26) : si l'etape echoue, l'article reste
+    //    publie et on remonte un avertissement — a l'utilisateur de reessayer
+    //    via le bouton « Ajouter a la page pole ».
+    //
+    //    Deux NON-erreurs signalees explicitement, sinon elles passent en
+    //    silence : « Vignette pole » vide (aucune galerie cible) et absence de
+    //    photo de couverture (une tuile PFG exige une image).
+    let poleResults: Awaited<ReturnType<typeof addProjetToPoleGalleries>> | undefined;
+    let galleryWarning: string | undefined;
+    const poleTargets = pfgGalleriesForPoles(projet.vignettePoles);
+    if (poleTargets.length === 0) {
+      galleryWarning = 'Aucune page pole ciblee : le champ « Vignette pole » est vide.';
+    } else if (!coverId) {
+      galleryWarning = "Pages pole ignorees : la fiche n'a pas de photo de couverture.";
+    } else {
+      try {
+        poleResults = await addProjetToPoleGalleries(projet, { link: url, imageId: coverId });
+        // Seul `error` marque un ECHEC. `added: false` sans erreur signifie
+        // « tuile deja presente » : l'endpoint /pfg/append est idempotent, et
+        // c'est le cas normal d'un reexport. Ne pas confondre les deux, sinon
+        // on avertit a tort a chaque republication.
+        const failed = poleResults.filter((g) => g.error);
+        if (failed.length > 0) {
+          galleryWarning = 'Page(s) pole non mise(s) a jour : '
+            + failed.map((g) => `${g.label} (${g.error ?? g.reason ?? 'raison inconnue'})`).join(', ')
+            + ". L'article reste publie — reessayer avec « Ajouter a la page pole ».";
+        }
+      } catch (poleErr) {
+        console.warn('Ajout aux galeries de pole echoue (non-fatal):', poleErr);
+        galleryWarning = 'Ajout aux pages pole echoue : '
+          + (poleErr instanceof Error ? poleErr.message : 'erreur inconnue')
+          + ". L'article reste publie.";
+      }
+    }
+
     return NextResponse.json({
       id, url, status, type, author, previousUrl,
-      warning: [airtableWarning, slugWarning].filter(Boolean).join(' — ') || undefined,
+      // Resultat par page pole (meme forme que la reponse de /pole-gallery,
+      // que l'UI sait deja afficher via poleResultsSummary).
+      gallery: poleResults,
+      warning: [airtableWarning, slugWarning, galleryWarning].filter(Boolean).join(' — ') || undefined,
       // Slug réellement attribué par WP (doit être égal au slug Airtable).
       wpSlug, slugSuffixed: !!wpSlug && wpSlug !== projet.slug,
       // Diagnostic catégories : noms demandés (Airtable) + nb d'IDs WP assignés.
