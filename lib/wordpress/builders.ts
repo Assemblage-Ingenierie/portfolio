@@ -392,6 +392,25 @@ function buildWpEditorial(
   // « Tags export WP » (cf. publish/route.ts → ensureCategoryIds). Le thème WP
   // les affiche alors au-dessus du titre.
 
+  // Rangée « Lieu (gauche) / État avancement · Année (droite) », rendue sous
+  // l'accroche et au-dessus de la photo. Styles repris à l'identique de la
+  // fiche PDF (lib/pdf/templates/shared.ts) :
+  //   - Lieu   → classe `.t-surtitre`      : gris NOIR70, weight 600, ls 0.05em
+  //   - statut → classe `.t-header-statut` : rouge, weight 500, ls 0.06em,
+  //              prefixe puce « ● » et annee suffixee par un point median.
+  // Taille calee sur `typo.fieldsSizePt` (et non le 9pt du PDF) pour rester
+  // proportionnee au bandeau champs cles, qui est plus grand en contexte web.
+  const metaRowReset = `font-family:${SANS} !important;font-size:${typo.fieldsSizePt}pt !important;`;
+  const lieuHtml = projet.lieu
+    ? `<span style="${metaRowReset}font-weight:600 !important;letter-spacing:0.05em !important;color:${NOIR70} !important;">${esc(projet.lieu)}</span>`
+    : '';
+  const anneeSuffixe = projet.anneeLivraison
+    ? ` · ${esc(String(projet.anneeLivraison))}`
+    : '';
+  const statutHtml = projet.statut
+    ? `<span style="${metaRowReset}font-weight:500 !important;letter-spacing:0.06em !important;color:${ROUGE} !important;">● ${esc(projet.statut)}${anneeSuffixe}</span>`
+    : '';
+
   return `
 <article style="font-family:${SANS};color:#000;line-height:1.6;">
 
@@ -410,6 +429,16 @@ function buildWpEditorial(
          max-width:none !important neutralise un éventuel cap du thème WP.
          NB : ce commentaire est dans un template literal — pas de backticks. -->
     ${pitch ? `<p style="font-family:${SERIF};font-size:${typo.pitchSizePx}px;font-style:italic;line-height:1.4;color:${VIOLET};margin:0;max-width:none !important;">${pitch}</p>` : ''}
+    <!-- Grille 1fr 1fr + gap 48px : volontairement identique a celle du bloc
+         photo/champs juste en dessous, pour que le Lieu s'aligne sur le bord
+         gauche de la photo et le statut sur la colonne des champs cles.
+         Reste en 2 colonnes meme si coverFullWidth est actif (sinon les deux
+         valeurs s'empileraient). -->
+    ${(lieuHtml || statutHtml) ? `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:baseline;margin:20px 0 0;line-height:1.4;">
+        <div>${lieuHtml}</div>
+        <div>${statutHtml}</div>
+      </div>` : ''}
   </header>
 
   <!-- Photo couverture + champs clés. coverFullWidth → photo pleine largeur
