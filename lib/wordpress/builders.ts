@@ -405,9 +405,10 @@ function buildWpEditorial(
         `).join('')}
       </div>` : ''}
     <!-- Accroche : pleine largeur de la colonne de contenu. Pas de cap de mesure
-         (l'ancien `max-width:780px` la coupait ~180px avant le bord droit, alors
+         (l'ancien max-width:780px la coupait ~180px avant le bord droit, alors
          que le grid photo/champs juste en dessous occupe toute la largeur).
-         `max-width:none !important` neutralise un éventuel cap du thème WP. -->
+         max-width:none !important neutralise un éventuel cap du thème WP.
+         NB : ce commentaire est dans un template literal — pas de backticks. -->
     ${pitch ? `<p style="font-family:${SERIF};font-size:${typo.pitchSizePx}px;font-style:italic;line-height:1.4;color:${VIOLET};margin:0;max-width:none !important;">${pitch}</p>` : ''}
   </header>
 
