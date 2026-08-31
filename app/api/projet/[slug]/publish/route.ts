@@ -8,6 +8,13 @@ import { buildWpContent } from '@/lib/wordpress/builders';
 import { buildWpContentV2 } from '@/lib/wordpress/buildersV2';
 import { requireApprovedUser } from '@/lib/supabase/requireApprovedUser';
 
+/**
+ * Valeur de la meta `post_layout` du thème « architecturer » (ThemeGoods).
+ * C'est le libellé exact du menu « Post Options → Post Layout » côté wp-admin —
+ * les autres choix sont « With Left Sidebar » et « Fullwidth ».
+ */
+const WP_POST_LAYOUT = 'With Right Sidebar';
+
 const ALLOWED_IMAGE_HOSTS = ['dl.airtable.com', 'v5.airtableusercontent.com', 'airtableusercontent.com'];
 
 function isAllowedImageUrl(url: string): boolean {
@@ -120,23 +127,46 @@ export async function POST(
     }
     console.log('[WP-PUBLISH] categories', { tags: projet.tagsExportWp, ids: categoryIds });
 
-    // Méta SEO Yoast : focus keyphrase = nom du projet ; méta description =
-    // champ aiText Airtable « Méta description SEO ». N'est persisté côté WP
-    // que si les meta keys `_yoast_wpseo_*` sont enregistrées pour le REST
-    // (register_post_meta show_in_rest) — sinon WP les ignore silencieusement.
-    const seoMeta: Record<string, string> = { _yoast_wpseo_focuskw: projet.nom };
-    if (projet.metaDescription) seoMeta._yoast_wpseo_metadesc = projet.metaDescription;
-    console.log('[WP-PUBLISH] yoast meta', { focuskw: projet.nom, hasMetadesc: !!projet.metaDescription });
+    // Metas envoyées au post WordPress.
+    //
+    // ⚠ Une meta n'est persistée QUE si sa clé est enregistrée côté WP avec
+    // `register_post_meta(..., show_in_rest: true)`. Sinon l'API REST l'ignore
+    // EN SILENCE — aucune erreur, la valeur disparaît. Cf.
+    // docs/wordpress/post-meta-register-snippet.php.
+    const postMeta: Record<string, string> = {
+      // SEO Yoast : focus keyphrase = nom du projet ; méta description = champ
+      // aiText Airtable « Méta description SEO ».
+      _yoast_wpseo_focuskw: projet.nom,
+      // Mise en page de l'article, lue par le thème « architecturer »
+      // (ThemeGoods) — metabox « Post Options → Post Layout ».
+      //
+      // Indispensable depuis la publication directe : le thème n'a AUCUN défaut
+      // global pour un article seul (le Customizer ne couvre que les pages
+      // d'archive / catégorie / tag). Meta absente ⇒ rendu en pleine largeur,
+      // donc SANS le menu latéral. Auparavant la valeur était écrite par
+      // l'éditeur wp-admin lors de la publication manuelle ; ce passage a
+      // disparu du workflow, d'où la régression.
+      //
+      // ⚠ La valeur attendue est le LIBELLÉ affiché dans le menu déroulant du
+      // thème, pas un slug. Vérifié sur les articles existants :
+      // `post_layout = "With Right Sidebar"`. Changer de thème = revoir ceci.
+      post_layout: WP_POST_LAYOUT,
+    };
+    if (projet.metaDescription) postMeta._yoast_wpseo_metadesc = projet.metaDescription;
+    console.log('[WP-PUBLISH] meta', { focuskw: projet.nom, hasMetadesc: !!projet.metaDescription, post_layout: WP_POST_LAYOUT });
 
     let slugWarning: string | undefined;
     try {
       const { freed, publishedHolder } = await releaseCanonicalSlug(projet.slug);
       console.log('[WP-PUBLISH] slug', { canonical: projet.slug, freed, holder: publishedHolder?.id });
       if (publishedHolder) {
+        // NB : « Mettre à jour la production » n'existe plus (retiré le
+        // 31/08/26). Avec la publication directe, le remède est de supprimer
+        // l'ancien article dans wp-admin AVANT de réexporter.
         slugWarning =
           `Le slug « ${projet.slug} » est déjà pris par l'article publié #${publishedHolder.id} : ` +
-          `ce brouillon recevra un suffixe. Utilise « Mettre à jour la production » pour pousser ` +
-          `le contenu sur cet article plutôt que de republier le brouillon.`;
+          `le nouvel article recevra un suffixe -2, ce qui dégrade son URL SEO. ` +
+          `Supprime l'ancien article dans wp-admin, puis relance l'export.`;
       }
     } catch (slugErr) {
       // Non bloquant : au pire WP suffixe le slug comme avant.
@@ -158,7 +188,7 @@ export async function POST(
       status: 'publish',
       featured_media: coverId,
       categories,
-      meta: seoMeta,
+      meta: postMeta,
     });
     console.log('[WP-PUBLISH]', { id, status, type, author, url, wpSlug, previousUrl });
 
