@@ -374,6 +374,13 @@ function buildWpEditorial(
     ? projet.materiaux.join(', ')
     : undefined;
 
+  // Certification (fldnb9rfM4C3m9Pcu) : cellule ordinaire du bandeau, rendue
+  // comme Budget / BET associés. `projet.certifications` est déjà normalisé en
+  // string[] par le mapper (le champ est en rich text Markdown depuis 2026).
+  const certification = projet.certifications && projet.certifications.length > 0
+    ? projet.certifications.join(', ')
+    : undefined;
+
   // Valeur de chaque champ par clé. `value` = texte brut (échappé au rendu) ;
   // `html` = HTML déjà sûr (liens CRM, rendu tel quel). Budget et Surface sont
   // deux cellules distinctes.
@@ -388,6 +395,7 @@ function buildWpEditorial(
     missionAi:   { value: projet.missionAi },
     programme:   { html: programmeHtml },
     // `programmeSecondaire` : pas de cellule autonome (rendu dans Programme).
+    certification: { value: certification },
     materiaux:   { value: materiaux },
   };
 
