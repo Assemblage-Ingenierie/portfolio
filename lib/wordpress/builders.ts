@@ -341,17 +341,33 @@ function buildWpEditorial(
       + `font-weight:${st.valueBold ? 700 : 400} !important;color:${st.valueColor} !important;`;
   };
 
-  // Programme : principal dans la cellule « Programme principal » ; le
-  // secondaire est rendu APRÈS, séparé d'un point médian, avec sa propre typo
-  // (clé `programmeSecondaire`). Masquable via son option « Masquer ».
-  const principal = projet.programmePrincipal;
-  const secondaire = projet.programmeSecondaire;
+  // Programme : TOUTES les entrées de « Programme principal »
+  // (fldKNKtsZNpvmf695) puis TOUTES celles de « Programme secondaire »
+  // (fldaTqKMNrIpeGBma), dans la même cellule, séparées par un point médian.
+  // Les valeurs secondaires portent la typo de la clé `programmeSecondaire`
+  // (stylable / masquable indépendamment du principal).
+  //
+  // NB : on lisait avant `programmePrincipal` / `programmeSecondaire`, qui ne
+  // portent que la PREMIÈRE valeur de chaque multi-select. On passe aux
+  // tableaux complets `programmesPrincipaux` / `programmesSecondaires`, avec
+  // repli sur les champs singuliers si les tableaux ne sont pas alimentés.
+  const PROG_SEP = ' · ';
+  const principaux = projet.programmesPrincipaux?.length
+    ? projet.programmesPrincipaux
+    : (projet.programmePrincipal ? [projet.programmePrincipal] : []);
+  const secondaires = projet.programmesSecondaires?.length
+    ? projet.programmesSecondaires
+    : (projet.programmeSecondaire ? [projet.programmeSecondaire] : []);
   const secHidden = effectiveFieldStyle(resolved, 'programmeSecondaire').hidden;
-  const programmeHtml = (principal || secondaire)
-    ? `${esc(principal ?? secondaire ?? '')}`
-      + (principal && secondaire && !secHidden
-        ? ` · <span style="${valueSpanStyle('programmeSecondaire')}">${esc(secondaire)}</span>`
-        : '')
+  const programmeParts: string[] = principaux.map((v) => esc(v));
+  if (!secHidden && secondaires.length > 0) {
+    const secStyle = valueSpanStyle('programmeSecondaire');
+    for (const v of secondaires) {
+      programmeParts.push(`<span style="${secStyle}">${esc(v)}</span>`);
+    }
+  }
+  const programmeHtml = programmeParts.length > 0
+    ? programmeParts.join(PROG_SEP)
     : undefined;
 
   const materiaux = projet.materiaux && projet.materiaux.length > 0
