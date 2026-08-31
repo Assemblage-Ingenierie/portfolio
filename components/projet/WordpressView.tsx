@@ -65,8 +65,6 @@ export default function WordpressView({ projet }: { projet: Projet }) {
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [publishing, setPublishing] = useState(false);
   const [result, setResult] = useState<{ url?: string; error?: string; id?: number; categoryNames?: string[]; categoryCount?: number; hasMetaDescription?: boolean; warning?: string } | null>(null);
-  const [promoting, setPromoting] = useState(false);
-  const [promoteResult, setPromoteResult] = useState<{ prodUrl?: string; prodId?: number; draftUrl?: string; error?: string; gallery?: PoleResult[] } | null>(null);
   const [addingPole, setAddingPole] = useState(false);
   const [poleResult, setPoleResult] = useState<{ results?: PoleResult[]; error?: string } | null>(null);
   const [showLeaveModal, setShowLeaveModal] = useState(false);
@@ -131,25 +129,6 @@ export default function WordpressView({ projet }: { projet: Projet }) {
       setResult({ error: e instanceof Error ? e.message : 'Erreur' });
     } finally {
       setPublishing(false);
-    }
-  }
-
-  async function handleUpdateProd() {
-    if (!confirm('Cette action remplace immédiatement la version publiée sur assemblage.net par le contenu du dernier brouillon. Continuer ?')) return;
-    setPromoting(true);
-    setPromoteResult(null);
-    try {
-      const res = await authedFetch(`/api/projet/${projet.slug}/update-prod`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? 'Erreur inconnue');
-      setPromoteResult({ prodUrl: data.prodUrl, prodId: data.prodId, draftUrl: data.draftUrl, gallery: data.gallery });
-    } catch (e) {
-      setPromoteResult({ error: e instanceof Error ? e.message : 'Erreur' });
-    } finally {
-      setPromoting(false);
     }
   }
 
@@ -261,18 +240,10 @@ export default function WordpressView({ projet }: { projet: Projet }) {
           {publishing ? 'Publication…' : 'Export WP'}
         </button>
 
-        {/* « Mettre à jour la production » : vue admin uniquement (pousse le
-            dernier brouillon vers le post publié). */}
-        {viewMode === 'admin' && (
-          <button
-            onClick={handleUpdateProd}
-            disabled={promoting}
-            title="Pousse le contenu du dernier brouillon vers le post WordPress publié existant (recherche par slug)"
-            style={{ ...btn, background: 'white', color: 'var(--ai-violet)' }}
-          >
-            {promoting ? 'Mise à jour…' : 'Mettre à jour la production'}
-          </button>
-        )}
+        {/* Le bouton « Mettre à jour la production » a été retiré : le workflow
+            retenu republie entièrement la fiche (suppression de l'ancien post
+            depuis wp-admin, puis nouvel Export WP). La route /update-prod
+            existe toujours côté serveur mais n'est plus appelée par l'UI. */}
 
         {/* « Ajouter à la page pôle » : vue admin uniquement. Ajoute la tuile du
             projet sur la/les galerie(s) de pôle (Développement / Structure /
@@ -311,17 +282,6 @@ export default function WordpressView({ projet }: { projet: Projet }) {
           <span style={{ color: '#ffdd88', fontWeight: 600 }}>⚠ {result.warning}</span>
         )}
         {result?.error && <span style={{ color: feedback.erreurClair, fontWeight: 600 }}>✗ {result.error}</span>}
-        {promoteResult?.prodUrl && (
-          <span style={{ color: feedback.succesClair, fontWeight: 600 }}>
-            ✓ Production mise à jour #{promoteResult.prodId} —{' '}
-            <a href={promoteResult.prodUrl} target="_blank" rel="noopener noreferrer" style={{ color: feedback.succesClair }}>voir l&apos;article publié</a>
-            {promoteResult.gallery && promoteResult.gallery.length > 0 && (
-              <span style={{ marginLeft: 8, fontWeight: 400 }}>· page pôle : {poleResultsSummary(promoteResult.gallery)}</span>
-            )}
-          </span>
-        )}
-        {promoteResult?.error && <span style={{ color: feedback.erreurClair, fontWeight: 600 }}>✗ {promoteResult.error}</span>}
-
         {poleResult?.results && (
           <span style={{ color: feedback.succesClair, fontWeight: 600 }}>
             ✓ Page pôle : {poleResultsSummary(poleResult.results)}
