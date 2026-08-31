@@ -2,7 +2,7 @@ import type { BandeauConfig } from './bandeauConfig';
 import type { ManualConfig } from './manualConfig';
 import type { CropData } from './photoCrop';
 import type { WpConfig } from '@/lib/wordpress/wpConfig';
-import { feedback } from '@/lib/ui/tokens';
+import { color, feedback } from '@/lib/ui/tokens';
 
 /**
  * Configuration unifiée d'une fiche projet, stockée en JSON dans le champ
@@ -28,14 +28,49 @@ export type FicheStatus =
   | 'Pas faite'
   | 'En cours'
   | 'En attente de validation'
-  | 'Prête pour publication';
+  | 'Prête pour publication'
+  /** Posé automatiquement par l'export WP (`/api/projet/[slug]/publish`)
+   *  quand l'article part en ligne. Sélectionnable à la main par un admin
+   *  seulement, pour corriger un statut erroné. */
+  | 'Publié'
+  /** Posé à la main par la personne qui relit les fiches quand une
+   *  correction est nécessaire. C'est le statut qui DÉVERROUILLE une fiche
+   *  publiée (cf. `isFicheLocked`). */
+  | 'À mettre à jour';
 
+/** Ordre du cycle de vie — pilote l'ordre d'affichage dans le panneau « État de
+ *  publication » de la home ET dans le sélecteur de la toolbar. */
 export const FICHE_STATUS_VALUES: FicheStatus[] = [
   'Pas faite',
   'En cours',
   'En attente de validation',
   'Prête pour publication',
+  'Publié',
+  'À mettre à jour',
 ];
+
+/** Statuts qui **verrouillent** la mise en page en lecture seule.
+ *  Centralisé ici pour ne plus comparer des littéraux de chaîne un peu partout
+ *  (cf. `ProjetView`, `FicheStatusPopup`). */
+export const FICHE_STATUS_LOCKED: readonly FicheStatus[] = [
+  'Prête pour publication',
+  'Publié',
+];
+
+export function isFicheLocked(status: FicheStatus | undefined): boolean {
+  return FICHE_STATUS_LOCKED.includes(status ?? DEFAULT_FICHE_STATUS);
+}
+
+/** Statuts que seul un **admin** peut sélectionner à la main. Vérifié côté
+ *  client (menu grisé) ET côté serveur (`/api/projet/[slug]/fields`). */
+export const FICHE_STATUS_ADMIN_ONLY: readonly FicheStatus[] = [
+  'Prête pour publication',
+  'Publié',
+];
+
+export function isFicheStatusAdminOnly(status: FicheStatus): boolean {
+  return FICHE_STATUS_ADMIN_ONLY.includes(status);
+}
 
 export const DEFAULT_FICHE_STATUS: FicheStatus = 'Pas faite';
 
@@ -47,6 +82,8 @@ export const FICHE_STATUS_COLOR: Record<FicheStatus, string> = {
   'En cours': feedback.info,
   'En attente de validation': feedback.attente,
   'Prête pour publication': feedback.succes,
+  'Publié': color.violet as string,
+  'À mettre à jour': feedback.erreur,
 };
 
 export const FICHE_STATUS_MESSAGES: Record<FicheStatus, string> = {
@@ -57,6 +94,10 @@ export const FICHE_STATUS_MESSAGES: Record<FicheStatus, string> = {
     'La mise en page de cette fiche est en attente de validation.',
   'Prête pour publication':
     "Cette fiche est prête pour être publiée dans le portfolio. Il n'est plus possible de modifier la mise en page.",
+  'Publié':
+    "Cette fiche est publiée sur assemblage.net. La mise en page est verrouillée : passez le statut à « À mettre à jour » pour la corriger.",
+  'À mettre à jour':
+    'Une mise à jour a été demandée sur cette fiche. La mise en page est déverrouillée.',
 };
 
 export interface ProjectConfig {

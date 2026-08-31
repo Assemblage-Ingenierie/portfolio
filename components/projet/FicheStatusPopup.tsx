@@ -1,12 +1,12 @@
 'use client';
 
-import { FICHE_STATUS_MESSAGES, type FicheStatus } from '@/lib/pdf/projectConfig';
+import { FICHE_STATUS_MESSAGES, isFicheLocked, type FicheStatus } from '@/lib/pdf/projectConfig';
 import { color } from '@/lib/ui/tokens';
 
 interface Props {
   status: FicheStatus;
-  /** Appelé pour fermer le popup. Pour les statuts != "Prête pour publication"
-   *  c'est juste un dismiss. */
+  /** Appelé pour fermer le popup. Pour un statut non verrouillant, c'est un
+   *  simple dismiss. */
   onClose: () => void;
   /** Appelé quand l'utilisateur choisit "Editer tout de même" sur une fiche
    *  verrouillée. Active l'édition (état contrôlé par ProjetView). */
@@ -15,7 +15,7 @@ interface Props {
 
 export default function FicheStatusPopup({ status, onClose, onForceEdit }: Props) {
   const message = FICHE_STATUS_MESSAGES[status];
-  const isLocked = status === 'Prête pour publication';
+  const isLocked = isFicheLocked(status);
 
   return (
     <div

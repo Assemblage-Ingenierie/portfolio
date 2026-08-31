@@ -52,6 +52,9 @@ export type WpFieldKey =
   // dans la cellule Programme (après le principal, séparée d'un point médian).
   // Présente dans l'ordre uniquement pour exposer ses options typo dans l'UI.
   | 'programmeSecondaire'
+  /** Multi-select / rich text Airtable « Certification » (fldnb9rfM4C3m9Pcu),
+   *  rendu comme une cellule ordinaire du bandeau (cf. Budget, BET associés). */
+  | 'certification'
   | 'materiaux';
 
 /** Libellés affichés (mêmes sigles que le bandeau PDF). */
@@ -66,19 +69,20 @@ export const WP_FIELD_LABELS: Record<WpFieldKey, string> = {
   missionAi: 'Mission AI',
   programme: 'Programme',
   programmeSecondaire: 'Programme secondaire',
+  certification: 'Certification',
   materiaux: 'Matériaux',
 };
 
 /** Ordre des champs du bandeau WP Str-Env (miroir de `metaGridHtml` Str-Env). */
 export const WP_FIELDS_STR_ENV: WpFieldKey[] = [
-  'moa', 'architecte', 'betAssocies', 'budget', 'surface', 'entreprise', 'missionAi', 'programme', 'programmeSecondaire', 'materiaux',
+  'moa', 'architecte', 'betAssocies', 'budget', 'surface', 'entreprise', 'missionAi', 'programme', 'programmeSecondaire', 'certification', 'materiaux',
 ];
 
 /** Ordre des champs du bandeau WP Dev (ordre de **rendu**, propre au template).
  *  `programmeSecondaire` n'y figure pas : il n'a pas de cellule autonome (rendu
  *  dans la cellule Programme), son style reste réglable via le menu partagé. */
 export const WP_FIELDS_DEV: WpFieldKey[] = [
-  'moa', 'bailleur', 'architecte', 'programme', 'missionAi', 'budget', 'betAssocies',
+  'moa', 'bailleur', 'architecte', 'programme', 'certification', 'missionAi', 'budget', 'betAssocies',
   'materiaux', 'surface', 'entreprise',
 ];
 
@@ -95,7 +99,7 @@ export function wpFieldOrder(template: WpTemplate): WpFieldKey[] {
  *  `programmeSecondaire`, rendu dans la cellule Programme). */
 export const WP_FIELD_MENU_KEYS: WpFieldKey[] = [
   'moa', 'bailleur', 'architecte', 'betAssocies', 'budget', 'surface',
-  'entreprise', 'programme', 'programmeSecondaire', 'materiaux', 'missionAi',
+  'entreprise', 'programme', 'programmeSecondaire', 'certification', 'materiaux', 'missionAi',
 ];
 
 /** Surcharge de style par champ (toutes les clés optionnelles → fallback global). */

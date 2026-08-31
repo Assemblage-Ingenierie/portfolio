@@ -341,21 +341,44 @@ function buildWpEditorial(
       + `font-weight:${st.valueBold ? 700 : 400} !important;color:${st.valueColor} !important;`;
   };
 
-  // Programme : principal dans la cellule « Programme principal » ; le
-  // secondaire est rendu APRÈS, séparé d'un point médian, avec sa propre typo
-  // (clé `programmeSecondaire`). Masquable via son option « Masquer ».
-  const principal = projet.programmePrincipal;
-  const secondaire = projet.programmeSecondaire;
+  // Programme : TOUTES les entrées de « Programme principal »
+  // (fldKNKtsZNpvmf695) puis TOUTES celles de « Programme secondaire »
+  // (fldaTqKMNrIpeGBma), dans la même cellule, séparées par un point médian.
+  // Les valeurs secondaires portent la typo de la clé `programmeSecondaire`
+  // (stylable / masquable indépendamment du principal).
+  //
+  // NB : on lisait avant `programmePrincipal` / `programmeSecondaire`, qui ne
+  // portent que la PREMIÈRE valeur de chaque multi-select. On passe aux
+  // tableaux complets `programmesPrincipaux` / `programmesSecondaires`, avec
+  // repli sur les champs singuliers si les tableaux ne sont pas alimentés.
+  const PROG_SEP = ' · ';
+  const principaux = projet.programmesPrincipaux?.length
+    ? projet.programmesPrincipaux
+    : (projet.programmePrincipal ? [projet.programmePrincipal] : []);
+  const secondaires = projet.programmesSecondaires?.length
+    ? projet.programmesSecondaires
+    : (projet.programmeSecondaire ? [projet.programmeSecondaire] : []);
   const secHidden = effectiveFieldStyle(resolved, 'programmeSecondaire').hidden;
-  const programmeHtml = (principal || secondaire)
-    ? `${esc(principal ?? secondaire ?? '')}`
-      + (principal && secondaire && !secHidden
-        ? ` · <span style="${valueSpanStyle('programmeSecondaire')}">${esc(secondaire)}</span>`
-        : '')
+  const programmeParts: string[] = principaux.map((v) => esc(v));
+  if (!secHidden && secondaires.length > 0) {
+    const secStyle = valueSpanStyle('programmeSecondaire');
+    for (const v of secondaires) {
+      programmeParts.push(`<span style="${secStyle}">${esc(v)}</span>`);
+    }
+  }
+  const programmeHtml = programmeParts.length > 0
+    ? programmeParts.join(PROG_SEP)
     : undefined;
 
   const materiaux = projet.materiaux && projet.materiaux.length > 0
     ? projet.materiaux.join(', ')
+    : undefined;
+
+  // Certification (fldnb9rfM4C3m9Pcu) : cellule ordinaire du bandeau, rendue
+  // comme Budget / BET associés. `projet.certifications` est déjà normalisé en
+  // string[] par le mapper (le champ est en rich text Markdown depuis 2026).
+  const certification = projet.certifications && projet.certifications.length > 0
+    ? projet.certifications.join(', ')
     : undefined;
 
   // Valeur de chaque champ par clé. `value` = texte brut (échappé au rendu) ;
@@ -372,6 +395,7 @@ function buildWpEditorial(
     missionAi:   { value: projet.missionAi },
     programme:   { html: programmeHtml },
     // `programmeSecondaire` : pas de cellule autonome (rendu dans Programme).
+    certification: { value: certification },
     materiaux:   { value: materiaux },
   };
 
@@ -392,6 +416,25 @@ function buildWpEditorial(
   // « Tags export WP » (cf. publish/route.ts → ensureCategoryIds). Le thème WP
   // les affiche alors au-dessus du titre.
 
+  // Rangée « Lieu (gauche) / État avancement · Année (droite) », rendue sous
+  // l'accroche et au-dessus de la photo. Styles repris à l'identique de la
+  // fiche PDF (lib/pdf/templates/shared.ts) :
+  //   - Lieu   → classe `.t-surtitre`      : gris NOIR70, weight 600, ls 0.05em
+  //   - statut → classe `.t-header-statut` : rouge, weight 500, ls 0.06em,
+  //              prefixe puce « ● » et annee suffixee par un point median.
+  // Taille calee sur `typo.fieldsSizePt` (et non le 9pt du PDF) pour rester
+  // proportionnee au bandeau champs cles, qui est plus grand en contexte web.
+  const metaRowReset = `font-family:${SANS} !important;font-size:${typo.fieldsSizePt}pt !important;`;
+  const lieuHtml = projet.lieu
+    ? `<span style="${metaRowReset}font-weight:600 !important;letter-spacing:0.05em !important;color:${NOIR70} !important;">${esc(projet.lieu)}</span>`
+    : '';
+  const anneeSuffixe = projet.anneeLivraison
+    ? ` · ${esc(String(projet.anneeLivraison))}`
+    : '';
+  const statutHtml = projet.statut
+    ? `<span style="${metaRowReset}font-weight:500 !important;letter-spacing:0.06em !important;color:${ROUGE} !important;">● ${esc(projet.statut)}${anneeSuffixe}</span>`
+    : '';
+
   return `
 <article style="font-family:${SANS};color:#000;line-height:1.6;">
 
@@ -404,7 +447,25 @@ function buildWpEditorial(
           <div><strong style="font-weight:700;">${esc(c.valeur)}</strong> ${esc(c.label)}</div>
         `).join('')}
       </div>` : ''}
-    ${pitch ? `<p style="font-family:${SERIF};font-size:${typo.pitchSizePx}px;font-style:italic;line-height:1.4;color:${VIOLET};margin:0;max-width:780px;">${pitch}</p>` : ''}
+    <!-- Accroche : pleine largeur de la colonne de contenu. Pas de cap de mesure
+         (l'ancien max-width:780px la coupait ~180px avant le bord droit, alors
+         que le grid photo/champs juste en dessous occupe toute la largeur).
+         max-width:none !important neutralise un éventuel cap du thème WP.
+         NB : ce commentaire est dans un template literal — pas de backticks. -->
+    ${pitch ? `<p style="font-family:${SERIF};font-size:${typo.pitchSizePx}px;font-style:italic;line-height:1.4;color:${VIOLET};margin:0;max-width:none !important;">${pitch}</p>` : ''}
+    <!-- Rangee pleine largeur de l'accroche : Lieu cale sur sa bordure gauche,
+         statut sur sa bordure droite. Volontairement PAS la grille 1fr 1fr du
+         bloc photo/champs en dessous — le statut ne doit pas tomber sur la
+         colonne MOA/Budget.
+         Meme mecanique que .t-surtitre-row du PDF (flex + baseline) ; le
+         margin-left:auto garde le statut a droite meme si le Lieu est vide,
+         et nowrap empeche « ● En chantier · 2026 » de se couper.
+         NB : commentaire dans un template literal — aucun backtick ici. -->
+    ${(lieuHtml || statutHtml) ? `
+      <div style="display:flex;align-items:baseline;gap:24px;margin:20px 0 0;line-height:1.4;">
+        <div>${lieuHtml}</div>
+        <div style="margin-left:auto;text-align:right;white-space:nowrap;">${statutHtml}</div>
+      </div>` : ''}
   </header>
 
   <!-- Photo couverture + champs clés. coverFullWidth → photo pleine largeur

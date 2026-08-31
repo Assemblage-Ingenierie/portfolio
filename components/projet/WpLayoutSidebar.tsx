@@ -4,18 +4,13 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   WP_ASPECT_RATIOS,
-  WP_FIELD_LABELS,
   ASSEMBLAGE_PALETTE,
   ASSEMBLAGE_WP_DEFAULTS,
   WP_MAX_GALLERY_SLOTS,
-  WP_FIELD_MENU_KEYS,
   resolveWpConfig,
-  effectiveFieldStyle,
   defaultGallerySlot,
   type WpConfig,
   type WpTemplate,
-  type WpFieldKey,
-  type WpFieldStyle,
 } from '@/lib/wordpress/wpConfig';
 import { useViewMode } from '@/lib/auth/useViewMode';
 import { color, font, radius, ui } from '@/lib/ui/tokens';
@@ -32,10 +27,15 @@ export interface KnownPhoto { url: string; filename: string; isCover?: boolean }
  */
 
 /**
- * Sidebar en menus déroulants (`<details>`). Vue admin = toutes les sections ;
- * vue user = « Typographie générale », « Espacements » et « Catégories »
- * masqués (cf. `useViewMode`). « Prestation Assemblage » n'apparaît que pour
- * le template Dev.
+ * Sidebar en menus déroulants (`<details>`). Sections restantes : « Prestation
+ * Assemblage » (template Dev uniquement) et « Photos ».
+ *
+ * « Typographie générale », « Champs du bandeau » et « Espacements » ont été
+ * retirées le 31/08/26 — pour tous les rôles, admin compris. Les valeurs
+ * correspondantes de `WpConfig` (typo / fields / spacing) sont toujours lues
+ * par le builder : elles viennent de la config sauvegardée en Airtable ou du
+ * preset `ASSEMBLAGE_WP_DEFAULTS`, que le bouton « Appliquer les paramètres
+ * par défaut WordPress » (admin, cf. `useViewMode`) repose.
  */
 
 /** Style du `<summary>` des menus déroulants (miroir du panneau bandeau PDF). */
@@ -170,33 +170,6 @@ function Palette({
   );
 }
 
-/** Contrôle de taille de police (pt) d'un sous-élément d'un champ du bandeau
- *  (libellé ou valeur) : slider + saisie manuelle + reset vers le défaut global. */
-function FieldSizeRow({
-  label, value, canReset, onChange, onReset,
-}: {
-  label: string; value: number; canReset: boolean; onChange: (v: number) => void; onReset: () => void;
-}) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 4 }}>
-      <span style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70 }}>
-        {label} {canReset && (
-          <button onClick={onReset} title="Revenir au défaut global"
-            style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: color.noir70 }}>↺</button>
-        )}
-      </span>
-      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flex: '1 1 60px', minWidth: 0, justifyContent: 'flex-end' }}>
-        <input type="range" min={9} max={20} value={value}
-          onChange={(e) => onChange(Number(e.target.value))}
-          style={{ accentColor: color.rouge as string, flex: '1 1 40px', minWidth: 0 }} />
-        <input type="number" min={9} max={20} step={1} value={value}
-          onChange={(e) => { const n = Number(e.target.value); if (Number.isFinite(n)) onChange(Math.max(9, Math.min(20, n))); }}
-          style={{ width: 46, fontFamily: font.sans, fontSize: '8pt', padding: '2px 4px', border: `1px solid ${color.gris}`, borderRadius: 4, textAlign: 'right' }} />
-      </span>
-    </div>
-  );
-}
-
 const SIDEBAR_WIDTH_KEY = 'portfolio_wp_sidebar_width';
 const SIDEBAR_WIDTH_MIN = 280;
 const SIDEBAR_WIDTH_MAX = 720;
@@ -207,9 +180,12 @@ export default function WpLayoutSidebar({
 }: {
   config: WpConfig; onChange: (next: WpConfig) => void; template: WpTemplate; slug: string; knownPhotos: KnownPhoto[];
 }) {
-  // Mode de vue (admin = UI complète ; user = Catégories / Espacements /
-  // Typographie générale masqués). Géré dans `lib/auth/useViewMode.ts` ; le
-  // toggle est dans la toolbar (visible uniquement pour les profils admin).
+  // Mode de vue. Depuis le 31/08/26, les sections « Typographie générale »,
+  // « Champs du bandeau » et « Espacements » ne sont plus dans la sidebar (ni
+  // pour les admins) : `isUserView` ne sert plus qu'à réserver aux admins le
+  // bouton « Appliquer les paramètres par défaut WordPress » (et son « Voir les
+  // paramètres »), seul moyen restant de poser ces valeurs.
+  // Géré dans `lib/auth/useViewMode.ts` ; le toggle est dans la toolbar.
   const { viewMode } = useViewMode();
   const isUserView = viewMode === 'user';
 
@@ -239,13 +215,11 @@ export default function WpLayoutSidebar({
   }
 
   const resolved = resolveWpConfig(config);
-  const { typo, fields, photos, spacing, prestation } = resolved;
+  const { photos, prestation } = resolved;
   const aspectOptions = WP_ASPECT_RATIOS.map((r) => ({ value: r, label: r }));
   const fontOptions = [{ value: 'sans', label: 'Open Sans' }, { value: 'serif', label: 'Georgia' }];
 
-  const setTypo = (patch: Partial<typeof typo>) => onChange({ ...config, typo: { ...config.typo, ...patch } });
   const setPhotos = (patch: Partial<typeof photos>) => onChange({ ...config, photos: { ...config.photos, ...patch } });
-  const setSpacing = (patch: Partial<typeof spacing>) => onChange({ ...config, spacing: { ...config.spacing, ...patch } });
   const setPresta = (patch: Partial<typeof prestation>) => onChange({ ...config, prestation: { ...config.prestation, ...patch } });
   // ── Galerie : slots ordonnés, modèle « Photos additionnelles » ──────────
   type GallerySlot = NonNullable<NonNullable<WpConfig['photos']>['gallery']>[number];
@@ -313,17 +287,6 @@ export default function WpLayoutSidebar({
     }
     setSlots(next);
   };
-  const setFieldsGlobal = (patch: { labelBold?: boolean; valueBold?: boolean; labelColor?: string; valueColor?: string }) =>
-    onChange({ ...config, fields: { ...(config.fields ?? {}), ...patch } });
-
-  const overrides = config.fields?.overrides ?? {};
-  const setOverride = (key: WpFieldKey, patch: Partial<WpFieldStyle>) =>
-    onChange({ ...config, fields: { ...(config.fields ?? {}), overrides: { ...overrides, [key]: { ...(overrides[key] ?? {}), ...patch } } } });
-  const clearOverrideProp = (key: WpFieldKey, prop: keyof WpFieldStyle) => {
-    const next = { ...(overrides[key] ?? {}) };
-    delete next[prop];
-    onChange({ ...config, fields: { ...(config.fields ?? {}), overrides: { ...overrides, [key]: next } } });
-  };
 
   // Applique les préréglages « par défaut WordPress » (typo + champs + espacements)
   // par-dessus la config courante. Les réglages photos / catégories / prestation
@@ -388,112 +351,13 @@ export default function WpLayoutSidebar({
       </nav>
 
       <div style={{ padding: 16, overflowY: 'auto', flex: 1, minHeight: 0 }}>
-        {!isUserView && (
-          <Section label="Typographie générale">
-            <StepSlider label="Taille description" value={typo.descriptionSizePx} min={11} max={24} step={1} suffix="px" onChange={(v) => setTypo({ descriptionSizePx: v })} />
-            <StepSlider label="Interlignage description" value={typo.descriptionLineHeight} min={1.2} max={2.2} step={0.05} onChange={(v) => setTypo({ descriptionLineHeight: v })} />
-            <StepSlider label="Taille champs clés (défaut)" value={typo.fieldsSizePt} min={9} max={18} step={1} suffix="pt" onChange={(v) => setTypo({ fieldsSizePt: v })} />
-            <StepSlider label="Taille pitch (chapô)" value={typo.pitchSizePx} min={14} max={30} step={1} suffix="px" onChange={(v) => setTypo({ pitchSizePx: v })} />
-            <StepSlider label="Taille titre de section" value={typo.sectionTitleSizePx} min={16} max={32} step={1} suffix="px" onChange={(v) => setTypo({ sectionTitleSizePx: v })} />
-          </Section>
-        )}
-
-        {!isUserView && (
-        <Section label="Champs du bandeau">
-            <p style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70, margin: '0 0 12px', lineHeight: 1.4 }}>
-              Défauts appliqués à tous les champs, puis surcharges par champ ci-dessous (couleurs = palette Assemblage).
-            </p>
-            <Toggle label="Libellés en gras" checked={fields.labelBold} onChange={(v) => setFieldsGlobal({ labelBold: v })} />
-            <Toggle label="Valeurs en gras" checked={fields.valueBold} onChange={(v) => setFieldsGlobal({ valueBold: v })} />
-            <div style={{ ...rowStyle, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ ...labelStyle, fontWeight: 600 }}>Couleur libellés</span>
-              <Palette value={fields.labelColor} onChange={(hex) => setFieldsGlobal({ labelColor: hex })} />
-            </div>
-            <div style={{ ...rowStyle, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ ...labelStyle, fontWeight: 600 }}>Couleur valeurs</span>
-              <Palette value={fields.valueColor} onChange={(hex) => setFieldsGlobal({ valueColor: hex })} />
-            </div>
-
-            <hr style={{ border: 'none', borderTop: `1px solid ${ui.separateur}`, margin: '12px 0' }} />
-
-            {/* Cartes de champs sur 2 colonnes pour raccourcir la liste. */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, alignItems: 'start' }}>
-            {WP_FIELD_MENU_KEYS.map((key) => {
-              const ov = overrides[key] ?? {};
-              const eff = effectiveFieldStyle(resolved, key);
-              // Tailles libellé / valeur indépendantes (le libellé retombe sur la
-              // taille valeur si non réglé, puis sur le défaut global).
-              const effValueSize = eff.sizePt ?? typo.fieldsSizePt;
-              const effLabelSize = eff.labelSizePt ?? eff.sizePt ?? typo.fieldsSizePt;
-              return (
-                <div key={key} style={{ border: `1px solid ${color.gris}`, borderRadius: radius.action, padding: '8px 10px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                    <span style={{ fontFamily: font.sans, fontSize: '9pt', fontWeight: 700, color: color.violet, opacity: eff.hidden ? 0.4 : 1 }}>{WP_FIELD_LABELS[key]}</span>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontFamily: font.sans, fontSize: '8pt', color: color.noir70, cursor: 'pointer' }}>
-                      <input type="checkbox" checked={!!ov.hidden} onChange={(e) => setOverride(key, { hidden: e.target.checked })} /> Masquer
-                    </label>
-                  </div>
-                  {!eff.hidden && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      {key === 'programmeSecondaire' && (
-                        <p style={{ fontFamily: font.sans, fontSize: '7.5pt', color: color.noir70, margin: 0, lineHeight: 1.35, fontStyle: 'italic' }}>
-                          Rendu après le Programme principal, séparé d&apos;un point médian (pas de libellé propre).
-                        </p>
-                      )}
-                      {key !== 'programmeSecondaire' && (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 4 }}>
-                          <span style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70 }}>Libellé</span>
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: '8pt', color: color.noir70, cursor: 'pointer' }}>
-                              <input type="checkbox" checked={eff.labelBold} onChange={(e) => setOverride(key, { labelBold: e.target.checked })} /> gras
-                            </label>
-                            <Palette value={eff.labelColor} canReset={ov.labelColor !== undefined}
-                              onChange={(hex) => setOverride(key, { labelColor: hex })} onReset={() => clearOverrideProp(key, 'labelColor')} />
-                          </span>
-                        </div>
-                      )}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 4 }}>
-                        <span style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70 }}>Valeur</span>
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: '8pt', color: color.noir70, cursor: 'pointer' }}>
-                            <input type="checkbox" checked={eff.valueBold} onChange={(e) => setOverride(key, { valueBold: e.target.checked })} /> gras
-                          </label>
-                          <Palette value={eff.valueColor} canReset={ov.valueColor !== undefined}
-                            onChange={(hex) => setOverride(key, { valueColor: hex })} onReset={() => clearOverrideProp(key, 'valueColor')} />
-                        </span>
-                      </div>
-                      {key !== 'programmeSecondaire' && (
-                        <FieldSizeRow
-                          label="Taille libellé (pt)"
-                          value={effLabelSize}
-                          canReset={ov.labelSizePt !== undefined}
-                          onChange={(v) => setOverride(key, { labelSizePt: v })}
-                          onReset={() => clearOverrideProp(key, 'labelSizePt')}
-                        />
-                      )}
-                      <FieldSizeRow
-                        label="Taille valeur (pt)"
-                        value={effValueSize}
-                        canReset={ov.sizePt !== undefined}
-                        onChange={(v) => setOverride(key, { sizePt: v })}
-                        onReset={() => clearOverrideProp(key, 'sizePt')}
-                      />
-                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: font.sans, fontSize: '8pt', color: color.noir70, cursor: 'pointer' }}>
-                        <input type="checkbox" checked={eff.smallCaps} onChange={(e) => setOverride(key, { smallCaps: e.target.checked })} />
-                        Valeur en petites capitales
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: font.sans, fontSize: '8pt', color: color.noir70, cursor: 'pointer' }}>
-                        <input type="checkbox" checked={eff.upperCase} onChange={(e) => setOverride(key, { upperCase: e.target.checked })} />
-                        Valeur en grandes capitales
-                      </label>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-            </div>
-        </Section>
-        )}
+        {/* Sections « Typographie générale », « Champs du bandeau » et
+            « Espacements » retirées de la sidebar (31/08/26) : elles ne sont
+            plus réglables depuis l’UI, y compris en vue admin. Les valeurs
+            correspondantes (typo / fields / spacing de WpConfig) restent
+            utilisées par le builder — elles proviennent désormais de la config
+            sauvegardée en Airtable ou du preset ASSEMBLAGE_WP_DEFAULTS, que le
+            bouton « Appliquer les paramètres par défaut WordPress » repose. */}
 
         {template === 'Dev' && (
           <Section label="Prestation Assemblage">
@@ -539,17 +403,6 @@ export default function WpLayoutSidebar({
               ]}
               onChange={(v) => setPhotos({ prestationPosition: v as 'before-description' | 'after-description' | 'after-photos' })}
             />
-          </Section>
-        )}
-
-        {!isUserView && (
-          <Section label="Espacements">
-            <StepSlider label="Titre ↔ accroche" value={spacing.titlePitchPx} min={0} max={120} step={1} suffix="px" onChange={(v) => setSpacing({ titlePitchPx: v })} />
-            <StepSlider label="Accroche ↔ photo" value={spacing.pitchPhotoPx} min={0} max={120} step={1} suffix="px" onChange={(v) => setSpacing({ pitchPhotoPx: v })} />
-            <StepSlider label="Photo ↔ description" value={spacing.photoDescPx} min={0} max={120} step={1} suffix="px" onChange={(v) => setSpacing({ photoDescPx: v })} />
-            <p style={{ fontFamily: font.sans, fontSize: '8pt', color: color.noir70, margin: '4px 0 0', lineHeight: 1.4 }}>
-              « Titre ↔ accroche » = marge au-dessus du contenu (le titre est rendu par le thème WordPress).
-            </p>
           </Section>
         )}
 

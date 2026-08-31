@@ -10,7 +10,7 @@ import { authedFetch } from '@/lib/supabase/authHeaders';
 import { DEFAULT_MANUAL_CONFIG, ManualConfig } from '@/lib/pdf/manualConfig';
 import type { BandeauConfig } from '@/lib/pdf/bandeauConfig';
 import type { CropData } from '@/lib/pdf/photoCrop';
-import { DEFAULT_FICHE_STATUS, type FicheStatus } from '@/lib/pdf/projectConfig';
+import { DEFAULT_FICHE_STATUS, isFicheLocked, type FicheStatus } from '@/lib/pdf/projectConfig';
 import { ASSEMBLAGE_DEFAULT_BANDEAU, ASSEMBLAGE_DEFAULT_MANUAL } from '@/lib/pdf/assemblageDefaults';
 import ProjetToolbar from './ProjetToolbar';
 import { ui } from '@/lib/ui/tokens';
@@ -53,17 +53,18 @@ export default function ProjetView({ projet, isPrint }: Props) {
   const [showPopup, setShowPopup] = useState(!isPrint);
   // Verrouillage de la mise en page : actif quand la fiche est "Prête pour
   // publication" ET que l'utilisateur n'a pas cliqué "Editer tout de même".
-  // Re-verrouille automatiquement si le statut change vers "Prête pour
-  // publication" via le sélecteur (et rouvre le popup).
+  // Re-verrouille automatiquement si le statut passe à un statut verrouillant
+  // (« Prête pour publication » ou « Publié ») via le sélecteur, et rouvre le
+  // popup. La liste des statuts verrouillants vit dans `isFicheLocked`.
   const [forceEdit, setForceEdit] = useState(false);
   useEffect(() => {
-    if (ficheStatus === 'Prête pour publication') {
+    if (isFicheLocked(ficheStatus)) {
       setForceEdit(false);
       if (!isPrint) setShowPopup(true);
     }
   }, [ficheStatus, isPrint]);
 
-  const readOnly = ficheStatus === 'Prête pour publication' && !forceEdit;
+  const readOnly = isFicheLocked(ficheStatus) && !forceEdit;
 
   // Snapshot des valeurs initiales (à l'ouverture de la fiche) pour détecter
   // si la mise en page a été modifiée sans être sauvegardée. Le snapshot

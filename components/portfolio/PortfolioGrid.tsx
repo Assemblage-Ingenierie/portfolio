@@ -100,12 +100,11 @@ export default function PortfolioGrid({ projets }: Props) {
   // Workflow : compte le nombre de fiches par status interne. Le défaut
   // pour les fiches non renseignées est DEFAULT_FICHE_STATUS ('Pas faite').
   const workflowCounts = useMemo(() => {
-    const counts: Record<FicheStatus, number> = {
-      'Pas faite': 0,
-      'En cours': 0,
-      'En attente de validation': 0,
-      'Prête pour publication': 0,
-    };
+    // Dérivé de FICHE_STATUS_VALUES (et non écrit à la main) : ajouter un
+    // statut ne demande plus de toucher ce fichier.
+    const counts = Object.fromEntries(
+      FICHE_STATUS_VALUES.map((s) => [s, 0]),
+    ) as Record<FicheStatus, number>;
     projets.forEach((p) => {
       counts[p.ficheStatus ?? DEFAULT_FICHE_STATUS]++;
     });
@@ -142,12 +141,10 @@ export default function PortfolioGrid({ projets }: Props) {
 
   // Map status → projets correspondants (calculé une fois par render).
   const projetsByStatus = useMemo(() => {
-    const map: Record<FicheStatus, Projet[]> = {
-      'Pas faite': [],
-      'En cours': [],
-      'En attente de validation': [],
-      'Prête pour publication': [],
-    };
+    // Dérivé de FICHE_STATUS_VALUES (cf. workflowCounts plus haut).
+    const map = Object.fromEntries(
+      FICHE_STATUS_VALUES.map((s) => [s, [] as Projet[]]),
+    ) as Record<FicheStatus, Projet[]>;
     projets.forEach((p) => {
       map[p.ficheStatus ?? DEFAULT_FICHE_STATUS].push(p);
     });
