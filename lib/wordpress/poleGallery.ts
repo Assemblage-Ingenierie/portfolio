@@ -86,39 +86,59 @@ const PFG_FILTER_REGISTRY: { id: number; label: string }[] = [
   { id: 25, label: 'Sport & loisirs' }, { id: 26, label: 'Santé & social' }, { id: 27, label: 'Tertiaire' },
   { id: 28, label: 'Commerce & activités' }, { id: 29, label: 'Industrie & logistique' }, { id: 30, label: 'Mobilité' },
   { id: 31, label: 'Ouvrage d’art' }, { id: 32, label: 'Art' }, { id: 33, label: 'Patrimoine' },
+  // Ajoutées le 31/08/26 depuis les valeurs Mission AI, via l'endpoint
+  // /pfg/add-categories (append-only). Ids relus depuis l'option WordPress
+  // après écriture : aucun id existant n'a été décalé.
+  { id: 34, label: 'MOE Structure' }, { id: 35, label: 'EXE Structure' },
+  { id: 36, label: 'AMO Développement' }, { id: 37, label: 'Programmation' },
+  { id: 38, label: 'AMO Structure' }, { id: 39, label: 'Diagnostic Structure' },
+  { id: 40, label: 'Faisabilité' },
 ];
 
-/** Normalisation pour matcher libellés app ↔ registre (insensible casse/accents). */
+/**
+ * Normalisation pour matcher libellés app ↔ registre.
+ *
+ * Insensible à : casse, accents, **espaces** et **type d'apostrophe**. Les deux
+ * derniers points sont indispensables : les options Airtable et les filtres du
+ * plugin PFG divergent sur ces caractères, ce qui faisait échouer le matching en
+ * silence. Exemples réels :
+ *   option « Santé&social »   ↔ filtre « Santé & social »
+ *   option « Ouvrage d'art »  ↔ filtre « Ouvrage d’art »   (U+0027 vs U+2019)
+ */
 function normLabel(s: string): string {
-  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+  return s
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[’ʼ`]/g, "'")
+    .replace(/\s+/g, '')
+    .trim();
 }
 
 /**
- * Facettes (champs Airtable) converties en filtres PFG, **par pôle**. On peut
- * configurer des filtres différents par page de pôle. Pour l'instant seul
- * Structure est activé (Matériaux + Réhab/Neuf + Programme principal) ; ENV/DEV
- * restent vides → aucune assignation de filtre (comportement actuel préservé).
+ * Calcule les ids de filtre PFG d'un projet.
+ *
+ * **Source unique : le champ Airtable « Tags export WP »** (`projet.tagsExportWp`),
+ * lui-même rempli automatiquement depuis Mission AI / Rehab-Neuf / Matériaux /
+ * Programmes principaux par une automatisation Airtable
+ * (cf. `docs/airtable/tags-export-wp-automation.js`).
+ *
+ * Avant, les facettes étaient lues sur 3 champs et **uniquement pour le pôle
+ * STR** — ENV et DEV n'avaient donc jamais de filtre, et 7 filtres présents sur
+ * la page Structure n'étaient plus assignables. Un seul champ pilote désormais
+ * les catégories WordPress ET les filtres, pour les trois pôles.
+ *
+ * Le paramètre `pole` est conservé (signature appelée dans
+ * `addProjetToPoleGalleries`) mais n'influence plus la sélection : les mêmes
+ * tags valent pour toutes les galeries.
  */
-type FacetField = 'materiaux' | 'rehabNeufValues' | 'programmesPrincipaux' | 'programmesSecondaires';
-const POLE_FACETS: Record<PoleKey, FacetField[]> = {
-  STR: ['materiaux', 'rehabNeufValues', 'programmesPrincipaux'],
-  ENV: [],
-  DEV: [],
-};
-
-/**
- * Calcule les ids de filtre PFG d'un projet pour un pôle donné : matche
- * (insensible casse/accents) les valeurs des facettes configurées contre le
- * registre. Renvoie une liste d'ids dédoublonnée (vide si le pôle n'a pas de
- * facette activée).
- */
-export function pfgFilterIdsForProjet(projet: Projet, pole: PoleKey): number[] {
-  const facets = POLE_FACETS[pole] ?? [];
+// `_pole` est volontairement conserve : il documente que le parametre existe
+// encore dans la signature appelee, et laisse la porte ouverte a un retour a des
+// filtres par pole sans toucher aux appelants.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function pfgFilterIdsForProjet(projet: Projet, _pole: PoleKey): number[] {
   const wanted = new Set<string>();
-  for (const f of facets) {
-    for (const v of (projet[f] ?? [])) {
-      if (typeof v === 'string' && v.trim()) wanted.add(normLabel(v));
-    }
+  for (const v of projet.tagsExportWp ?? []) {
+    if (typeof v === 'string' && v.trim()) wanted.add(normLabel(v));
   }
   if (wanted.size === 0) return [];
   const ids: number[] = [];
