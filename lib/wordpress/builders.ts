@@ -429,15 +429,18 @@ function buildWpEditorial(
          max-width:none !important neutralise un éventuel cap du thème WP.
          NB : ce commentaire est dans un template literal — pas de backticks. -->
     ${pitch ? `<p style="font-family:${SERIF};font-size:${typo.pitchSizePx}px;font-style:italic;line-height:1.4;color:${VIOLET};margin:0;max-width:none !important;">${pitch}</p>` : ''}
-    <!-- Grille 1fr 1fr + gap 48px : volontairement identique a celle du bloc
-         photo/champs juste en dessous, pour que le Lieu s'aligne sur le bord
-         gauche de la photo et le statut sur la colonne des champs cles.
-         Reste en 2 colonnes meme si coverFullWidth est actif (sinon les deux
-         valeurs s'empileraient). -->
+    <!-- Rangee pleine largeur de l'accroche : Lieu cale sur sa bordure gauche,
+         statut sur sa bordure droite. Volontairement PAS la grille 1fr 1fr du
+         bloc photo/champs en dessous — le statut ne doit pas tomber sur la
+         colonne MOA/Budget.
+         Meme mecanique que .t-surtitre-row du PDF (flex + baseline) ; le
+         margin-left:auto garde le statut a droite meme si le Lieu est vide,
+         et nowrap empeche « ● En chantier · 2026 » de se couper.
+         NB : commentaire dans un template literal — aucun backtick ici. -->
     ${(lieuHtml || statutHtml) ? `
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:baseline;margin:20px 0 0;line-height:1.4;">
+      <div style="display:flex;align-items:baseline;gap:24px;margin:20px 0 0;line-height:1.4;">
         <div>${lieuHtml}</div>
-        <div>${statutHtml}</div>
+        <div style="margin-left:auto;text-align:right;white-space:nowrap;">${statutHtml}</div>
       </div>` : ''}
   </header>
 
