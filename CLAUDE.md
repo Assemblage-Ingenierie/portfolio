@@ -288,6 +288,69 @@ WordPress **ne compte pas les versions**. À chaque insertion, `wp_unique_post_s
 - **`findProductionPost(slug, trackedUrl)`** (`client.ts`) — remplace `findPublishedPostBySlug` dans `/update-prod` et `/pole-gallery`. Deux passes : (1) lookup par slug canonique `status=publish` ; (2) repli sur le post tracké dans Airtable (`urlWordpress` → `?p=<id>`) s'il est passé en `publish`. La passe 2 couvre le cas d'un brouillon au slug suffixé publié à la main depuis wp-admin. ⚠ Ne pas remplacer ce repli par un match `^slug(-\d+)?$` : deux fiches homonymes (`mon-projet` / `mon-projet-2`) se confondraient et on écraserait le mauvais article.
 - `/update-prod` envoie le **slug canonique** au post de production : si la prod porte encore un suffixe hérité et que le canonique est libre, le permalien est réparé au passage.
 
+#### Ce que le thème WordPress contrôle (et que l'app doit écrire)
+
+Thème actif : **`architecturer` 4.0.1** (ThemeGoods) + plugin compagnon
+`architecturer-elementor`. Ses options passent par **Kirki**, donc par le Customizer
+(Apparence → Personnaliser) — il n'y a **pas** de panneau « Theme Options » séparé.
+
+⚠ Ces comportements ne sont **pas déductibles du code de ce repo** : ils vivent dans le
+thème. Toute modification du flux de publication doit les revérifier.
+
+**1. Mise en page d'un article — meta `post_layout` (obligatoire)**
+
+Le thème lit la mise en page d'un article seul dans la meta **`post_layout`** (metabox
+wp-admin « Post Options → Post Layout »). Valeurs = les **libellés du menu déroulant**, pas
+des slugs : `With Right Sidebar` (celle qu'on envoie), `With Left Sidebar`, `Fullwidth`.
+
+- Il n'existe **aucun défaut global** pour ce cas : le Customizer ne propose de layout que
+  pour les pages d'**archive**, de **catégorie** et de **tag**. Meta absente ⇒ le thème rend
+  l'article en **pleine largeur**, donc **sans le menu latéral**
+  (STRUCTURE / TYPE D'OUVRAGE / DÉVELOPPEMENT).
+- Le défaut de l'**éditeur** wp-admin (`With Right Sidebar`) n'est **pas** le défaut du thème
+  **au rendu**. C'est pourquoi ouvrir un article et cliquer « Mettre à jour » suffit à
+  réparer : la sauvegarde écrit la meta.
+- Tant que l'app créait des brouillons publiés à la main, ce passage par l'éditeur écrivait
+  la valeur « gratuitement ». La publication directe (31/08/26) a supprimé ce passage →
+  régression du menu latéral. `/publish` envoie donc désormais `post_layout` explicitement
+  (constante `WP_POST_LAYOUT`).
+- **Prérequis WordPress** : `docs/wordpress/post-meta-register-snippet.php` doit rester
+  **actif**. Sans `register_post_meta(..., show_in_rest: true)`, l'API REST **ignore la meta
+  en silence** — aucune erreur, la valeur disparaît. Même piège que les metas `_yoast_wpseo_*`.
+- Vérifier que c'est bien en place : `GET /wp-json/wp/v2/posts/<id>?context=edit` doit
+  exposer `post_layout` dans `meta`.
+
+**2. Navigation « article précédent / suivant » — rien à écrire**
+
+Repose sur la **pure adjacence par `post_date`** entre tous les `post_type=post`. Vérifié
+en 08/2026 : un article sans aucune catégorie commune avec ses voisins pointe quand même
+vers eux ⇒ le thème n'utilise **pas** `in_same_term`. Aucune meta, aucune catégorie en jeu.
+
+Conséquences :
+- Rien à écrire à l'export ; la navigation fonctionne d'office entre les fiches.
+- Les fiches réexportées prennent `post_date = maintenant` ⇒ **l'ordre des flèches est
+  l'ordre de réexport**, pas l'année des projets.
+- La chaîne parcourt **tous** les articles, fiches ou non. Les 3 offres d'emploi
+  (catégorie « Offre d'emploi », id 63) y figurent : la flèche « précédent » de la plus
+  ancienne fiche peut donc atterrir sur une offre d'emploi. **Résidu connu, non traité.**
+  Correctif possible côté WP si besoin : filtres natifs
+  `get_previous_post_excluded_terms` / `get_next_post_excluded_terms`.
+- Le réglage *Display Previous/Next Navigation* (Customizer → Blog → Single Post) doit
+  rester activé.
+
+**Méthode de diagnostic (réutilisable)**
+
+Pour toute divergence entre un article ancien et un article publié par l'app :
+1. Comparer le **HTML public rendu** des deux (`fetch` sur `post.link`) — c'est là qu'on a vu
+   la classe `full_width` n'apparaître que sur le nouveau.
+2. Comparer les **metas réelles**, pas celles de l'API REST : une meta non enregistrée pour
+   le REST est invisible dans `?context=edit`. Utiliser
+   `docs/wordpress/post-meta-diag-snippet.php` (routes `GET /assemblage/v1/post-meta/{id}`
+   et `/theme-mods`), **à désactiver après usage**.
+3. Chercher un **cas discriminant** plutôt que raisonner sur des cas ambigus : c'est un
+   article en `Uncategorized` qui a permis d'écarter l'hypothèse « navigation par catégorie »,
+   et 5 articles sans Elementor qui ont écarté l'hypothèse Elementor.
+
 ### PDF
 
 En développement : Puppeteer bundled. En production / Lambda : `@sparticuz/chromium` + `puppeteer-core` (activé par `NODE_ENV=production` ou `USE_CHROMIUM_LAMBDA=true`).
