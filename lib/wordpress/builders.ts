@@ -404,7 +404,11 @@ function buildWpEditorial(
           <div><strong style="font-weight:700;">${esc(c.valeur)}</strong> ${esc(c.label)}</div>
         `).join('')}
       </div>` : ''}
-    ${pitch ? `<p style="font-family:${SERIF};font-size:${typo.pitchSizePx}px;font-style:italic;line-height:1.4;color:${VIOLET};margin:0;max-width:780px;">${pitch}</p>` : ''}
+    <!-- Accroche : pleine largeur de la colonne de contenu. Pas de cap de mesure
+         (l'ancien `max-width:780px` la coupait ~180px avant le bord droit, alors
+         que le grid photo/champs juste en dessous occupe toute la largeur).
+         `max-width:none !important` neutralise un éventuel cap du thème WP. -->
+    ${pitch ? `<p style="font-family:${SERIF};font-size:${typo.pitchSizePx}px;font-style:italic;line-height:1.4;color:${VIOLET};margin:0;max-width:none !important;">${pitch}</p>` : ''}
   </header>
 
   <!-- Photo couverture + champs clés. coverFullWidth → photo pleine largeur
