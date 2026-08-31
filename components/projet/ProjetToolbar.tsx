@@ -10,7 +10,7 @@ import { useViewMode } from '@/lib/auth/useViewMode';
 import { encodeConfig, ManualConfig } from '@/lib/pdf/manualConfig';
 import type { BandeauConfig } from '@/lib/pdf/bandeauConfig';
 import type { CropData } from '@/lib/pdf/photoCrop';
-import { FICHE_STATUS_VALUES, FICHE_STATUS_COLOR, type FicheStatus } from '@/lib/pdf/projectConfig';
+import { FICHE_STATUS_VALUES, FICHE_STATUS_COLOR, isFicheStatusAdminOnly, type FicheStatus } from '@/lib/pdf/projectConfig';
 import { color, feedback } from '@/lib/ui/tokens';
 
 interface Props {
@@ -169,7 +169,7 @@ export default function ProjetToolbar({
         value={ficheStatus}
         onChange={(e) => handleStatusChange(e.target.value as FicheStatus)}
         disabled={statusSaveState === 'saving'}
-        title={!isAdmin ? 'Seul un administrateur peut sélectionner "Prête pour publication"' : 'Statut de la fiche'}
+        title={!isAdmin ? 'Certains statuts sont réservés aux administrateurs' : 'Statut de la fiche'}
         style={{
           ...btn,
           background: statusSaveState === 'error' ? feedback.erreur : FICHE_STATUS_COLOR[ficheStatus],
@@ -182,10 +182,10 @@ export default function ProjetToolbar({
           <option
             key={s}
             value={s}
-            disabled={s === 'Prête pour publication' && !isAdmin && ficheStatus !== s}
+            disabled={isFicheStatusAdminOnly(s) && !isAdmin && ficheStatus !== s}
             style={{ background: 'white', color: 'var(--ai-noir)' }}
           >
-            {s}{s === 'Prête pour publication' && !isAdmin ? ' (admin uniquement)' : ''}
+            {s}{isFicheStatusAdminOnly(s) && !isAdmin ? ' (admin uniquement)' : ''}
           </option>
         ))}
       </select>

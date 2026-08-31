@@ -126,7 +126,7 @@ Airtable ──► lib/airtable/queries.ts (getProjets / getProjet)
 |-------|---------|------|
 | `/api/projet/[slug]/fields` | PATCH | Sauvegarde les champs éditables dans Airtable. Retourne `{ ok, slug }` (le nouveau slug si renommage). Invalide le cache `projets`. |
 | `/api/projet/[slug]/pdf` | GET | Génère un PDF A4 via Puppeteer (navigue vers `?print=true`) |
-| `/api/projet/[slug]/publish` | POST | Upload médias → WordPress, **publie directement** (`status: 'publish'`), write-back URL dans Airtable, puis **ajoute aux galeries de pôle** (non bloquant). Crée toujours un nouveau post, jamais d'UPDATE sur un post existant. |
+| `/api/projet/[slug]/publish` | POST | Upload médias → WordPress, **publie directement** (`status: 'publish'`), write-back URL dans Airtable, puis **ajoute aux galeries de pôle** et passe `ficheStatus` à **« Publié »** (les deux non bloquants). Crée toujours un nouveau post, jamais d'UPDATE sur un post existant. |
 | `/api/projet/[slug]/update-prod` | POST | ⚠ **Plus aucun appelant côté UI** (bouton retiré le 31/08/26). Promeut le contenu du dernier draft tracké vers le post publié existant. Conservée pour rétro-compat / usage manuel. |
 | `/api/admin/users/[id]` | PATCH | Met à jour `role` / `is_approved` dans `portfolio_profiles` (vérifie le rôle admin côté serveur) |
 | `/api/admin/apply-defaults` | POST | **Admin only.** Écrit `ASSEMBLAGE_DEFAULT_BANDEAU` + `ASSEMBLAGE_DEFAULT_MANUAL` dans le champ « Config template manuel » de toutes les fiches `ficheStatus === 'Pas faite'` (écrase bandeau+manuel, préserve le reste). Invalide les tags `projet:<slug>` concernés. |
@@ -256,6 +256,29 @@ Il n'y a plus d'étape brouillon : l'aperçu de `/projet/[slug]/wordpress` en ti
 
 **Important** : par construction, le code n'envoie **jamais** `status: 'trash'` ni `DELETE`.
 Aucun export ne peut mettre un post existant à la corbeille.
+
+#### Statuts de fiche (`FicheStatus`) — verrou et droits
+
+`ficheStatus` n'est **pas** un champ Airtable : il vit dans le JSON `ProjectConfig`
+(champ « Config template manuel »). Ajouter un statut est donc un changement purement code.
+
+Tout est centralisé dans `lib/pdf/projectConfig.ts` — **ne pas comparer de littéraux de
+chaîne ailleurs** :
+- `FICHE_STATUS_VALUES` — ordre du cycle de vie, pilote l'affichage du panneau « État de
+  publication » (home) ET le sélecteur de `ProjetToolbar`. `PortfolioGrid` en dérive ses
+  `Record<FicheStatus, …>` (ne plus les écrire à la main).
+- `isFicheLocked(status)` — statuts qui passent la mise en page en lecture seule :
+  **« Prête pour publication »** et **« Publié »**. Consommé par `ProjetView.readOnly` et
+  `FicheStatusPopup.isLocked`.
+- `isFicheStatusAdminOnly(status)` — statuts réservés aux admins : les deux mêmes.
+  Vérifié côté client (option grisée) **et côté serveur** dans `/fields` (le grisage client
+  ne protège rien).
+
+**« Publié »** est posé automatiquement par `/publish`. **« À mettre à jour »** est posé à la
+main par le relecteur : c'est le statut qui **déverrouille** une fiche publiée.
+
+⚠ Toute écriture de `ficheStatus` doit invalider `PROJETS_LIST_TAG` (le panneau de la home
+dénombre les fiches par statut), pas seulement `projetTag(slug)`.
 
 #### Slugs WordPress : pourquoi `-2` / `-3` / `-4` apparaissaient
 

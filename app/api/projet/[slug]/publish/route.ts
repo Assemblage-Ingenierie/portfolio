@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getProjet, updateProjetUrl } from '@/lib/airtable';
+import { revalidateTag } from 'next/cache';
+import { getProjet, updateProjetUrl, updateProjetFields } from '@/lib/airtable';
+import { PROJETS_LIST_TAG, projetTag } from '@/lib/airtable/queries';
 import { uploadMedia, createOrUpdatePost, ensureCategoryIds, releaseCanonicalSlug } from '@/lib/wordpress';
 import { addProjetToPoleGalleries, pfgGalleriesForPoles } from '@/lib/wordpress/poleGallery';
 import { buildWpContent } from '@/lib/wordpress/builders';
@@ -177,6 +179,28 @@ export async function POST(
       airtableWarning = 'URL non sauvegardée dans Airtable';
     }
 
+    // Statut de fiche → « Publié ». L'article etant en ligne, le panneau
+    // « Etat de publication » de la home doit le refleter sans action manuelle.
+    // updateProjetFields fait un merge du ProjectConfig : les cles bandeau /
+    // manuel / wp / photoCrops sont preservees.
+    //
+    // NON BLOQUANT comme le reste des ecritures Airtable : l'article est deja
+    // publie, un echec ici ne doit pas transformer la reponse en erreur.
+    //
+    // ⚠ « Publié » VERROUILLE la mise en page (cf. isFicheLocked). Pour
+    // corriger une fiche publiee, passer le statut a « À mettre à jour ».
+    let statusWarning: string | undefined;
+    try {
+      await updateProjetFields(slug, { ficheStatus: 'Publié' });
+      // ficheStatus alimente le decompte par statut de la home → il faut
+      // invalider la LISTE, pas seulement la fiche.
+      revalidateTag(projetTag(slug), 'max');
+      revalidateTag(PROJETS_LIST_TAG, 'max');
+    } catch (statusErr) {
+      console.warn('Passage du statut de fiche a « Publié » echoue (non-fatal):', statusErr);
+      statusWarning = 'Statut de fiche non mis a jour (« Publié »)';
+    }
+
     // 6. Ajout aux galeries de pole, dans la continuite de la publication.
     //    NON BLOQUANT (choix 31/08/26) : si l'etape echoue, l'article reste
     //    publie et on remonte un avertissement — a l'utilisateur de reessayer
@@ -218,7 +242,7 @@ export async function POST(
       // Resultat par page pole (meme forme que la reponse de /pole-gallery,
       // que l'UI sait deja afficher via poleResultsSummary).
       gallery: poleResults,
-      warning: [airtableWarning, slugWarning, galleryWarning].filter(Boolean).join(' — ') || undefined,
+      warning: [airtableWarning, statusWarning, slugWarning, galleryWarning].filter(Boolean).join(' — ') || undefined,
       // Slug réellement attribué par WP (doit être égal au slug Airtable).
       wpSlug, slugSuffixed: !!wpSlug && wpSlug !== projet.slug,
       // Diagnostic catégories : noms demandés (Airtable) + nb d'IDs WP assignés.

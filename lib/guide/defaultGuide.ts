@@ -57,7 +57,9 @@ Le bouton **× Réinitialiser** (qui apparaît dès qu'un filtre est actif) reme
 
 ### Le panneau « État de publication »
 
-À gauche, le panneau **État de publication** classe les fiches selon leur avancement éditorial : *Pas faite*, *En cours*, *En attente de validation*, *Prête pour publication*. Cliquez sur une catégorie pour filtrer les fiches concernées, ou dépliez-la (flèche ▸) pour accéder directement aux projets de cette catégorie.
+À gauche, le panneau **État de publication** classe les fiches selon leur avancement éditorial : *Pas faite*, *En cours*, *En attente de validation*, *Prête pour publication*, *Publié*, *À mettre à jour*. Cliquez sur une catégorie pour filtrer les fiches concernées, ou dépliez-la (flèche ▸) pour accéder directement aux projets de cette catégorie.
+
+*Publié* est posé **automatiquement** dès qu'une fiche part en ligne via « Export WP » — il n'y a rien à cocher. Comme *Prête pour publication*, il **verrouille** la mise en page. Si vous relisez une fiche publiée et qu'une correction est nécessaire, passez-la à *À mettre à jour* : cela la déverrouille et signale le travail à faire. Seuls les administrateurs peuvent sélectionner *Publié* et *Prête pour publication* à la main.
 
 ---
 

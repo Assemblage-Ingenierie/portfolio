@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
 import { updateProjetFields } from '@/lib/airtable';
 import { PROJETS_LIST_TAG, projetTag } from '@/lib/airtable/queries';
+import { isFicheStatusAdminOnly } from '@/lib/pdf/projectConfig';
 import { requireApprovedUser } from '@/lib/supabase/requireApprovedUser';
 import type { ProjetEditableFields } from '@/lib/airtable';
 
@@ -59,15 +60,18 @@ export async function PATCH(
     return NextResponse.json({ error: 'Corps de requête invalide' }, { status: 400 });
   }
 
-  // Gate admin sur le status "Prête pour publication" : seul un admin peut
-  // verrouiller une fiche (les utilisateurs réguliers peuvent passer aux
-  // autres status mais pas à celui-ci).
+  // Gate admin sur les statuts verrouillants (« Prête pour publication » et
+  // « Publié ») : seul un admin peut les poser à la main. Les utilisateurs
+  // réguliers peuvent passer aux autres statuts, dont « À mettre à jour » qui
+  // est justement leur moyen de signaler une correction à faire.
+  // ⚠ Gate serveur indispensable : le menu grisé côté client ne protège rien.
   if (
-    body.ficheStatus === 'Prête pour publication' &&
+    body.ficheStatus !== undefined &&
+    isFicheStatusAdminOnly(body.ficheStatus) &&
     auth.profile.role !== 'admin'
   ) {
     return NextResponse.json(
-      { error: 'Seul un administrateur peut marquer une fiche comme prête pour publication' },
+      { error: `Seul un administrateur peut passer une fiche au statut « ${body.ficheStatus} »` },
       { status: 403 }
     );
   }
