@@ -2,30 +2,12 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import type { Projet, Statut, TemplateChoice } from '@/types/projet';
+import { STATUT_FILTER_OPTIONS, type Projet, type Statut, type TemplateChoice } from '@/types/projet';
+import { STATUT_BG, STATUT_COLOR } from '@/lib/ui/statutColors';
 import { TEMPLATE_OPTIONS } from '@/types/projet';
 import { autoSelectTemplate } from '@/lib/pdf/selectTemplate';
 import { RangeSlider } from './RangeSlider';
 import { color } from '@/lib/ui/tokens';
-
-const STATUT_BG: Record<string, string> = {
-  'En étude': color.gris,
-  'Concours': '#F0E8F5',
-  'En chantier': color.rougeClair,
-  'Livré': '#d4edda',
-  'Abandonné': '#e2e3e5',
-  'En pause': '#fff3cd',
-  'En consultation': '#d1ecf1',
-};
-const STATUT_COLOR: Record<string, string> = {
-  'En étude': color.violet,
-  'Concours': '#6B4F94',
-  'En chantier': color.rouge,
-  'Livré': '#155724',
-  'Abandonné': '#6c757d',
-  'En pause': '#856404',
-  'En consultation': '#0c5460',
-};
 
 interface Props { projets: Projet[]; }
 
@@ -94,9 +76,9 @@ export default function PortfolioBuilder({ projets }: Props) {
     });
     return [...set].sort((a, b) => a.localeCompare(b, 'fr'));
   }, [projets]);
-  // Ordre demandé : Livré · Concours · En chantier · En pause · En étude · En consultation.
-  // "Abandonné" omis volontairement du filtre (reste dans le type pour compat).
-  const allStatuts: Statut[] = ['Livré', 'Concours', 'En chantier', 'En pause', 'En étude', 'En consultation'];
+  // Ordre et contenu : STATUT_FILTER_OPTIONS (types/projet.ts), partagé avec
+  // la home, le tableau et la page publique.
+  const allStatuts: Statut[] = STATUT_FILTER_OPTIONS;
 
   const [search, setSearch] = useState('');
   // Type Neuf/Réhab : multi-sélection cumulable, AND. Set vide = "Tous".

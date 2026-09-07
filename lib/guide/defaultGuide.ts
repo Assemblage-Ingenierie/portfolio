@@ -41,7 +41,7 @@ Le champ de recherche en haut filtre en temps réel sur le nom du projet, le ma�
 Sous la barre de recherche, plusieurs filtres permettent d'affiner l'affichage :
 
 - **Pôle** — STR (structure), ENV (environnement), DEV (développement)
-- **Statut** — Livré, Concours, En chantier, En pause, En étude, En consultation
+- **Statut** — Terminé, Livré, Concours, En cours, En chantier, En pause, En étude, En consultation (les paires Terminé/Livré et En cours/En chantier coexistent dans Airtable ; chaque fiche affiche sa propre valeur)
 - **Type** — Neuf / Réhabilitation
 - **Matériaux**
 - **Année de livraison** — curseur à deux poignées (min / max)

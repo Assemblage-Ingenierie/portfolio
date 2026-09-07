@@ -2,7 +2,8 @@
 
 import { useMemo, useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import type { Projet, Statut } from '@/types/projet';
+import { STATUT_FILTER_OPTIONS, type Projet, type Statut } from '@/types/projet';
+import { STATUT_BG, STATUT_COLOR } from '@/lib/ui/statutColors';
 import { RangeSlider } from './RangeSlider';
 import { TABLEAU_FIELDS, TABLEAU_DEFAULTS_BY_MODE, TABLEAU_ORDER_BY_MODE, renderTableau, type TableauOrientation, type TableauMode } from '@/lib/pdf/tableauTemplate';
 import { SHARED_CSS, FONTS_LINK } from '@/lib/pdf/templates/shared';
@@ -16,25 +17,6 @@ type Step = 'select' | 'order' | 'preview';
 const chipLabel: React.CSSProperties = {
   fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em',
   textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 6,
-};
-
-const STATUT_BG: Record<string, string> = {
-  'En étude': color.gris,
-  'Concours': '#F0E8F5',
-  'En chantier': color.rougeClair,
-  'Livré': '#d4edda',
-  'Abandonné': '#e2e3e5',
-  'En pause': '#fff3cd',
-  'En consultation': '#d1ecf1',
-};
-const STATUT_COLOR: Record<string, string> = {
-  'En étude': color.violet,
-  'Concours': '#6B4F94',
-  'En chantier': color.rouge,
-  'Livré': '#155724',
-  'Abandonné': '#6c757d',
-  'En pause': '#856404',
-  'En consultation': '#0c5460',
 };
 
 export default function TableauBuilder({ projets }: Props) {
@@ -85,7 +67,7 @@ export default function TableauBuilder({ projets }: Props) {
       return a.localeCompare(b);
     });
   }, [projets]);
-  const allStatuts: Statut[] = ['Livré', 'Concours', 'En chantier', 'En pause', 'En étude', 'En consultation'];
+  const allStatuts: Statut[] = STATUT_FILTER_OPTIONS;
   // Matériaux : valeurs disponibles dans les projets (multi-select AND).
   const materiauxOptions = useMemo(() => {
     const set = new Set<string>();

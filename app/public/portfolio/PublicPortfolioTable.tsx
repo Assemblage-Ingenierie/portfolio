@@ -1,31 +1,13 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import type { Statut } from '@/types/projet';
+import { STATUT_FILTER_OPTIONS, type Statut } from '@/types/projet';
+import { STATUT_BG, STATUT_COLOR } from '@/lib/ui/statutColors';
 import type { PublicProjet } from '@/app/api/public/portfolio/route';
 import { RangeSlider } from '@/components/portfolio/RangeSlider';
 import { color } from '@/lib/ui/tokens';
 
-const STATUT_BG: Record<string, string> = {
-  'En étude': color.gris,
-  'Concours': '#F0E8F5',
-  'En chantier': color.rougeClair,
-  'Livré': '#d4edda',
-  'Abandonné': '#e2e3e5',
-  'En pause': '#fff3cd',
-  'En consultation': '#d1ecf1',
-};
-const STATUT_COLOR: Record<string, string> = {
-  'En étude': color.violet,
-  'Concours': '#6B4F94',
-  'En chantier': color.rouge,
-  'Livré': '#155724',
-  'Abandonné': '#6c757d',
-  'En pause': '#856404',
-  'En consultation': '#0c5460',
-};
-
-const ALL_STATUTS: Statut[] = ['Livré', 'Concours', 'En chantier', 'En pause', 'En étude', 'En consultation'];
+const ALL_STATUTS = STATUT_FILTER_OPTIONS;
 const POLE_ORDER = ['STR', 'ENV', 'DEV'];
 const PAGE_SIZE = 25;
 
