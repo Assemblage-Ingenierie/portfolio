@@ -14,6 +14,23 @@ npm run lint     # ESLint
 
 No test suite is configured.
 
+## Ne pas vérifier les déploiements
+
+**Ne pas surveiller les builds Vercel, ne pas lire les logs de déploiement, ne
+pas relancer `npm run build` juste pour pré-valider un push.** Le mainteneur
+voit lui-même les échecs de déploiement ; le faire à sa place ne fait que
+consommer des tokens.
+
+Concrètement, après un `git push` : s'arrêter là et le dire. Pas de
+`list_deployments`, pas de `get_deployment_build_logs`, pas de build local
+« au cas où », pas de boucle d'attente sur un déploiement.
+
+`npm run build` reste légitime quand il **est** la tâche demandée (debug d'une
+erreur de build, vérification d'un changement de config Next). Ce qui est
+proscrit, c'est de le lancer spontanément comme filet de sécurité avant ou
+après un push. `npx tsc --noEmit` et `npm run lint` sont rapides et restent
+les contrôles par défaut avant un commit.
+
 ## Architecture
 
 **Portfolio interne** d'Assemblage ingénierie. Airtable est la source de vérité ; l'app lit, édite et publie les projets sur WordPress. L'accès est protégé par Supabase Auth (Google OAuth + magic link + email/password) avec validation manuelle par un administrateur.
