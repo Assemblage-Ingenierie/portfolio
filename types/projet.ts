@@ -19,14 +19,39 @@ export type CrmField =
   | 'betAssocies'
   | 'bailleur';
 
+/** Options du single-select Airtable « État avancement » (fldxXNdE0uNaomeby).
+ *
+ *  ⚠ Cette union doit refléter **exactement** les options du champ Airtable.
+ *  Depuis 2026 le champ porte deux paires de quasi-synonymes assumées :
+ *  `Terminé`/`Livré` et `En cours`/`En chantier`. L'app affiche la valeur
+ *  brute de la fiche (pas de collapse) — cf. `normalizeStatut`. Une fiche n'a
+ *  qu'une seule valeur ; ce sont les pastilles de filtre qui exposent les deux.
+ *
+ *  Ajouter une option côté Airtable = l'ajouter ici, dans `STATUT_BG` /
+ *  `STATUT_COLOR` (`lib/ui/statutColors.ts`, typés `Record<Statut, string>`
+ *  donc le compilateur refusera un oubli) et, si elle doit être filtrable,
+ *  dans `STATUT_FILTER_OPTIONS`. */
 export type Statut =
   | 'En étude'
   | 'Concours'
   | 'En chantier'
+  | 'En cours'
   | 'Livré'
+  | 'Terminé'
   | 'Abandonné'
   | 'En pause'
   | 'En consultation';
+
+/** Ordre des pastilles du filtre Statut, partagé par les 4 pages de portfolio
+ *  (home, builder, tableau, public). Les quasi-synonymes sont volontairement
+ *  adjacents pour que le doublon soit lisible.
+ *
+ *  `Abandonné` est omis du filtre (aucune fiche ne le porte aujourd'hui) mais
+ *  reste dans le type pour compat avec d'anciens records. */
+export const STATUT_FILTER_OPTIONS: Statut[] = [
+  'Terminé', 'Livré', 'Concours', 'En cours', 'En chantier',
+  'En pause', 'En étude', 'En consultation',
+];
 
 export type TemplateChoice = 'Solo' | 'Diptyque' | 'Triptyque' | 'Str-Env' | 'Dev';
 
