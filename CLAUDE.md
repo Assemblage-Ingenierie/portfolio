@@ -290,10 +290,18 @@ ne désélectionne jamais hors plage.
   publication (metas, catégories, galeries de pôle) est donc héritée automatiquement.
 - **Séquentiel, pas parallèle** : chaque publication uploade N médias vers WordPress ;
   un fan-out saturerait l'API WP et les quotas Airtable derrière.
-- **Les garde-fous SEO ne bloquent pas le lot.** `exportBlockers()` reprend les règles de
-  l'export unitaire (photo de couverture + Tags export WP + méta description) mais marque
-  la fiche fautive « Ignoré » et poursuit — sinon une fiche incomplète ferait échouer 40
+- **Garde-fous SEO : bloquants par fiche, jamais pour le lot.** `exportBlockers()` reprend
+  les règles de l'export unitaire (photo de couverture + Tags export WP + méta description).
+  Une fiche incomplète est marquée **« Bloquée »**, aucun appel réseau ne part pour elle, et
+  les autres publient normalement — sinon une seule fiche incomplète ferait échouer 40
   publications.
+  - **Conséquence sur `ficheStatus`** : la fiche publiée passe à **« Publié »** (écrit par
+    `/publish`) ; la fiche bloquée ne subit **aucune écriture Airtable** et conserve donc son
+    statut — typiquement **« Prête pour publication »**. Elle reste ainsi visible comme
+    restant à traiter dans le panneau « État de publication » de la home.
+  - `'blocked'` (garde-fou) et `'skipped'` (lot interrompu par l'utilisateur) sont deux
+    états distincts dans le modal : ne pas les fusionner, ils n'appellent pas la même action
+    corrective.
 - **Pages de pôle** : rien de spécifique au lot. Une fiche multi-pôle (« Vignette pôle »
   = STR + ENV) part dans les **deux** galeries parce que `pfgGalleriesForPoles` itère sur
   toutes les vignettes côté serveur — comportement déjà en place, le modal se contente de

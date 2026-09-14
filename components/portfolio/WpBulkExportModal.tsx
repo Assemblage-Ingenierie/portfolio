@@ -14,8 +14,16 @@ import { color } from '@/lib/ui/tokens';
  * fan-out parallèle saturerait l'API WP (et les quotas Airtable derrière).
  *
  * Les garde-fous SEO sont ceux de la fiche unitaire (cf. `WordpressView`) :
- * Tags export WP + méta description + photo de couverture. Ici ils ne bloquent
- * pas le lot — la fiche fautive est marquée « ignorée » et le lot continue.
+ * Tags export WP + méta description + photo de couverture. Ils bloquent
+ * **uniquement la fiche concernée**, jamais le lot : la fiche incomplète est
+ * marquée « Bloquée » et aucun appel réseau ne part pour elle, les autres
+ * publient normalement.
+ *
+ * Conséquence sur les statuts de fiche (`ficheStatus`) :
+ * - fiche publiée → `/publish` la passe à **« Publié »** côté serveur ;
+ * - fiche bloquée → **aucune écriture Airtable**, elle conserve son statut
+ *   (typiquement « Prête pour publication »), et reste donc dans le panneau
+ *   « État de publication » de la home comme restant à traiter.
  *
  * ⚠ Pages de pôle : une fiche multi-pôle (« Vignette pôle » = STR + ENV) est
  * ajoutée à CHAQUE galerie correspondante — c'est `pfgGalleriesForPoles`
@@ -23,7 +31,9 @@ import { color } from '@/lib/ui/tokens';
  * affichés ici servent à vérifier la cible avant de lancer le lot.
  */
 
-type ItemState = 'pending' | 'running' | 'done' | 'skipped' | 'error';
+// 'blocked' = garde-fou (fiche incomplète : aucun appel réseau, statut Airtable
+// inchangé) ; 'skipped' = lot interrompu avant d'atteindre la fiche.
+type ItemState = 'pending' | 'running' | 'done' | 'blocked' | 'skipped' | 'error';
 
 interface ItemResult {
   state: ItemState;
@@ -86,6 +96,8 @@ export default function WpBulkExportModal({ projets, onClose, onDone }: Props) {
   const blockersBySlug: Record<string, string[]> = Object.fromEntries(
     projets.map((p) => [p.slug, exportBlockers(p)]),
   );
+  // Fiches incomplètes : écartées du lot, sans l'interrompre.
+  const blockedProjets = projets.filter((p) => blockersBySlug[p.slug].length > 0);
   const exportable = projets.filter((p) => blockersBySlug[p.slug].length === 0);
 
   // Empêche la fermeture accidentelle pendant un lot (chaque item est une
@@ -102,11 +114,16 @@ export default function WpBulkExportModal({ projets, onClose, onDone }: Props) {
   }
 
   async function runBatch() {
+    if (exportable.length === 0) return;
+
     const msg = [
       `Publier EN LIGNE ${exportable.length} fiche${exportable.length > 1 ? 's' : ''} sur assemblage.net ?`,
       '',
       'Chaque article sera visible immédiatement et ajouté à sa/ses page(s) de pôle.',
       "Il n'y a pas d'étape brouillon.",
+      ...(blockedProjets.length > 0
+        ? ['', `${blockedProjets.length} fiche(s) bloquée(s) ne seront pas publiées et garderont leur statut actuel.`]
+        : []),
     ].join('\n');
     if (!confirm(msg)) return;
 
@@ -115,10 +132,10 @@ export default function WpBulkExportModal({ projets, onClose, onDone }: Props) {
     setFinished(false);
 
     // Les fiches bloquées sont marquées d'emblée : l'utilisateur voit
-    // immédiatement ce que le lot ne traitera pas, et pourquoi.
-    for (const p of projets) {
-      const blockers = blockersBySlug[p.slug];
-      if (blockers.length > 0) setItem(p.slug, { state: 'skipped', message: blockers.join(' · ') });
+    // immédiatement ce que le lot ne traitera pas, et pourquoi. Aucune écriture
+    // Airtable pour elles → leur ficheStatus reste inchangé.
+    for (const p of blockedProjets) {
+      setItem(p.slug, { state: 'blocked', message: blockersBySlug[p.slug].join(' · ') });
     }
 
     let anySuccess = false;
@@ -160,7 +177,7 @@ export default function WpBulkExportModal({ projets, onClose, onDone }: Props) {
       acc[results[p.slug]?.state ?? 'pending']++;
       return acc;
     },
-    { pending: 0, running: 0, done: 0, skipped: 0, error: 0 } as Record<ItemState, number>,
+    { pending: 0, running: 0, done: 0, blocked: 0, skipped: 0, error: 0 } as Record<ItemState, number>,
   );
 
   const badge = (state: ItemState) => {
@@ -168,7 +185,8 @@ export default function WpBulkExportModal({ projets, onClose, onDone }: Props) {
       pending: { bg: '#F0F0F0', fg: 'var(--ai-noir70)', txt: 'En attente' },
       running: { bg: 'var(--ai-violet)', fg: 'white', txt: 'Publication…' },
       done: { bg: '#1E8E3E', fg: 'white', txt: 'Publié' },
-      skipped: { bg: '#FDE68A', fg: '#7A5B00', txt: 'Ignoré' },
+      blocked: { bg: '#FDE68A', fg: '#7A5B00', txt: 'Bloquée' },
+      skipped: { bg: '#F0F0F0', fg: 'var(--ai-noir70)', txt: 'Non traitée' },
       error: { bg: 'var(--ai-rouge)', fg: 'white', txt: 'Échec' },
     };
     const s = map[state];
@@ -208,9 +226,17 @@ export default function WpBulkExportModal({ projets, onClose, onDone }: Props) {
           <p style={{ fontSize: '8.5pt', color: 'var(--ai-noir70)', marginTop: 4 }}>
             {projets.length} fiche{projets.length > 1 ? 's' : ''} sélectionnée{projets.length > 1 ? 's' : ''}
             {' · '}{exportable.length} exportable{exportable.length > 1 ? 's' : ''}
+            {blockedProjets.length > 0 && ` · ${blockedProjets.length} bloquée${blockedProjets.length > 1 ? 's' : ''}`}
             {counts.done > 0 && ` · ${counts.done} publiée${counts.done > 1 ? 's' : ''}`}
             {counts.error > 0 && ` · ${counts.error} en échec`}
           </p>
+          {blockedProjets.length > 0 && (
+            <p style={{ fontSize: '8pt', color: '#7A5B00', marginTop: 6, lineHeight: 1.4 }}>
+              Les fiches bloquées ne seront pas publiées et <strong>conserveront leur statut
+              actuel</strong> (« Prête pour publication ») ; les autres passeront à « Publié ».
+              Complète les champs manquants dans Airtable, ou retire ces fiches de la sélection.
+            </p>
+          )}
         </header>
 
         <div style={{ overflowY: 'auto', padding: '8px 18px', flex: 1 }}>
@@ -232,12 +258,17 @@ export default function WpBulkExportModal({ projets, onClose, onDone }: Props) {
                   </div>
                   {r.state === 'pending' && blockers.length > 0 && (
                     <div style={{ fontSize: '8pt', color: '#7A5B00', marginTop: 2 }}>
-                      Non exportable : {blockers.join(' · ')}
+                      Bloquée : {blockers.join(' · ')}
                     </div>
                   )}
                   {r.message && (
-                    <div style={{ fontSize: '8pt', color: r.state === 'error' ? 'var(--ai-rouge)' : 'var(--ai-noir70)', marginTop: 2 }}>
-                      {r.message}
+                    <div style={{
+                      fontSize: '8pt', marginTop: 2,
+                      color: r.state === 'error' ? 'var(--ai-rouge)'
+                        : r.state === 'blocked' ? '#7A5B00'
+                        : 'var(--ai-noir70)',
+                    }}>
+                      {r.state === 'blocked' ? `Bloquée : ${r.message}` : r.message}
                     </div>
                   )}
                   {r.state === 'done' && r.galleries && r.galleries.length > 0 && (
