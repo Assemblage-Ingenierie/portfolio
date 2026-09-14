@@ -1,7 +1,9 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import WpBulkExportModal from './WpBulkExportModal';
 import { STATUT_FILTER_OPTIONS, type Projet, type Statut } from '@/types/projet';
 import { STATUT_BG, STATUT_COLOR } from '@/lib/ui/statutColors';
 import { RangeSlider } from './RangeSlider';
@@ -29,6 +31,7 @@ function Badge({ statut }: { statut: Statut }) {
 export default function PortfolioGrid({ projets }: Props) {
   const { profile } = useAuth();
   const isAdmin = profile?.role === 'admin';
+  const router = useRouter();
   const years = useMemo(() => {
     const ys = projets.map(p => p.anneeLivraison).filter((y): y is number => !!y);
     return { min: Math.min(...ys), max: Math.max(...ys) };
@@ -186,6 +189,16 @@ export default function PortfolioGrid({ projets }: Props) {
     });
   };
 
+  // ── Sélection multiple pour l'export WordPress groupé ──────────────────
+  // Activée par le bouton « Export WordPress » du header. Tant qu'elle est
+  // active, un clic sur une fiche ne navigue plus : il (dé)sélectionne.
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedSlugs, setSelectedSlugs] = useState<Set<string>>(new Set());
+  // Index d'ancrage du dernier clic, pour la plage Shift+clic. Exprimé dans
+  // l'ordre de `filtered` (ce que l'utilisateur voit), pas dans `projets`.
+  const [anchorIndex, setAnchorIndex] = useState<number | null>(null);
+  const [showExportModal, setShowExportModal] = useState(false);
+
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return projets.filter(p => {
@@ -260,6 +273,74 @@ export default function PortfolioGrid({ projets }: Props) {
     setYearMax(years.max);
   };
 
+  // Sélectionne toutes les fiches VISIBLES (après filtres + recherche) —
+  // pas les 845 du catalogue : Ctrl+A doit rester cohérent avec ce qui est
+  // affiché à l'écran.
+  const selectAllFiltered = useCallback(() => {
+    setSelectedSlugs(new Set(filtered.map((p) => p.slug)));
+    setAnchorIndex(filtered.length > 0 ? filtered.length - 1 : null);
+  }, [filtered]);
+
+  // Ctrl+A / Cmd+A. Uniquement en mode sélection, et jamais quand le focus est
+  // dans un champ de saisie (sinon on casse le « tout sélectionner » du champ
+  // de recherche).
+  useEffect(() => {
+    if (!selectMode) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!(e.key === 'a' || e.key === 'A') || !(e.ctrlKey || e.metaKey)) return;
+      const el = e.target as HTMLElement | null;
+      const tag = el?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || el?.isContentEditable) return;
+      e.preventDefault();
+      selectAllFiltered();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [selectMode, selectAllFiltered]);
+
+  /**
+   * Clic sur une fiche en mode sélection.
+   * - clic simple : bascule la fiche, et pose l'ancre
+   * - Shift+clic : ajoute toute la plage entre l'ancre et la fiche cliquée
+   *   (ajout pur — comme un explorateur de fichiers, la plage ne désélectionne
+   *   jamais ce qui est hors plage)
+   */
+  const handleSelectClick = (index: number, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const slug = filtered[index]?.slug;
+    if (!slug) return;
+    if (e.shiftKey && anchorIndex !== null) {
+      const [from, to] = anchorIndex <= index ? [anchorIndex, index] : [index, anchorIndex];
+      setSelectedSlugs((prev) => {
+        const next = new Set(prev);
+        for (let i = from; i <= to; i++) next.add(filtered[i].slug);
+        return next;
+      });
+    } else {
+      setSelectedSlugs((prev) => {
+        const next = new Set(prev);
+        if (next.has(slug)) next.delete(slug); else next.add(slug);
+        return next;
+      });
+    }
+    setAnchorIndex(index);
+  };
+
+  const exitSelectMode = () => {
+    setSelectMode(false);
+    setSelectedSlugs(new Set());
+    setAnchorIndex(null);
+  };
+
+  // Fiches sélectionnées, dans l'ordre d'affichage courant. `projets` (et non
+  // `filtered`) comme source : une fiche cochée puis masquée par un changement
+  // de filtre reste dans le lot.
+  const selectedProjets = useMemo(
+    () => projets.filter((p) => selectedSlugs.has(p.slug)),
+    [projets, selectedSlugs],
+  );
+
   const btn = (active: boolean): React.CSSProperties => ({
     padding: '4px 12px', borderRadius: '6px', cursor: 'pointer',
     fontFamily: 'var(--sans)', fontSize: '8pt', fontWeight: 700,
@@ -270,6 +351,50 @@ export default function PortfolioGrid({ projets }: Props) {
 
   const totalProjets = projets.length;
   const statusColor = FICHE_STATUS_COLOR;
+
+  /**
+   * Enveloppe d'une fiche : `<Link>` en temps normal, `<div>` cliquable en mode
+   * sélection (le clic sélectionne au lieu de naviguer). Fonction et non
+   * composant : un composant défini dans le rendu changerait d'identité à
+   * chaque render et remonterait toutes les tuiles.
+   */
+  const wrapItem = (
+    projet: Projet,
+    index: number,
+    style: React.CSSProperties,
+    children: React.ReactNode,
+  ) =>
+    selectMode ? (
+      <div
+        key={projet.slug}
+        onClick={(e) => handleSelectClick(index, e)}
+        style={{ ...style, cursor: 'pointer', userSelect: 'none' }}
+      >
+        {children}
+      </div>
+    ) : (
+      <Link key={projet.slug} href={`/projet/${projet.slug}`} prefetch={false} style={style}>
+        {children}
+      </Link>
+    );
+
+  /** Case à cocher purement visuelle (le clic est géré par l'enveloppe). */
+  const checkbox = (checked: boolean, extra?: React.CSSProperties) => (
+    <span
+      aria-hidden
+      style={{
+        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+        width: 18, height: 18, flexShrink: 0, borderRadius: 4,
+        border: checked ? '1px solid var(--ai-rouge)' : `1px solid ${color.gris}`,
+        background: checked ? 'var(--ai-rouge)' : 'white',
+        color: 'white', fontSize: '10pt', fontWeight: 700, lineHeight: 1,
+        boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+        ...extra,
+      }}
+    >
+      {checked ? '✓' : ''}
+    </span>
+  );
 
   return (
     <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '32px 24px', fontFamily: 'var(--sans)' }}>
@@ -317,6 +442,24 @@ export default function PortfolioGrid({ projets }: Props) {
             >
               Constituer le tableau
             </Link>
+            <button
+              onClick={() => (selectMode ? exitSelectMode() : setSelectMode(true))}
+              style={{
+                padding: '8px 16px',
+                background: selectMode ? 'white' : 'var(--ai-violet)',
+                color: selectMode ? 'var(--ai-violet)' : 'white',
+                border: selectMode ? '1px solid var(--ai-violet)' : 'none',
+                fontFamily: 'var(--sans)',
+                fontSize: '9pt',
+                fontWeight: 700,
+                letterSpacing: '0.05em',
+                borderRadius: 8,
+                textAlign: 'center',
+                cursor: 'pointer',
+              }}
+            >
+              {selectMode ? '× Quitter la sélection' : 'Export WordPress'}
+            </button>
             {isAdmin && (
               <Link
                 href="/admin"
@@ -344,6 +487,74 @@ export default function PortfolioGrid({ projets }: Props) {
           {filtered.length} / {projets.length} projet{projets.length > 1 ? 's' : ''} · source Airtable
         </p>
       </header>
+
+      {/* Barre de sélection — visible uniquement en mode sélection. Sticky :
+          la sélection se fait en scrollant la grille, l'action doit rester
+          accessible sans remonter. */}
+      {selectMode && (
+        <div style={{
+          position: 'sticky', top: 0, zIndex: 20,
+          display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+          background: 'var(--ai-violet)', color: 'white',
+          padding: '10px 14px', borderRadius: 12, marginBottom: 16,
+        }}>
+          <strong style={{ fontSize: '9.5pt', fontWeight: 700 }}>
+            {selectedSlugs.size} fiche{selectedSlugs.size > 1 ? 's' : ''} sélectionnée{selectedSlugs.size > 1 ? 's' : ''}
+          </strong>
+          <span style={{ fontSize: '8pt', opacity: 0.85 }}>
+            Ctrl+A : tout sélectionner · Maj+clic : sélectionner la plage
+          </span>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button
+              onClick={selectAllFiltered}
+              style={{
+                padding: '6px 12px', borderRadius: 8, cursor: 'pointer',
+                background: 'transparent', color: 'white', border: '1px solid rgba(255,255,255,0.6)',
+                fontFamily: 'var(--sans)', fontSize: '8.5pt', fontWeight: 700,
+              }}
+            >
+              Tout sélectionner ({filtered.length})
+            </button>
+            <button
+              onClick={() => { setSelectedSlugs(new Set()); setAnchorIndex(null); }}
+              disabled={selectedSlugs.size === 0}
+              style={{
+                padding: '6px 12px', borderRadius: 8,
+                cursor: selectedSlugs.size === 0 ? 'default' : 'pointer',
+                background: 'transparent', color: 'white', border: '1px solid rgba(255,255,255,0.6)',
+                fontFamily: 'var(--sans)', fontSize: '8.5pt', fontWeight: 700,
+                opacity: selectedSlugs.size === 0 ? 0.4 : 1,
+              }}
+            >
+              Tout désélectionner
+            </button>
+            <button
+              onClick={() => setShowExportModal(true)}
+              disabled={selectedSlugs.size === 0}
+              style={{
+                padding: '6px 14px', borderRadius: 8,
+                cursor: selectedSlugs.size === 0 ? 'default' : 'pointer',
+                background: 'var(--ai-rouge)', color: 'white', border: 'none',
+                fontFamily: 'var(--sans)', fontSize: '8.5pt', fontWeight: 700,
+                opacity: selectedSlugs.size === 0 ? 0.4 : 1,
+              }}
+            >
+              Exporter vers WordPress
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showExportModal && (
+        <WpBulkExportModal
+          projets={selectedProjets}
+          onClose={() => setShowExportModal(false)}
+          // Les publications réussies passent ficheStatus à « Publié » côté
+          // serveur (et invalident PROJETS_LIST_TAG) : on rafraîchit pour que
+          // le panneau « État de publication » reflète le lot.
+          onDone={() => router.refresh()}
+        />
+      )}
 
       {/* Search + view toggle */}
       <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '16px' }}>
@@ -638,13 +849,20 @@ export default function PortfolioGrid({ projets }: Props) {
       {/* Results */}
       {viewMode === 'grid' ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '16px' }}>
-          {filtered.map(projet => (
-            <Link key={projet.slug} href={`/projet/${projet.slug}`} prefetch={false} style={{ textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }}>
+          {filtered.map((projet, index) => {
+            const isSelected = selectedSlugs.has(projet.slug);
+            return wrapItem(projet, index, { textDecoration: 'none', color: 'inherit', display: 'block', height: '100%' }, (
+              <>
               {/* Tuile uniforme : height 100% (la grille align-items: stretch
                   par défaut + height 100% sur le Link force toutes les tuiles
                   d'une même rangée à la même hauteur). Image en aspect-ratio
                   fixe pour un rendu cohérent quelle que soit la photo source. */}
-              <article style={{ background: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', cursor: 'pointer', height: '100%', display: 'flex', flexDirection: 'column' }}>
+              <article style={{ position: 'relative', background: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: isSelected ? '0 0 0 2px var(--ai-rouge)' : '0 2px 8px rgba(0,0,0,0.08)', cursor: 'pointer', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                {selectMode && (
+                  <span style={{ position: 'absolute', top: 8, left: 8, zIndex: 2 }}>
+                    {checkbox(isSelected)}
+                  </span>
+                )}
                 {projet.photoCouverture
                   ? <div style={{ aspectRatio: '16 / 10', width: '100%', backgroundImage: `url(${projet.photoCouverture.url})`, backgroundSize: 'cover', backgroundPosition: 'center', flexShrink: 0 }} />
                   : <div style={{ aspectRatio: '16 / 10', width: '100%', background: 'var(--ai-gris)', flexShrink: 0 }} />
@@ -666,25 +884,30 @@ export default function PortfolioGrid({ projets }: Props) {
                   </div>
                 </div>
               </article>
-            </Link>
-          ))}
+              </>
+            ));
+          })}
         </div>
       ) : (
         <div style={{ background: 'white', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-          {filtered.map((projet, i) => (
-            <Link key={projet.slug} href={`/projet/${projet.slug}`} prefetch={false} style={{ textDecoration: 'none', color: 'inherit' }}>
+          {filtered.map((projet, i) => {
+            const isSelected = selectedSlugs.has(projet.slug);
+            return wrapItem(projet, i, { textDecoration: 'none', color: 'inherit' }, (
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: '56px 1fr 120px 80px 60px 80px',
+                // Colonne de cases à cocher insérée en tête en mode sélection.
+                gridTemplateColumns: `${selectMode ? '24px ' : ''}56px 1fr 120px 80px 60px 80px`,
                 gap: '12px',
                 alignItems: 'center',
                 padding: '10px 16px',
                 borderBottom: i < filtered.length - 1 ? `1px solid ${color.gris}` : 'none',
                 cursor: 'pointer',
+                background: isSelected ? color.grisTresClair : 'white',
               }}
                 onMouseEnter={e => (e.currentTarget.style.background = color.grisTresClair)}
-                onMouseLeave={e => (e.currentTarget.style.background = 'white')}
+                onMouseLeave={e => (e.currentTarget.style.background = isSelected ? color.grisTresClair : 'white')}
               >
+                {selectMode && checkbox(isSelected)}
                 {projet.photoCouverture
                   ? <div style={{ width: '56px', height: '40px', backgroundImage: `url(${projet.photoCouverture.url})`, backgroundSize: 'cover', backgroundPosition: 'center', borderRadius: '1px', flexShrink: 0 }} />
                   : <div style={{ width: '56px', height: '40px', background: 'var(--ai-gris)', borderRadius: '1px', flexShrink: 0 }} />
@@ -698,8 +921,8 @@ export default function PortfolioGrid({ projets }: Props) {
                 <div style={{ fontSize: '7.5pt', fontWeight: 700, color: 'var(--ai-noir70)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{(projet.vignettePoles ?? []).length > 0 ? (projet.vignettePoles ?? []).join(' · ') : '—'}</div>
                 <Badge statut={projet.statut} />
               </div>
-            </Link>
-          ))}
+            ));
+          })}
         </div>
       )}
 
