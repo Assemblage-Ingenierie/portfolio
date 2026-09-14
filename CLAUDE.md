@@ -274,6 +274,34 @@ Il n'y a plus d'étape brouillon : l'aperçu de `/projet/[slug]/wordpress` en ti
 > que les **brouillons** : avec la publication directe, un article publié portant déjà le slug
 > canonique n'est jamais touché — d'où la nécessité de le supprimer à la main d'abord.
 
+#### Export WordPress GROUPÉ (depuis le 14/09/26)
+
+Le bouton **« Export WordPress »** du header de la home (`PortfolioGrid`) bascule la grille
+en **mode sélection** : les tuiles et les lignes portent une case à cocher, le clic
+sélectionne au lieu de naviguer. Raccourcis : **Ctrl/Cmd+A** sélectionne toutes les fiches
+**visibles** (après filtres, pas le catalogue entier ; ignoré quand le focus est dans un
+champ de saisie) et **Maj+clic** ajoute toute la plage depuis l'ancre — ajout pur, la plage
+ne désélectionne jamais hors plage.
+
+`components/portfolio/WpBulkExportModal.tsx` exécute le lot. Points structurants :
+
+- **Aucune logique de publication dupliquée** : le modal appelle la route unitaire
+  `/api/projet/[slug]/publish` une fiche après l'autre. Toute évolution du flux de
+  publication (metas, catégories, galeries de pôle) est donc héritée automatiquement.
+- **Séquentiel, pas parallèle** : chaque publication uploade N médias vers WordPress ;
+  un fan-out saturerait l'API WP et les quotas Airtable derrière.
+- **Les garde-fous SEO ne bloquent pas le lot.** `exportBlockers()` reprend les règles de
+  l'export unitaire (photo de couverture + Tags export WP + méta description) mais marque
+  la fiche fautive « Ignoré » et poursuit — sinon une fiche incomplète ferait échouer 40
+  publications.
+- **Pages de pôle** : rien de spécifique au lot. Une fiche multi-pôle (« Vignette pôle »
+  = STR + ENV) part dans les **deux** galeries parce que `pfgGalleriesForPoles` itère sur
+  toutes les vignettes côté serveur — comportement déjà en place, le modal se contente de
+  l'**afficher avant lancement** (« Pages de pôle : Structure + Environnement ») pour que la
+  cible soit vérifiable, et de lister après coup les galeries réellement mises à jour.
+- Le lot terminé, `router.refresh()` recharge la liste : `/publish` passe `ficheStatus` à
+  « Publié » et invalide `PROJETS_LIST_TAG`, le panneau « État de publication » doit suivre.
+
 **Important** : par construction, le code n'envoie **jamais** `status: 'trash'` ni `DELETE`.
 Aucun export ne peut mettre un post existant à la corbeille.
 
