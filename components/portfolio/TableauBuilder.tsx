@@ -55,7 +55,7 @@ export default function TableauBuilder({ projets }: Props) {
   const [champLibreConfigured, setChampLibreConfigured] = useState(false);
   const [showChampLibreModal, setShowChampLibreModal] = useState(false);
 
-  // ----- Pagination automatique (paysage) -----
+  // ----- Pagination automatique (portrait ET paysage) -----
   // Quand measureOverflow détecte un dépassement, on calcule un rowsPerPage
   // qui fait tenir le contenu, on re-render, et on itère si besoin. Reset
   // automatique sur changement d'orientation / mode / colonnes / ordre /
@@ -322,6 +322,8 @@ export default function TableauBuilder({ projets }: Props) {
       });
       params.set('clv', JSON.stringify(filteredValues));
     }
+    // rpp = lignes par page retenues par l'auto-pagination (portrait comme
+    // paysage) — la page d'impression rechunke à l'identique.
     if (autoRowsPerPage && autoRowsPerPage > 0) {
       params.set('rpp', String(autoRowsPerPage));
     }
@@ -902,7 +904,7 @@ function PreviewStep({
     }
   }, [autoRowsPerPage, paginationAttempts]);
 
-  // ----- Mesure + auto-pagination paysage (effet unique) -----
+  // ----- Mesure + auto-pagination (effet unique, les 2 orientations) -----
   // Critique : la décision de pagination doit se faire DANS le même cycle
   // async que la mesure pour éviter la cascade de re-renders synchrones
   // sur un state `overflow` périmé. À chaque changement de `html` :
@@ -938,9 +940,11 @@ function PreviewStep({
             const pages = doc.querySelectorAll('.tab-page').length;
             setPageCount(Math.max(1, pages));
 
-            // 2. Décision pagination — paysage uniquement, limites de garde.
+            // 2. Décision pagination — les deux orientations. L'algorithme ne
+            //    lit que le DOM (hauteur de page, hauteur moyenne de ligne,
+            //    hauteur du spacer) : il est indifférent au format de page, seul
+            //    le nombre de lignes qui tiennent change.
             if (!m) return;
-            if (orientation !== 'paysage') return;
             if (paginationAttempts >= MAX_PAGINATION_ATTEMPTS) return;
             const N = orderedProjets.length;
             if (N <= 1) return;
@@ -1012,15 +1016,15 @@ function PreviewStep({
     // avant que la nouvelle ne commence à charger. Seul l'event `load`
     // garantit qu'on mesure le DOM correspondant au state React courant.
     return () => { cancelled = true; iframe.removeEventListener('load', onLoad); };
-  }, [html, orientation, orderedProjets.length, autoRowsPerPage, paginationAttempts, setAutoRowsPerPage, setPaginationAttempts]);
+  }, [html, orderedProjets.length, autoRowsPerPage, paginationAttempts, setAutoRowsPerPage, setPaginationAttempts]);
 
   // L'overflow visuel n'est "réel" que si l'auto-pagination n'a pas réussi
   // (paginationAttempts >= MAX). Sinon on est en cours de convergence et le
   // warning rouge clignoterait à chaque itération — on l'attend stabilisé.
   const stillOverflowing = overflow !== null
     && overflow.overflowMm > 0
-    && (orientation !== 'paysage' || paginationAttempts >= MAX_PAGINATION_ATTEMPTS);
-  const paginated = orientation === 'paysage' && autoRowsPerPage !== null && pageCount > 1;
+    && paginationAttempts >= MAX_PAGINATION_ATTEMPTS;
+  const paginated = autoRowsPerPage !== null && pageCount > 1;
   const previewWidthMm = orientation === 'paysage' ? 297 : 210;
   const previewHeightMm = orientation === 'paysage' ? 210 : 297;
   // mm → px (96 DPI) puis facteur d'échelle pour faire tenir l'A4 dans la
@@ -1132,7 +1136,7 @@ function PreviewStep({
             background: 'var(--ai-rouge)', color: 'white', fontFamily: 'var(--sans)',
             fontSize: '9pt', fontWeight: 600, borderRadius: 8,
           }}>
-            Le tableau dépasse la page de {overflow!.overflowMm} mm — réduit le nombre de lignes/colonnes ou bascule en {orientation === 'portrait' ? 'paysage' : 'portrait'}.
+            Le tableau dépasse la page de {overflow!.overflowMm} mm même après pagination — une ligne ne tient pas sur une page. Réduis le nombre de colonnes ou la taille de police, ou bascule en {orientation === 'portrait' ? 'paysage' : 'portrait'}.
           </div>
         )}
         {paginated && (
@@ -1141,7 +1145,7 @@ function PreviewStep({
             background: 'var(--ai-violet)', color: 'white', fontFamily: 'var(--sans)',
             fontSize: '9pt', fontWeight: 600, borderRadius: 8,
           }}>
-            Tableau réparti automatiquement sur {pageCount} pages ({autoRowsPerPage} lignes par page).
+            Tableau réparti automatiquement sur {pageCount} pages ({autoRowsPerPage} lignes par page) — numérotées en pied de page.
           </div>
         )}
         {/* Wrapper dimensionné à la taille scalée ; l'iframe garde sa taille A4

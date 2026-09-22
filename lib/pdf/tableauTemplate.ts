@@ -250,7 +250,9 @@ export function renderTableau({
   const titleHtml = title ? `<h1 class="tab-title">${esc(title)}</h1>` : '';
   const totalCount = projets.length;
 
-  const renderOnePage = (pageProjets: Projet[]) => {
+  const totalPages = pages.length;
+
+  const renderOnePage = (pageProjets: Projet[], pageIndex: number) => {
     const tbody = `<tbody>${pageProjets.map((p) =>
       `<tr>${fields.map((f) => {
         const v = f.getValue(p);
@@ -265,13 +267,16 @@ export function renderTableau({
       <table class="tab-grid">${head}${tbody}</table>
       <div class="tab-spacer"></div>
       <footer class="tab-footer">
-        <img class="tab-footer-logo" src="${LOGO_URL}" alt="Assemblage ingénierie" />
+        <div class="tab-footer-left">
+          <img class="tab-footer-logo" src="${LOGO_URL}" alt="Assemblage ingénierie" />
+          ${totalPages > 1 ? `<span class="tab-footer-page">Page ${pageIndex + 1}/${totalPages}</span>` : ''}
+        </div>
         <span>${totalCount} référence${totalCount > 1 ? 's' : ''}</span>
       </footer>
     </article>`;
   };
 
-  const html = pages.map(renderOnePage).join('\n');
+  const html = pages.map((p, i) => renderOnePage(p, i)).join('\n');
 
   const css = `
     /* Override @page pour cet export : taille pilotée par orientation.
@@ -366,10 +371,23 @@ export function renderTableau({
       padding-top: 3mm;
       flex: 0 0 auto;
     }
+    /* Groupe de gauche du pied de page : logo + numéro de page. La pagination
+       n'est rendue qu'à partir de 2 pages (cf. totalPages dans renderOnePage) :
+       un « Page 1/1 » sur un tableau d'une seule page serait du bruit. */
+    .tab-footer-left {
+      display: flex;
+      align-items: center;
+      gap: 4mm;
+    }
     .tab-footer-logo {
       height: 12mm;
       width: auto;
       display: block;
+    }
+    .tab-footer-page {
+      font-weight: 500;
+      color: var(--ai-violet);
+      white-space: nowrap;
     }
   `;
 
