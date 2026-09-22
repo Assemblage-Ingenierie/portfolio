@@ -27,12 +27,16 @@ export interface TableauFieldDef {
  * Statuts pour lesquels la colonne « Statut » affiche l'année de livraison à la
  * suite du libellé (ex. « Livré 2024 »).
  *
- * Volontairement limité à « Livré » : le champ Airtable « État avancement »
- * porte deux paires de quasi-synonymes assumées (Terminé/Livré, En cours/En
- * chantier) qu'on ne collapse jamais (cf. CLAUDE.md). Ajouter « Terminé » ici
- * est un one-liner si le besoin se confirme.
+ * Le champ Airtable « État avancement » porte deux paires de quasi-synonymes
+ * assumées (Terminé/Livré, En cours/En chantier) qu'on ne collapse jamais au
+ * niveau des données (cf. CLAUDE.md) : les deux options restent distinctes
+ * partout ailleurs (filtres, badges, header PDF). Ici on se contente de leur
+ * appliquer le même traitement d'affichage, ce qui ne les confond pas.
+ *
+ * « En cours » / « En chantier » en sont exclus : un projet non achevé n'a pas
+ * d'année de livraison à annoncer.
  */
-export const STATUT_AVEC_ANNEE: ReadonlySet<string> = new Set(['Livré']);
+export const STATUT_AVEC_ANNEE: ReadonlySet<string> = new Set(['Livré', 'Terminé']);
 
 /** Catalogue complet des colonnes disponibles (toutes modes confondues). */
 export const TABLEAU_FIELDS: TableauFieldDef[] = [
