@@ -23,6 +23,21 @@ export interface TableauFieldDef {
   getValue: (p: Projet) => string | undefined;
 }
 
+/**
+ * Statuts pour lesquels la colonne « Statut » affiche l'année de livraison à la
+ * suite du libellé (ex. « Livré 2024 »).
+ *
+ * Le champ Airtable « État avancement » porte deux paires de quasi-synonymes
+ * assumées (Terminé/Livré, En cours/En chantier) qu'on ne collapse jamais au
+ * niveau des données (cf. CLAUDE.md) : les deux options restent distinctes
+ * partout ailleurs (filtres, badges, header PDF). Ici on se contente de leur
+ * appliquer le même traitement d'affichage, ce qui ne les confond pas.
+ *
+ * « En cours » / « En chantier » en sont exclus : un projet non achevé n'a pas
+ * d'année de livraison à annoncer.
+ */
+export const STATUT_AVEC_ANNEE: ReadonlySet<string> = new Set(['Livré', 'Terminé']);
+
 /** Catalogue complet des colonnes disponibles (toutes modes confondues). */
 export const TABLEAU_FIELDS: TableauFieldDef[] = [
   { key: 'nom',          label: 'Projet',            getValue: (p) => p.nom },
@@ -43,8 +58,21 @@ export const TABLEAU_FIELDS: TableauFieldDef[] = [
   { key: 'surface',      label: 'Surface',           getValue: (p) => p.surface ? `${p.surface.toLocaleString('fr-FR')} m²` : undefined },
   { key: 'budget',       label: 'Budget',            getValue: (p) => p.budgetHT },
   // Nouveaux champs cochables (par défaut désactivés sur les 2 modes).
-  { key: 'statut',       label: 'Statut',            getValue: (p) =>
-      (p.statutValues && p.statutValues.length > 0) ? p.statutValues.join(', ') : p.statut },
+  // Statut : quand la valeur vaut « Livré » (cf. STATUT_AVEC_ANNEE), l'année de
+  // livraison est concaténée à la suite → « Livré 2024 ». Pour tout autre statut
+  // l'année n'apparaît pas. Objectif : économiser la colonne « Année » en mode
+  // portrait, où la largeur manque. La colonne « Année » reste dans le catalogue
+  // et son rendu est inchangé — c'est à l'utilisateur de la décocher.
+  { key: 'statut',       label: 'Statut',            getValue: (p) => {
+      const base = (p.statutValues && p.statutValues.length > 0)
+        ? p.statutValues.join(', ')
+        : p.statut;
+      if (!base) return undefined;
+      const livre = (p.statutValues && p.statutValues.length > 0)
+        ? p.statutValues.some((v) => STATUT_AVEC_ANNEE.has(v))
+        : STATUT_AVEC_ANNEE.has(base);
+      return (livre && p.anneeLivraison) ? `${base} ${p.anneeLivraison}` : base;
+    } },
   { key: 'materiaux',    label: 'Matériaux',         getValue: (p) =>
       (p.materiaux && p.materiaux.length > 0) ? p.materiaux.join(', ') : undefined },
   { key: 'certification', label: 'Certification',    getValue: (p) =>
@@ -76,47 +104,77 @@ export const TABLEAU_DEFAULTS_BY_MODE: Record<TableauMode, string[]> = {
 /** Sélection par défaut quand aucune n'est précisée par l'URL (fallback Str-Env). */
 export const TABLEAU_DEFAULT_FIELDS = TABLEAU_DEFAULTS_BY_MODE['Str-Env'];
 
+/**
+ * Tailles de police du tableau, en points. Réglables depuis la sidebar de
+ * l'étape 3 et propagées à l'export PDF (query params `ts`/`hs`/`cs`) comme à
+ * l'export Excel.
+ *
+ * ⚠ Toute modification d'une de ces valeurs change la hauteur du tableau : le
+ * `typo` doit donc figurer dans les dépendances du reset d'auto-pagination
+ * (cf. TableauBuilder), sinon on conserverait un `rowsPerPage` périmé.
+ */
+export interface TableauTypo {
+  /** Titre « Tableau de références ». */
+  titleSizePt: number;
+  /** En-têtes de colonnes (`thead th`). */
+  headSizePt: number;
+  /** Cellules du corps (`tbody td`). */
+  cellSizePt: number;
+}
+
+export const TABLEAU_TYPO_DEFAULT: TableauTypo = {
+  titleSizePt: 18,
+  headSizePt: 9,
+  cellSizePt: 9,
+};
+
+/** Bornes des curseurs de taille (UI + garde-fou de parsing des query params). */
+export const TABLEAU_TYPO_BOUNDS: Record<keyof TableauTypo, { min: number; max: number }> = {
+  titleSizePt: { min: 8, max: 32 },
+  headSizePt: { min: 5, max: 16 },
+  cellSizePt: { min: 5, max: 16 },
+};
+
+/** Complète une typo partielle avec les défauts, en bornant chaque valeur. */
+export function resolveTableauTypo(partial?: Partial<TableauTypo>): TableauTypo {
+  const out = { ...TABLEAU_TYPO_DEFAULT };
+  for (const k of Object.keys(TABLEAU_TYPO_DEFAULT) as (keyof TableauTypo)[]) {
+    const v = partial?.[k];
+    if (typeof v === 'number' && Number.isFinite(v)) {
+      const { min, max } = TABLEAU_TYPO_BOUNDS[k];
+      out[k] = Math.min(max, Math.max(min, v));
+    }
+  }
+  return out;
+}
+
 /** URL du logo Assemblage (rouge) — bucket Branding Supabase. */
 const LOGO_URL = 'https://hhkofvbptnrtwbazftlm.supabase.co/storage/v1/object/public/Branding/logo/logo_Ai_rouge.svg';
 
-export interface RenderTableauOptions {
-  projets: Projet[];
-  fieldKeys: string[];
-  orientation: TableauOrientation;
-  mode?: TableauMode;
-  title?: string;
-  /** Nom de la colonne "Champ libre" (dernière colonne). Si défini ET que
-   *  'champLibre' est dans fieldKeys, le label de la colonne devient ce nom
-   *  et les valeurs sont prises dans `champLibreValues`. */
-  champLibreNom?: string;
-  /** Map slug → description du champ libre pour chaque référence. */
-  champLibreValues?: Record<string, string>;
-  /** Si défini et inférieur au nombre de projets, le tableau est paginé en
-   *  plusieurs `.page` A4 contenant chacune au plus `rowsPerPage` lignes.
-   *  Header de colonnes + footer logo/count sont répétés sur chaque page. */
-  rowsPerPage?: number;
-}
-
-export function renderTableau({
-  projets,
+/**
+ * Résout la liste ordonnée des colonnes à rendre : filtre le catalogue sur les
+ * clés cochées, les trie selon l'ordre canonique du mode, et remplace le
+ * placeholder `champLibre` par le nom + les valeurs saisis par l'utilisateur.
+ *
+ * Partagé par le rendu HTML/PDF (`renderTableau`) et l'export Excel
+ * (`lib/excel/tableauExcel.ts`) — les deux sorties doivent afficher exactement
+ * les mêmes colonnes, dans le même ordre, avec les mêmes valeurs.
+ */
+export function resolveTableauFields({
   fieldKeys,
-  orientation,
-  mode = 'Str-Env',
-  title = 'Tableau de références',
+  mode,
   champLibreNom,
   champLibreValues,
-  rowsPerPage,
-}: RenderTableauOptions): { body: string; css: string } {
-  // Largeur / hauteur de la page en mm selon orientation.
-  const pageWidthMm = orientation === 'paysage' ? 297 : 210;
-  const pageHeightMm = orientation === 'paysage' ? 210 : 297;
-
-  // Tri des colonnes selon l'ordre canonique du mode — "Lieu" se retrouve
-  // toujours juste avant "Année" même s'il est activé après-coup.
+}: {
+  fieldKeys: string[];
+  mode: TableauMode;
+  champLibreNom?: string;
+  champLibreValues?: Record<string, string>;
+}): TableauFieldDef[] {
   const order = TABLEAU_ORDER_BY_MODE[mode];
   const selected = new Set(fieldKeys);
   const fieldByKey = new Map(TABLEAU_FIELDS.map((f) => [f.key, f]));
-  const fields = order
+  return order
     .filter((k) => selected.has(k))
     .map((k) => {
       const f = fieldByKey.get(k);
@@ -133,6 +191,46 @@ export function renderTableau({
       return f;
     })
     .filter((f): f is TableauFieldDef => Boolean(f));
+}
+
+export interface RenderTableauOptions {
+  projets: Projet[];
+  fieldKeys: string[];
+  orientation: TableauOrientation;
+  mode?: TableauMode;
+  title?: string;
+  /** Nom de la colonne "Champ libre" (dernière colonne). Si défini ET que
+   *  'champLibre' est dans fieldKeys, le label de la colonne devient ce nom
+   *  et les valeurs sont prises dans `champLibreValues`. */
+  champLibreNom?: string;
+  /** Map slug → description du champ libre pour chaque référence. */
+  champLibreValues?: Record<string, string>;
+  /** Tailles de police (titre / en-têtes / cellules). Valeurs manquantes =
+   *  défauts de `TABLEAU_TYPO_DEFAULT`. */
+  typo?: Partial<TableauTypo>;
+  /** Si défini et inférieur au nombre de projets, le tableau est paginé en
+   *  plusieurs `.page` A4 contenant chacune au plus `rowsPerPage` lignes.
+   *  Header de colonnes + footer logo/count sont répétés sur chaque page. */
+  rowsPerPage?: number;
+}
+
+export function renderTableau({
+  projets,
+  fieldKeys,
+  orientation,
+  mode = 'Str-Env',
+  title = 'Tableau de références',
+  champLibreNom,
+  champLibreValues,
+  rowsPerPage,
+  typo,
+}: RenderTableauOptions): { body: string; css: string } {
+  const { titleSizePt, headSizePt, cellSizePt } = resolveTableauTypo(typo);
+  // Largeur / hauteur de la page en mm selon orientation.
+  const pageWidthMm = orientation === 'paysage' ? 297 : 210;
+  const pageHeightMm = orientation === 'paysage' ? 210 : 297;
+
+  const fields = resolveTableauFields({ fieldKeys, mode, champLibreNom, champLibreValues });
 
   // Header de tableau (répété sur chaque page).
   const head = `<thead><tr>${fields.map((f) =>
@@ -198,7 +296,7 @@ export function renderTableau({
 
     .tab-title {
       font-family: var(--sans);
-      font-size: 18pt;
+      font-size: ${titleSizePt}pt;
       font-weight: 500;
       color: var(--ai-violet);
       letter-spacing: -0.01em;
@@ -211,7 +309,7 @@ export function renderTableau({
       width: 100%;
       border-collapse: collapse;
       font-family: var(--sans);
-      font-size: 9pt;
+      font-size: ${cellSizePt}pt;
       line-height: 1.35;
       color: var(--ai-noir);
       /* Pas de flex: 1 1 auto — les lignes gardent leur hauteur naturelle
@@ -222,7 +320,7 @@ export function renderTableau({
       border: 1pt solid var(--ai-noir);
     }
     .tab-grid thead th {
-      font-size: 9pt;
+      font-size: ${headSizePt}pt;
       font-weight: 400;
       letter-spacing: 0.02em;
       color: var(--ai-rouge);

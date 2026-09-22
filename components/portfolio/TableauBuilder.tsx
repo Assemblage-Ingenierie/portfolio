@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { STATUT_FILTER_OPTIONS, type Projet, type Statut } from '@/types/projet';
 import { STATUT_BG, STATUT_COLOR } from '@/lib/ui/statutColors';
 import { RangeSlider } from './RangeSlider';
-import { TABLEAU_FIELDS, TABLEAU_DEFAULTS_BY_MODE, TABLEAU_ORDER_BY_MODE, renderTableau, type TableauOrientation, type TableauMode } from '@/lib/pdf/tableauTemplate';
+import { TABLEAU_FIELDS, TABLEAU_DEFAULTS_BY_MODE, TABLEAU_ORDER_BY_MODE, TABLEAU_TYPO_DEFAULT, TABLEAU_TYPO_BOUNDS, renderTableau, type TableauOrientation, type TableauMode, type TableauTypo } from '@/lib/pdf/tableauTemplate';
+import { exportTableauExcel } from '@/lib/excel/tableauExcel';
 import { SHARED_CSS, FONTS_LINK } from '@/lib/pdf/templates/shared';
 import { measureOverflow, type OverflowMeasure } from '@/lib/utils/measureOverflow';
 import { color } from '@/lib/ui/tokens';
@@ -32,6 +33,18 @@ export default function TableauBuilder({ projets }: Props) {
   const [mode, setMode] = useState<TableauMode>('Str-Env');
   const [fields, setFields] = useState<string[]>(TABLEAU_DEFAULTS_BY_MODE['Str-Env']);
   const [modeInitialized, setModeInitialized] = useState(false);
+
+  // ----- Tailles de police -----
+  // Pilotent l'aperçu, l'export PDF (query params ts/hs/cs) et l'export Excel.
+  // ⚠ Changer une taille change la hauteur du tableau → `typo` fait partie des
+  // dépendances du reset d'auto-pagination (cf. plus bas).
+  const [typo, setTypo] = useState<TableauTypo>(TABLEAU_TYPO_DEFAULT);
+  const setTypoKey = (k: keyof TableauTypo, v: number) =>
+    setTypo(prev => ({ ...prev, [k]: v }));
+
+  // `exporting` évite un double-clic pendant la génération du .xlsx (import
+  // dynamique de write-excel-file au premier appel).
+  const [exportingExcel, setExportingExcel] = useState(false);
 
   // ----- Champ libre -----
   // nomConfigured : true quand l'utilisateur a confirmé le nom + descriptions.
@@ -284,6 +297,14 @@ export default function TableauBuilder({ projets }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, orderedSlugs, projetsBySlug, modeInitialized]);
 
+  // Références dans l'ordre choisi à l'étape 2 — consommées par les deux
+  // exports et par l'aperçu. Déclarée ici (et non plus près de l'aperçu) pour
+  // précéder les handlers qui la lisent.
+  const orderedProjets = useMemo(
+    () => orderedSlugs.map(s => projetsBySlug.get(s)).filter((p): p is Projet => Boolean(p)),
+    [orderedSlugs, projetsBySlug]
+  );
+
   // ----- Export PDF (impression natif) -----
   function handleExport() {
     if (orderedSlugs.length === 0 || fields.length === 0) return;
@@ -304,14 +325,34 @@ export default function TableauBuilder({ projets }: Props) {
     if (autoRowsPerPage && autoRowsPerPage > 0) {
       params.set('rpp', String(autoRowsPerPage));
     }
+    params.set('ts', String(typo.titleSizePt));
+    params.set('hs', String(typo.headSizePt));
+    params.set('cs', String(typo.cellSizePt));
     window.open(`/portfolio/tableau/print?${params.toString()}`, '_blank');
   }
 
+  // ----- Export Excel (.xlsx, généré côté client) -----
+  // Pas de `rowsPerPage` : la pagination est un artefact de la mise en page A4,
+  // une feuille Excel reçoit le tableau d'un seul tenant.
+  async function handleExportExcel() {
+    if (orderedSlugs.length === 0 || fields.length === 0 || exportingExcel) return;
+    setExportingExcel(true);
+    try {
+      await exportTableauExcel({
+        projets: orderedProjets,
+        fieldKeys: fields,
+        mode,
+        orientation,
+        champLibreNom: champLibreConfigured ? champLibreNom : undefined,
+        champLibreValues: champLibreConfigured ? champLibreValues : undefined,
+        typo,
+      });
+    } finally {
+      setExportingExcel(false);
+    }
+  }
+
   // ----- Aperçu HTML du tableau (iframe) -----
-  const orderedProjets = useMemo(
-    () => orderedSlugs.map(s => projetsBySlug.get(s)).filter((p): p is Projet => Boolean(p)),
-    [orderedSlugs, projetsBySlug]
-  );
   const previewHtml = useMemo(() => {
     if (step !== 'preview') return '';
     const bundle = renderTableau({
@@ -323,9 +364,10 @@ export default function TableauBuilder({ projets }: Props) {
       champLibreValues: champLibreConfigured ? champLibreValues : undefined,
       // Pagination auto déclenchée par l'effet d'overflow ci-dessous.
       rowsPerPage: autoRowsPerPage ?? undefined,
+      typo,
     });
     return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">${FONTS_LINK}<style>${SHARED_CSS}${bundle.css}body{background:white;}</style></head><body>${bundle.body}</body></html>`;
-  }, [step, orderedProjets, fields, orientation, mode, champLibreNom, champLibreValues, champLibreConfigured, autoRowsPerPage]);
+  }, [step, orderedProjets, fields, orientation, mode, champLibreNom, champLibreValues, champLibreConfigured, autoRowsPerPage, typo]);
 
   // Reset de la pagination automatique sur toute modification qui change la
   // hauteur du tableau (orientation, mode, colonnes, ordre, champ libre).
@@ -333,7 +375,7 @@ export default function TableauBuilder({ projets }: Props) {
   useEffect(() => {
     setAutoRowsPerPage(null);
     setPaginationAttempts(0);
-  }, [orientation, mode, fields, orderedSlugs, champLibreNom, champLibreValues, champLibreConfigured]);
+  }, [orientation, mode, fields, orderedSlugs, champLibreNom, champLibreValues, champLibreConfigured, typo]);
 
   // ----- Styles partagés -----
   const btn = (active: boolean): React.CSSProperties => ({
@@ -383,9 +425,24 @@ export default function TableauBuilder({ projets }: Props) {
         </button>
       )}
       {step === 'preview' && (
-        <button onClick={handleExport} disabled={orderedSlugs.length === 0 || fields.length === 0} style={primaryBtn(orderedSlugs.length === 0 || fields.length === 0)}>
-          Exporter le PDF →
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            onClick={handleExportExcel}
+            disabled={orderedSlugs.length === 0 || fields.length === 0 || exportingExcel}
+            style={{
+              ...primaryBtn(orderedSlugs.length === 0 || fields.length === 0 || exportingExcel),
+              // Secondaire : l'export PDF reste l'action principale (rouge plein).
+              background: 'white',
+              color: orderedSlugs.length === 0 || fields.length === 0 ? '#CCC' : 'var(--ai-rouge)',
+              border: `1px solid ${orderedSlugs.length === 0 || fields.length === 0 ? color.gris : 'var(--ai-rouge)'}`,
+            }}
+          >
+            {exportingExcel ? 'Génération…' : 'Exporter en Excel'}
+          </button>
+          <button onClick={handleExport} disabled={orderedSlugs.length === 0 || fields.length === 0} style={primaryBtn(orderedSlugs.length === 0 || fields.length === 0)}>
+            Exporter le PDF →
+          </button>
+        </div>
       )}
     </div>
   );
@@ -461,6 +518,8 @@ export default function TableauBuilder({ projets }: Props) {
             setPaginationAttempts={setPaginationAttempts}
             champLibreNom={champLibreConfigured ? champLibreNom : ''}
             openChampLibreModal={() => setShowChampLibreModal(true)}
+            typo={typo}
+            setTypoKey={setTypoKey}
           />
           </>
         )}
@@ -720,6 +779,58 @@ function arrowBtn(disabled: boolean): React.CSSProperties {
   };
 }
 
+/**
+ * Une ligne de réglage de taille de police : curseur + champ numérique (saisie
+ * directe), bornés par TABLEAU_TYPO_BOUNDS. Même parti-pris que le `StepSlider`
+ * de la sidebar WordPress — le curseur pour dégrossir, le champ pour la valeur
+ * exacte.
+ */
+function FontSizeRow({
+  label, k, typo, setTypoKey,
+}: {
+  label: string;
+  k: keyof TableauTypo;
+  typo: TableauTypo;
+  setTypoKey: (k: keyof TableauTypo, v: number) => void;
+}) {
+  const { min, max } = TABLEAU_TYPO_BOUNDS[k];
+  const clamp = (v: number) => Math.min(max, Math.max(min, v));
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6, marginBottom: 2 }}>
+        <span style={{ fontSize: '8.5pt', color: 'var(--ai-noir70)' }}>{label}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+          <input
+            type="number"
+            min={min}
+            max={max}
+            step={0.5}
+            value={typo[k]}
+            onChange={e => {
+              const v = Number(e.target.value);
+              if (Number.isFinite(v)) setTypoKey(k, clamp(v));
+            }}
+            style={{
+              width: 44, padding: '2px 4px', fontFamily: 'var(--sans)', fontSize: '8pt',
+              textAlign: 'right', border: `1px solid ${color.gris}`, borderRadius: 6,
+            }}
+          />
+          <span style={{ fontSize: '7.5pt', color: 'var(--ai-noir70)' }}>pt</span>
+        </div>
+      </div>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={0.5}
+        value={typo[k]}
+        onChange={e => setTypoKey(k, clamp(Number(e.target.value)))}
+        style={{ width: '100%', accentColor: color.rouge, display: 'block' }}
+      />
+    </div>
+  );
+}
+
 // ─── Étape 3 : preview ──────────────────────────────────────────────────────
 interface PreviewStepProps {
   html: string;
@@ -736,12 +847,15 @@ interface PreviewStepProps {
   setPaginationAttempts: React.Dispatch<React.SetStateAction<number>>;
   champLibreNom: string;
   openChampLibreModal: () => void;
+  typo: TableauTypo;
+  setTypoKey: (k: keyof TableauTypo, v: number) => void;
 }
 function PreviewStep({
   html, orientation, setOrientation, mode, setMode, fields, toggleField,
   orderedProjets, autoRowsPerPage, setAutoRowsPerPage,
   paginationAttempts, setPaginationAttempts,
   champLibreNom, openChampLibreModal,
+  typo, setTypoKey,
 }: PreviewStepProps) {
   // Affiche les colonnes dans l'ordre canonique du mode pour que la liste de
   // checkboxes corresponde à l'ordre du tableau rendu. "Lieu" reste à sa
@@ -950,6 +1064,23 @@ function PreviewStep({
                 cursor: 'pointer', borderRadius: 8, textTransform: 'capitalize',
               }}>{o}</button>
           ))}
+        </div>
+        <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 8 }}>Taille de police</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 18 }}>
+          <FontSizeRow label="Titre du tableau"   k="titleSizePt" typo={typo} setTypoKey={setTypoKey} />
+          <FontSizeRow label="Titres de colonnes" k="headSizePt"  typo={typo} setTypoKey={setTypoKey} />
+          <FontSizeRow label="Cellules"           k="cellSizePt"  typo={typo} setTypoKey={setTypoKey} />
+          <button
+            onClick={() => (Object.keys(TABLEAU_TYPO_DEFAULT) as (keyof TableauTypo)[])
+              .forEach(k => setTypoKey(k, TABLEAU_TYPO_DEFAULT[k]))}
+            style={{
+              alignSelf: 'flex-start', padding: '3px 8px', fontFamily: 'var(--sans)',
+              fontSize: '7.5pt', fontWeight: 700, border: `1px solid ${color.gris}`,
+              borderRadius: 8, background: 'white', color: 'var(--ai-noir70)', cursor: 'pointer',
+            }}
+          >
+            Réinitialiser
+          </button>
         </div>
         <div style={{ fontSize: '7pt', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ai-noir70)', marginBottom: 8 }}>Colonnes</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
