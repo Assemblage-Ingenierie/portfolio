@@ -50,6 +50,11 @@ export const FIELD_META_DESCRIPTION = 'fldQmXMJpDY7TrbfL';
 // donc renvoyer une liste VIDE pour la home, le builder, le tableau et l'API
 // publique. Le field ID rend la colonne librement renommable.
 export const FIELD_ANNEE_LIVRAISON = 'fldTYnGzVW4wwPSAC';
+// Lieu (texte) + Code postal — lus par field ID. Le tableau de références
+// (/portfolio/tableau) affiche « Lieu (dép.) », le département étant les deux
+// premiers caractères du code postal.
+export const FIELD_LIEU = 'fld8Se9ddPxzAM8B2';
+export const FIELD_CODE_POSTAL = 'fldhhstZGrJUHQhBX';
 // Champs éditables écrits par field ID depuis `updateProjetFields`. Écrire par
 // NOM expose à un `UNKNOWN_FIELD_NAME` qui fait échouer TOUTE la mutation (donc
 // la sauvegarde entière de la fiche) au moindre renommage de colonne côté
@@ -92,6 +97,10 @@ export interface AuxValues {
   metaDescription?: string;
   /** Année de livraison (champ "Numéro" fldTYnGzVW4wwPSAC), lue par field ID. */
   anneeLivraison?: number;
+  /** Lieu (fld8Se9ddPxzAM8B2), lu par field ID. */
+  lieu?: string;
+  /** Code postal (fldhhstZGrJUHQhBX), lu par field ID. */
+  codePostal?: string;
   /** Map<recordId → { nom, url }> des entités CRM (table « Sync CRM »). */
   crmNames?: Map<string, CrmEntity>;
 }
@@ -241,7 +250,9 @@ export function recordToProjet(record: any, aux?: AuxValues): Projet {
     slug: f['Slug'] ?? '',
     nom: f['Nom du projet'] ?? '',
     adresse: f['Adresse'] ?? undefined,
-    lieu: f['Lieu'] ?? undefined,
+    // Lieu : lu par field ID via l'aux (FIELD_LIEU), fallback nom de colonne.
+    lieu: aux?.lieu ?? f['Lieu'] ?? undefined,
+    codePostal: aux?.codePostal,
     pitch: formulaValue(f['Pitch']),
     description,
 
