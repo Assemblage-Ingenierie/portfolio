@@ -1,7 +1,7 @@
 import type { Projet, TemplateChoice } from '@/types/projet';
 import { renderTemplate } from './renderHtml';
 import { renderCover, type CoverVariant } from './templates/cover';
-import { renderSommaire } from './templates/sommaire';
+import { renderSommaire, sommairePageCount } from './templates/sommaire';
 import { SHARED_CSS } from './templates/shared';
 
 export interface PortfolioItem {
@@ -19,11 +19,8 @@ export interface PortfolioBundle {
  *
  * Numérotation des pages :
  *   1 = cover
- *   2 = sommaire
- *   3..n = fiches
- *
- * Hypothèse : le sommaire tient sur 1 page (jusqu'à ~25 références).
- * Au-delà il faudra découper en plusieurs pages.
+ *   2..(1+k) = sommaire (k = sommairePageCount, TOC_ITEMS_PER_PAGE lignes par page)
+ *   (2+k)..n = fiches
  */
 export function renderPortfolioHtml(items: PortfolioItem[], title?: string): string {
   const cover = renderCover({ title, count: items.length });
@@ -33,7 +30,7 @@ export function renderPortfolioHtml(items: PortfolioItem[], title?: string): str
     nom: item.projet.nom,
     pole: item.projet.pole,
     programme: item.projet.programme,
-    pageNumber: 3 + idx,
+    pageNumber: 2 + sommairePageCount(items.length) + idx,
   }));
 
   const sommaire = renderSommaire(items[0]?.projet ?? null, tocEntries);
@@ -113,7 +110,7 @@ export function renderPortfolioBundle(
     nom: item.projet.nom,
     pole: item.projet.pole,
     programme: item.projet.programme,
-    pageNumber: 3 + idx,
+    pageNumber: 2 + sommairePageCount(items.length) + idx,
   }));
 
   const sommaire = renderSommaire(items[0]?.projet ?? null, tocEntries);
