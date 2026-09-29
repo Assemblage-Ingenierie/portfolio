@@ -41,7 +41,13 @@ export const STATUT_AVEC_ANNEE: ReadonlySet<string> = new Set(['Livré', 'Termin
 /** Catalogue complet des colonnes disponibles (toutes modes confondues). */
 export const TABLEAU_FIELDS: TableauFieldDef[] = [
   { key: 'nom',          label: 'Projet',            getValue: (p) => p.nom },
-  { key: 'lieu',         label: 'Lieu',              getValue: (p) => p.lieu },
+  // Lieu + département entre parenthèses (2 premiers caractères du code
+  // postal) : « Paris (75) ». Sans code postal → Lieu seul.
+  { key: 'lieu',         label: 'Lieu',              getValue: (p) => {
+      if (!p.lieu) return undefined;
+      const dep = p.codePostal?.slice(0, 2);
+      return dep ? `${p.lieu} (${dep})` : p.lieu;
+    } },
   { key: 'annee',        label: 'Année',             getValue: (p) => p.anneeLivraison ? String(p.anneeLivraison) : undefined },
   { key: 'moa',          label: 'MOA',               getValue: (p) => p.moa },
   { key: 'architecte',   label: 'Architecte',        getValue: (p) => p.architecte },

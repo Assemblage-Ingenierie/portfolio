@@ -1,7 +1,7 @@
 import type { Projet } from '@/types/projet';
 import { cacheTag, cacheLife } from 'next/cache';
 import { base, TABLE } from './client';
-import { recordToProjet, type AuxValues, FIELD_PROGRAMME_PRINCIPAL, FIELD_PROGRAMME_SECONDAIRE, FIELD_POLE, FIELD_VIGNETTE_POLE, FIELD_PRESTATION_ASSEMBLAGE, FIELD_REHAB_NEUF, FIELD_MATERIAUX, FIELD_STATUT, FIELD_TAGS_EXPORT_WP, FIELD_META_DESCRIPTION, FIELD_ANNEE_LIVRAISON } from './mappers';
+import { recordToProjet, type AuxValues, FIELD_PROGRAMME_PRINCIPAL, FIELD_PROGRAMME_SECONDAIRE, FIELD_POLE, FIELD_VIGNETTE_POLE, FIELD_PRESTATION_ASSEMBLAGE, FIELD_REHAB_NEUF, FIELD_MATERIAUX, FIELD_STATUT, FIELD_TAGS_EXPORT_WP, FIELD_META_DESCRIPTION, FIELD_ANNEE_LIVRAISON, FIELD_LIEU, FIELD_CODE_POSTAL } from './mappers';
 import { fetchCrmNames } from './crm';
 
 /** Tag de la liste complète (`getProjets`) — invalidé seulement quand un
@@ -75,6 +75,8 @@ interface AuxByFieldId {
   metaDescription?: string;
   /** Année de livraison (champ "Numéro" fldTYnGzVW4wwPSAC). */
   anneeLivraison?: number;
+  lieu?: string;
+  codePostal?: string;
 }
 
 // Multi-select avec cellFormat: 'string' → CSV. Renvoie l'array complet
@@ -109,6 +111,24 @@ function yearValue(v: unknown): number | undefined {
   return Number.isFinite(n) ? n : undefined;
 }
 
+function textValue(v: unknown): string | undefined {
+  if (typeof v === 'number') return String(v);
+  return typeof v === 'string' && v.trim() ? v.trim() : undefined;
+}
+
+/**
+ * Code postal lu en `cellFormat: 'string'`. Si le champ Airtable est de type
+ * nombre, la locale fr-FR peut insérer un séparateur de milliers (« 75 011 »)
+ * et le zéro initial est perdu (« 1000 » pour 01000) : on retire les espaces
+ * et on re-complète à 5 chiffres un code purement numérique de 4 chiffres.
+ * Les codes corses (« 2A004 ») passent tels quels.
+ */
+function codePostalValue(v: unknown): string | undefined {
+  const raw = textValue(v)?.replace(/\s/g, '');
+  if (!raw) return undefined;
+  return /^\d{4}$/.test(raw) ? raw.padStart(5, '0') : raw;
+}
+
 async function fetchAuxByFieldId(
   filterFormula?: string,
 ): Promise<Map<string, AuxByFieldId>> {
@@ -117,7 +137,7 @@ async function fetchAuxByFieldId(
     const records = await base(TABLE)
       .select({
         ...STRING_FORMAT,
-        fields: [FIELD_PROGRAMME_PRINCIPAL, FIELD_PROGRAMME_SECONDAIRE, FIELD_POLE, FIELD_VIGNETTE_POLE, FIELD_PRESTATION_ASSEMBLAGE, FIELD_REHAB_NEUF, FIELD_MATERIAUX, FIELD_STATUT, FIELD_TAGS_EXPORT_WP, FIELD_META_DESCRIPTION, FIELD_ANNEE_LIVRAISON],
+        fields: [FIELD_PROGRAMME_PRINCIPAL, FIELD_PROGRAMME_SECONDAIRE, FIELD_POLE, FIELD_VIGNETTE_POLE, FIELD_PRESTATION_ASSEMBLAGE, FIELD_REHAB_NEUF, FIELD_MATERIAUX, FIELD_STATUT, FIELD_TAGS_EXPORT_WP, FIELD_META_DESCRIPTION, FIELD_ANNEE_LIVRAISON, FIELD_LIEU, FIELD_CODE_POSTAL],
         returnFieldsByFieldId: true,
         ...(filterFormula ? { filterByFormula: filterFormula } : {}),
       })
@@ -160,6 +180,8 @@ async function fetchAuxByFieldId(
           return typeof raw === 'string' && raw.trim() ? raw.trim() : undefined;
         })(),
         anneeLivraison: yearValue(r.fields[FIELD_ANNEE_LIVRAISON]),
+        lieu: textValue(r.fields[FIELD_LIEU]),
+        codePostal: codePostalValue(r.fields[FIELD_CODE_POSTAL]),
       });
     });
   } catch (err) {
@@ -233,6 +255,8 @@ export async function getProjets(): Promise<Projet[]> {
         tagsExportWp: prog?.tagsExportWp,
         metaDescription: prog?.metaDescription,
         anneeLivraison: prog?.anneeLivraison,
+        lieu: prog?.lieu,
+        codePostal: prog?.codePostal,
         crmNames,
       };
       return recordToProjet(r, aux);
@@ -302,6 +326,8 @@ export async function getProjet(slug: string): Promise<Projet | null> {
       tagsExportWp: p?.tagsExportWp,
       metaDescription: p?.metaDescription,
       anneeLivraison: p?.anneeLivraison,
+      lieu: p?.lieu,
+      codePostal: p?.codePostal,
       crmNames,
     };
     return recordToProjet(r, aux);

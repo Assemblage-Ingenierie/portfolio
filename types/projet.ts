@@ -63,6 +63,8 @@ export interface Projet {
   nom: string;
   adresse?: string;
   lieu?: string;
+  /** Code postal (Airtable fldhhstZGrJUHQhBX). */
+  codePostal?: string;
   pitch?: string;
   description: string;
 
